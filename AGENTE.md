@@ -5,7 +5,7 @@ Procedimento semanal que o agente segue toda vez que roda. Este arquivo é a fon
 ## Contexto da marca
 - Marca: **Ciello** — tecnologia, sites, automação e IA para micro e pequenas empresas (Chapecó/SC e região).
 - Instagram: **@ciellotec** · Metricool brand id **6611209** · fuso **America/Sao_Paulo**.
-- Paleta: #161616 (fundo), #F5F5F5 (texto), #1693A5 (destaque). Tagline: "Tecnologia que eleva".
+- Identidade oficial (manual de marca): Tinta #0d0d0d, Ouro #C8960A (acento, usar pouco), Teal #1693A5 (secundária), Branco, Cinza #888888, Carvão #1a1a1a. Fundo papel #F5F5F5 com blocos diagonais em tinta. Títulos em Barlow Condensed Black, linhas de apoio em Barlow Condensed Light cinza, ênfase em Playfair Display Black Italic dourado, texto em DM Sans. Logo: nuvem em contorno + CIELLO espaçado. Tagline: "Tecnologia que eleva". O gerador v3 já aplica tudo isso — nos roteiros use os campos kicker/pre/big/accent/post (hook), num/tag/title/body/prompt (item) e kicker/pre/big/accent/button/save (cta).
 - Ângulo editorial: pegar o que está viral no nicho de IA e traduzir para **"IA aplicada ao seu negócio"**, para que as views virem clientes.
 
 ## Perfis de referência
