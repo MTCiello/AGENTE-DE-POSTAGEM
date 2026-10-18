@@ -1,0 +1,57 @@
+{
+ "scenes": [
+  {
+   "type": "hook",
+   "kicker": "IA PRA VENDER",
+   "text": "Um vendedor que não dorme",
+   "highlight": [
+    "dorme"
+   ],
+   "sub": "E ele trabalha só pra você",
+   "say": "Imagina um vendedor que não dorme."
+  },
+  {
+   "type": "item",
+   "num": "1",
+   "title": "Acha as empresas",
+   "highlight": [
+    "empresas"
+   ],
+   "body": "Você diz o cliente ideal. Ela encontra na sua região.",
+   "prompt": "Encontre barbearias em Chapecó que ainda não têm site",
+   "say": "Você diz o cliente que quer, e a IA encontra as empresas da sua região."
+  },
+  {
+   "type": "item",
+   "num": "2",
+   "title": "Pesquisa cada uma",
+   "highlight": [
+    "cada"
+   ],
+   "body": "O que vende, o que está faltando.",
+   "prompt": "Resuma o que cada uma vende e o que falta no Instagram delas",
+   "say": "Depois ela pesquisa cada uma: o que vende, o que tá faltando."
+  },
+  {
+   "type": "item",
+   "num": "3",
+   "title": "Escreve a mensagem",
+   "highlight": [
+    "mensagem"
+   ],
+   "body": "Personalizada pra cada dono. Você só revisa e manda.",
+   "prompt": "Escreva uma mensagem curta e pessoal pra cada dono",
+   "say": "E escreve uma mensagem personalizada pra cada dono. Você só revisa e manda."
+  },
+  {
+   "type": "cta",
+   "text": "Quer um vendedor de IA no seu negócio?",
+   "highlight": [
+    "IA"
+   ],
+   "sub": "A Ciello monta pra você. Chama no direct.",
+   "save_label": "Salva esse vídeo",
+   "say": "Isso já dá pra montar hoje com o Claude. Quer um desses no seu negócio? Chama a Ciello no direct."
+  }
+ ]
+}

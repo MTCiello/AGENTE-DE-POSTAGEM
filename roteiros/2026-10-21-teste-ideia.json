@@ -1,0 +1,57 @@
+{
+ "scenes": [
+  {
+   "type": "hook",
+   "kicker": "ANTES DE ABRIR",
+   "text": "Teste sua ideia antes de gastar um real",
+   "highlight": [
+    "real"
+   ],
+   "sub": "3 testes rápidos com IA",
+   "say": "Antes de gastar um real no seu negócio, faz esse teste com IA."
+  },
+  {
+   "type": "item",
+   "num": "1",
+   "title": "O cliente desconfiado",
+   "highlight": [
+    "desconfiado"
+   ],
+   "body": "Ela lista por que alguém não compraria.",
+   "prompt": "Aja como um cliente cético: por que você não compraria isso?",
+   "say": "Primeiro, pede pra ela agir como um cliente desconfiado e listar por que não compraria."
+  },
+  {
+   "type": "item",
+   "num": "2",
+   "title": "Compare com a concorrência",
+   "highlight": [
+    "concorrência"
+   ],
+   "body": "Quem já vende isso na sua cidade, e como.",
+   "prompt": "Quem já vende isso em Chapecó e qual o diferencial de cada um?",
+   "say": "Depois, pede pra ela comparar com os concorrentes da sua cidade."
+  },
+  {
+   "type": "item",
+   "num": "3",
+   "title": "Faça a conta",
+   "highlight": [
+    "conta"
+   ],
+   "body": "Quanto precisa vender por mês pra pagar tudo.",
+   "prompt": "Quantas vendas por mês preciso pra cobrir R$ 3.000 de custos?",
+   "say": "E por último, faz a conta: quanto você precisa vender por mês pra pagar tudo."
+  },
+  {
+   "type": "cta",
+   "text": "Testa antes de abrir",
+   "highlight": [
+    "antes"
+   ],
+   "sub": "Precisa de site ou automação? Chama a Ciello.",
+   "save_label": "Salva pra testar depois",
+   "say": "Salva esse vídeo e testa antes de abrir. E se precisar de site ou automação, chama a Ciello."
+  }
+ ]
+}

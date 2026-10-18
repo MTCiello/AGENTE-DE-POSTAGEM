@@ -1,0 +1,55 @@
+{
+ "scenes": [
+  {
+   "type": "hook",
+   "kicker": "CUIDADO",
+   "text": "Seu cliente percebe quando foi a IA que escreveu",
+   "highlight": [
+    "IA"
+   ],
+   "sub": "E isso afasta",
+   "say": "Seu cliente percebe quando o texto foi feito por IA. E isso afasta."
+  },
+  {
+   "type": "item",
+   "num": "1",
+   "title": "Palavras que ninguém fala",
+   "highlight": [
+    "ninguém"
+   ],
+   "body": "“Potencialize”, “descubra”, “transforme sua jornada”...",
+   "say": "Sinal número um: palavras que ninguém fala, tipo potencialize e descubra."
+  },
+  {
+   "type": "item",
+   "num": "2",
+   "title": "Elogio genérico",
+   "highlight": [
+    "genérico"
+   ],
+   "body": "“Qualidade e excelência” serve pra qualquer empresa.",
+   "say": "Sinal dois: elogio genérico, que serve pra qualquer empresa."
+  },
+  {
+   "type": "item",
+   "num": "3",
+   "title": "Ensine o seu jeito",
+   "highlight": [
+    "seu"
+   ],
+   "body": "Cole 3 mensagens que você já mandou.",
+   "prompt": "Escreva do jeito que eu escrevo nessas 3 mensagens",
+   "say": "A solução: cola três mensagens que você já mandou e pede pra IA escrever do seu jeito."
+  },
+  {
+   "type": "cta",
+   "text": "Use na próxima legenda",
+   "highlight": [
+    "legenda"
+   ],
+   "sub": "Segue a Ciello pra mais dicas de IA.",
+   "save_label": "Salva esse vídeo",
+   "say": "Salva pra usar na próxima legenda, e segue a Ciello pra mais dicas."
+  }
+ ]
+}
