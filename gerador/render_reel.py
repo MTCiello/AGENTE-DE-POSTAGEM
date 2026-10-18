@@ -20,13 +20,14 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 W, H, FPS = 1080, 1920, 30
-PAPER = (245, 245, 245)
-INK = (13, 13, 13)
-CARVAO = (26, 26, 26)
-GOLD = (200, 150, 10)
-TEAL = (22, 147, 165)
-CINZA = (136, 136, 136)
-CLARO = (170, 170, 170)
+# identidade 2026 (CIELLO-CRM / Instagram atual)
+PAPER = (248, 244, 232)   # marfim
+INK = (22, 22, 22)        # carvão
+CARVAO = (42, 40, 37)
+GOLD = (224, 168, 28)     # ouro do ponto da logo / faixa de destaque
+TEAL = (38, 58, 89)       # azul profundo (secundária)
+CINZA = (125, 119, 109)
+CLARO = (163, 156, 144)
 WHITE = (255, 255, 255)
 
 MX = 92
@@ -36,14 +37,14 @@ CAP_Y = 1560
 
 FD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
 FONTS = {
-    "black": "barlow-condensed-latin-900-normal.woff",
-    "xbold": "barlow-condensed-latin-800-normal.woff",
-    "light": "barlow-condensed-latin-300-normal.woff",
-    "thin": "barlow-condensed-latin-200-normal.woff",
-    "serif": "playfair-display-latin-900-italic.woff",
-    "sans": "dm-sans-latin-400-normal.woff",
-    "sansm": "dm-sans-latin-500-normal.woff",
-    "sansb": "dm-sans-latin-700-normal.woff",
+    "black": "oswald-latin-700-normal.woff",
+    "xbold": "oswald-latin-600-normal.woff",
+    "light": "oswald-latin-300-normal.woff",
+    "thin": "oswald-latin-300-normal.woff",
+    "serif": "oswald-latin-600-normal.woff",
+    "sans": "oswald-latin-300-normal.woff",
+    "sansm": "oswald-latin-400-normal.woff",
+    "sansb": "oswald-latin-600-normal.woff",
 }
 _fc = {}
 def font(name, size):
@@ -102,13 +103,21 @@ def cloud_icon(h, color):
     _cloud_cache[key] = im
     return im
 
+_logo_cache = {}
 def draw_logo(layer, x, y, color, a=1.0, size=34):
-    ic = cloud_icon(int(size * 1.0), color)
+    """símbolo oficial (nuvem + ponto ouro) + CIELLO em Oswald espaçado"""
+    var = "marfim" if color == WHITE or sum(color) > 600 else "carvao"
+    key = (var, size)
+    if key not in _logo_cache:
+        im = Image.open(os.path.join(os.path.dirname(FD), "..", "marca", f"logo-simbolo-{var}.png")).convert("RGBA")
+        h = int(size * 1.05); w = int(im.width * h / im.height)
+        _logo_cache[key] = im.resize((w, h), Image.LANCZOS)
+    ic = _logo_cache[key]
     if a < 1:
         ic = ic.copy(); ic.putalpha(ic.getchannel("A").point(lambda v: int(v * a)))
     layer.alpha_composite(ic, (int(x), int(y)))
     d = ImageDraw.Draw(layer)
-    spaced(d, (x + ic.width + 14, y - size * 0.12), "CIELLO", font("xbold", size * 1.05), rgba(color, a), size * 0.22)
+    spaced(d, (x + ic.width + 16, y - size * 0.22), "CIELLO", font("xbold", size * 0.95), rgba(color, a), size * 0.26)
 
 # ---------- fundo ----------
 class Paper:
@@ -142,7 +151,16 @@ def reveal_line(layer, x, y, txt, f, color, p, spacing=0, stroke=None):
     if h - off <= 0: return
     layer.alpha_composite(li.crop((0, 0, w, h - off)), (int(x - 4), int(y + off)))
 
-def kicker(layer, x, y, txt, t, color=GOLD):
+def highlight_line(layer, x, y, txt, f, p):
+    """texto carvão sobre faixa ouro que cresce da esquerda"""
+    if p <= 0 or not txt: return
+    d = ImageDraw.Draw(layer)
+    w = f.getlength(txt); bb = f.getbbox(txt)
+    k = eo(p / 0.6)
+    d.rectangle([x - 14, y + bb[1] - 6, x - 14 + (w + 28) * k, y + bb[3] + 8], fill=GOLD + (255,))
+    if p > 0.35: reveal_line(layer, x, y, txt, f, rgba(INK), (p - 0.35) / 0.65)
+
+def kicker(layer, x, y, txt, t, color=CINZA):
     d = ImageDraw.Draw(layer)
     p = eo(t / 0.45)
     d.line([(x, y + 17), (x + 64 * p, y + 17)], fill=rgba(color), width=3)
@@ -160,25 +178,25 @@ def ink_bottom(d, t, y_left=1390, y_right=1300, enter=True):
 def scene_hook(layer, sc, t, dur, idx, n):
     d = ImageDraw.Draw(layer)
     ink_bottom(d, t)
-    y = 430
+    y = 380
     if sc.get("kicker"): kicker(layer, MX, y, sc["kicker"], t); y += 80
     if sc.get("pre"):
         f = font("light", fit_size(sc["pre"].upper(), "light", 128, TW))
         for ln in wrap(sc["pre"].upper(), f, TW):
-            reveal_line(layer, MX, y, ln, f, rgba(CLARO), (t - 0.15) / 0.5); y += int(f.size * 0.98)
+            reveal_line(layer, MX, y, ln, f, rgba(CLARO), (t - 0.15) / 0.5); y += int(f.size * 1.3)
     if sc.get("big"):
-        sz = fit_size(sc["big"].upper(), "black", 230, TW)
+        sz = fit_size(sc["big"].upper(), "black", 190, TW)
         f = font("black", sz)
         for k, ln in enumerate(wrap(sc["big"].upper(), f, TW)):
-            reveal_line(layer, MX, y, ln, f, rgba(INK), (t - 0.35 - 0.12 * k) / 0.5); y += int(sz * 0.95)
+            reveal_line(layer, MX, y, ln, f, rgba(INK), (t - 0.35 - 0.12 * k) / 0.5); y += int(sz * 1.28)
     if sc.get("accent"):
-        f = font("serif", fit_size(sc["accent"], "serif", 96, TW))
+        f = font("serif", fit_size(sc["accent"].upper(), "serif", 78, TW - 40))
         for k, ln in enumerate(wrap(sc["accent"], f, TW)):
-            reveal_line(layer, MX, y + 6, ln, f, rgba(GOLD), (t - 0.75 - 0.1 * k) / 0.5); y += int(f.size * 1.18)
+            highlight_line(layer, MX + 14, y + 10, ln.upper(), f, (t - 0.75 - 0.1 * k) / 0.6); y += int(f.size * 1.4)
     if sc.get("post"):
         f = font("light", fit_size(sc["post"].upper(), "light", 92, TW))
         for ln in wrap(sc["post"].upper(), f, TW):
-            reveal_line(layer, MX, y, ln, f, rgba(CLARO), (t - 1.0) / 0.5); y += int(f.size * 1.0)
+            reveal_line(layer, MX, y, ln, f, rgba(CLARO), (t - 1.0) / 0.5); y += int(f.size * 1.3)
 
 def scene_item(layer, sc, t, dur, idx, n):
     d = ImageDraw.Draw(layer)
@@ -190,20 +208,20 @@ def scene_item(layer, sc, t, dur, idx, n):
     d.line([(bx + W * 0.80 + 8, 0), (bx + W * 0.63 + 8, 860)], fill=rgba(TEAL, p), width=6)
     # número gigante em contorno
     sz = 560
-    fn = font("black", sz * (0.85 + 0.15 * spring((t - 0.15) / 0.6)))
+    fn = font("black", 470 * (0.85 + 0.15 * spring((t - 0.15) / 0.6)))
     na = clamp((t - 0.15) / 0.3)
     nl = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(nl).text((MX - 20 + bx * 0.2, 150), sc["num"], font=fn, fill=INK + (255,), stroke_width=4, stroke_fill=rgba((110, 110, 110), na))
+    ImageDraw.Draw(nl).text((MX - 10 + bx * 0.2, 110), sc["num"], font=fn, fill=INK + (255,), stroke_width=4, stroke_fill=rgba((150, 143, 130), na))
     if na > 0: layer.alpha_composite(nl)
     if sc.get("tag"): kicker(layer, MX, 780, sc["tag"], t - 0.3)
     # título e corpo na área clara
-    y = 930
-    f = font("black", 112)
+    y = 920
+    f = font("black", 96)
     tl = wrap(sc["title"].upper(), f, TW)
-    if len(tl) > 2: f = font("black", 96); tl = wrap(sc["title"].upper(), f, TW)
+    if len(tl) > 2: f = font("black", 82); tl = wrap(sc["title"].upper(), f, TW)
     for k, ln in enumerate(tl):
-        reveal_line(layer, MX, y, ln, f, rgba(INK), (t - 0.35 - 0.1 * k) / 0.45); y += int(f.size * 0.96)
-    y += 14
+        reveal_line(layer, MX, y, ln, f, rgba(INK), (t - 0.35 - 0.1 * k) / 0.45); y += int(f.size * 1.22)
+    y += 30
     if sc.get("body"):
         fb = font("sans", 40)
         ba = eo((t - 0.7) / 0.35)
@@ -254,15 +272,15 @@ def scene_cta(layer, sc, t, dur, idx, n):
     if sc.get("pre"):
         f = font("light", fit_size(sc["pre"].upper(), "light", 112, TW))
         for ln in wrap(sc["pre"].upper(), f, TW):
-            reveal_line(layer, MX, y, ln, f, rgba(CLARO), (t - 0.1) / 0.45); y += int(f.size * 0.98)
+            reveal_line(layer, MX, y, ln, f, rgba(CLARO), (t - 0.1) / 0.45); y += int(f.size * 1.3)
     if sc.get("big"):
-        sz = fit_size(sc["big"].upper(), "black", 190, TW); f = font("black", sz)
+        sz = fit_size(sc["big"].upper(), "black", 160, TW); f = font("black", sz)
         for k, ln in enumerate(wrap(sc["big"].upper(), f, TW)):
-            reveal_line(layer, MX, y, ln, f, rgba(INK), (t - 0.3 - 0.1 * k) / 0.45); y += int(sz * 0.95)
+            reveal_line(layer, MX, y, ln, f, rgba(INK), (t - 0.3 - 0.1 * k) / 0.45); y += int(sz * 1.28)
     if sc.get("accent"):
-        f = font("serif", fit_size(sc["accent"], "serif", 84, TW))
+        f = font("serif", fit_size(sc["accent"].upper(), "serif", 70, TW - 40))
         for k, ln in enumerate(wrap(sc["accent"], f, TW)):
-            reveal_line(layer, MX, y + 6, ln, f, rgba(GOLD), (t - 0.6) / 0.45); y += int(f.size * 1.2)
+            highlight_line(layer, MX + 14, y + 10, ln.upper(), f, (t - 0.6) / 0.6); y += int(f.size * 1.4)
     y += 40
     # botão principal (retangular, como nos posts)
     bp = eo((t - 0.9) / 0.4)
@@ -271,8 +289,8 @@ def scene_cta(layer, sc, t, dur, idx, n):
         bw = tlen(lbl, fb, sp) + 110; bh = 104
         pulse = 1 + 0.03 * math.sin(max(0, t - 1.4) * 6)
         x0 = MX; y0 = y + 30 * (1 - bp)
-        d.rectangle([x0, y0, x0 + bw * pulse, y0 + bh], fill=rgba(INK, bp))
-        spaced(d, (x0 + 55, y0 + 24), lbl, fb, rgba(WHITE, bp), sp)
+        d.rounded_rectangle([x0, y0, x0 + bw * pulse, y0 + bh], radius=bh / 2, fill=rgba(INK, bp))
+        spaced(d, (x0 + 55, y0 + 18), lbl, fb, rgba(PAPER, bp), sp)
         ax = x0 + bw * pulse + 36 + 12 * math.sin(t * 7)
         d.line([(ax, y0 + bh / 2), (ax + 70, y0 + bh / 2)], fill=rgba(GOLD, bp), width=4)
         d.polygon([(ax + 70, y0 + bh / 2 - 12), (ax + 88, y0 + bh / 2), (ax + 70, y0 + bh / 2 + 12)], fill=rgba(GOLD, bp))
@@ -282,11 +300,11 @@ def scene_cta(layer, sc, t, dur, idx, n):
         fs = font("sansb", 30)
         lbl = sc["save"].upper()
         bw = tlen(lbl, fs, 4) + 120
-        d.rectangle([MX, y, MX + bw, y + 74], outline=rgba(INK, sp2), width=3)
+        d.rounded_rectangle([MX, y, MX + bw, y + 74], radius=37, outline=rgba(INK, sp2), width=3)
         # ícone salvar
         bx, by = MX + 34, y + 20
         d.polygon([(bx, by), (bx + 24, by), (bx + 24, by + 34), (bx + 12, by + 25), (bx, by + 34)], fill=rgba(GOLD, sp2))
-        spaced(d, (MX + 80, y + 19), lbl, fs, rgba(INK, sp2), 4)
+        spaced(d, (MX + 80, y + 14), lbl, fs, rgba(INK, sp2), 4)
 
 SCENES = {"hook": scene_hook, "item": scene_item, "cta": scene_cta}
 
@@ -305,13 +323,13 @@ def draw_caption(layer, sc, t, dur):
         acc += seg
     txt = cs[idx]
     q = spring((t - cst) / 0.3); s = 0.88 + 0.12 * clamp(q, 0, 1.1)
-    f = font("sansb", 54 * s); tw = f.getlength(txt)
+    f = font("sansb", 52 * s); tw = f.getlength(txt)
     d = ImageDraw.Draw(layer)
     x = (W - tw) / 2 - 20; y = CAP_Y
-    d.rectangle([x - 26, y - 12, x + tw + 26, y + 74 * s], fill=(26, 26, 26, 235))
+    d.rounded_rectangle([x - 30, y - 6, x + tw + 30, y + 84 * s], radius=42 * s, fill=(22, 22, 22, 240))
     parts = txt.rsplit(" ", 1)
     if len(parts) == 2:
-        d.text((x, y), parts[0] + " ", font=f, fill=WHITE + (255,))
+        d.text((x, y), parts[0] + " ", font=f, fill=PAPER + (255,))
         d.text((x + f.getlength(parts[0] + " "), y), parts[1], font=f, fill=GOLD + (255,))
     else:
         d.text((x, y), txt, font=f, fill=GOLD + (255,))
