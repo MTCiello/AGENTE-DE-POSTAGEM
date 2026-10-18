@@ -1,0 +1,9 @@
+{
+  "scenes": [
+    {"type": "hook", "kicker": "DICA DE IA", "text": "Pare de usar o Claude só pra escrever texto", "highlight": ["Claude"], "sub": "3 usos que economizam horas no seu negócio", "dur": 3.4},
+    {"type": "item", "num": "1", "title": "Nota fiscal vira planilha", "body": "Manda a foto e ele organiza os gastos pra você.", "prompt": "Monta uma planilha com os itens e valores dessa nota", "dur": 5.0},
+    {"type": "item", "num": "2", "title": "Descubra do que seus clientes reclamam", "body": "Cola as avaliações do Google e pede um resumo.", "prompt": "Quais são as 3 maiores reclamações nessas avaliações?", "dur": 5.2},
+    {"type": "item", "num": "3", "title": "Uma página pronta em minutos", "body": "Descreve seu negócio e ele monta a página.", "prompt": "Cria uma página pra minha barbearia com botão de WhatsApp", "dur": 5.2},
+    {"type": "cta", "text": "Quer IA trabalhando no seu negócio?", "sub": "A Ciello implementa pra você. Chama no direct.", "dur": 4.2}
+  ]
+}
