@@ -2,13 +2,17 @@
  "scenes": [
   {
    "type": "hook",
-   "kicker": "ANTES DE ABRIR",
+   "kicker": "Antes de abrir",
    "text": "Teste sua ideia antes de gastar um real",
    "highlight": [
     "real"
    ],
    "sub": "3 testes rápidos com IA",
-   "say": "Antes de gastar um real no seu negócio, faz esse teste com IA."
+   "say": "Antes de gastar um real no seu negócio, faz esse teste com IA.",
+   "pre": "Teste sua ideia",
+   "big": "Antes de gastar",
+   "accent": "um real sequer.",
+   "post": "3 testes rápidos com IA"
   },
   {
    "type": "item",
@@ -19,7 +23,8 @@
    ],
    "body": "Ela lista por que alguém não compraria.",
    "prompt": "Aja como um cliente cético: por que você não compraria isso?",
-   "say": "Primeiro, pede pra ela agir como um cliente desconfiado e listar por que não compraria."
+   "say": "Primeiro, pede pra ela agir como um cliente desconfiado e listar por que não compraria.",
+   "tag": "Teste 1 de 3"
   },
   {
    "type": "item",
@@ -30,7 +35,8 @@
    ],
    "body": "Quem já vende isso na sua cidade, e como.",
    "prompt": "Quem já vende isso em Chapecó e qual o diferencial de cada um?",
-   "say": "Depois, pede pra ela comparar com os concorrentes da sua cidade."
+   "say": "Depois, pede pra ela comparar com os concorrentes da sua cidade.",
+   "tag": "Teste 2 de 3"
   },
   {
    "type": "item",
@@ -41,7 +47,8 @@
    ],
    "body": "Quanto precisa vender por mês pra pagar tudo.",
    "prompt": "Quantas vendas por mês preciso pra cobrir R$ 3.000 de custos?",
-   "say": "E por último, faz a conta: quanto você precisa vender por mês pra pagar tudo."
+   "say": "E por último, faz a conta: quanto você precisa vender por mês pra pagar tudo.",
+   "tag": "Teste 3 de 3"
   },
   {
    "type": "cta",
@@ -51,7 +58,13 @@
    ],
    "sub": "Precisa de site ou automação? Chama a Ciello.",
    "save_label": "Salva pra testar depois",
-   "say": "Salva esse vídeo e testa antes de abrir. E se precisar de site ou automação, chama a Ciello."
+   "say": "Salva esse vídeo e testa antes de abrir. E se precisar de site ou automação, chama a Ciello.",
+   "kicker": "Próximo passo",
+   "pre": "Salva e",
+   "big": "Testa antes",
+   "accent": "de abrir as portas.",
+   "button": "Fale com a Ciello",
+   "save": "Salva pra testar depois"
   }
  ]
 }

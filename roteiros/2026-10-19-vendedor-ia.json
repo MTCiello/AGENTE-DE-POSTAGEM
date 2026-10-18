@@ -2,13 +2,17 @@
  "scenes": [
   {
    "type": "hook",
-   "kicker": "IA PRA VENDER",
+   "kicker": "IA pra vender",
    "text": "Um vendedor que não dorme",
    "highlight": [
     "dorme"
    ],
    "sub": "E ele trabalha só pra você",
-   "say": "Imagina um vendedor que não dorme."
+   "say": "Imagina um vendedor que não dorme.",
+   "pre": "Imagina um",
+   "big": "Vendedor",
+   "accent": "que não dorme.",
+   "post": "e trabalha só pra você"
   },
   {
    "type": "item",
@@ -19,7 +23,8 @@
    ],
    "body": "Você diz o cliente ideal. Ela encontra na sua região.",
    "prompt": "Encontre barbearias em Chapecó que ainda não têm site",
-   "say": "Você diz o cliente que quer, e a IA encontra as empresas da sua região."
+   "say": "Você diz o cliente que quer, e a IA encontra as empresas da sua região.",
+   "tag": "Passo 1 de 3"
   },
   {
    "type": "item",
@@ -30,7 +35,8 @@
    ],
    "body": "O que vende, o que está faltando.",
    "prompt": "Resuma o que cada uma vende e o que falta no Instagram delas",
-   "say": "Depois ela pesquisa cada uma: o que vende, o que tá faltando."
+   "say": "Depois ela pesquisa cada uma: o que vende, o que tá faltando.",
+   "tag": "Passo 2 de 3"
   },
   {
    "type": "item",
@@ -41,7 +47,8 @@
    ],
    "body": "Personalizada pra cada dono. Você só revisa e manda.",
    "prompt": "Escreva uma mensagem curta e pessoal pra cada dono",
-   "say": "E escreve uma mensagem personalizada pra cada dono. Você só revisa e manda."
+   "say": "E escreve uma mensagem personalizada pra cada dono. Você só revisa e manda.",
+   "tag": "Passo 3 de 3"
   },
   {
    "type": "cta",
@@ -51,7 +58,13 @@
    ],
    "sub": "A Ciello monta pra você. Chama no direct.",
    "save_label": "Salva esse vídeo",
-   "say": "Isso já dá pra montar hoje com o Claude. Quer um desses no seu negócio? Chama a Ciello no direct."
+   "say": "Isso já dá pra montar hoje com o Claude. Quer um desses no seu negócio? Chama a Ciello no direct.",
+   "kicker": "Próximo passo",
+   "pre": "Quer um desses",
+   "big": "No seu negócio?",
+   "accent": "A Ciello monta pra você.",
+   "button": "Chama no direct",
+   "save": "Salva esse vídeo"
   }
  ]
 }

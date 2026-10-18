@@ -2,13 +2,17 @@
  "scenes": [
   {
    "type": "hook",
-   "kicker": "CUIDADO",
+   "kicker": "Cuidado",
    "text": "Seu cliente percebe quando foi a IA que escreveu",
    "highlight": [
     "IA"
    ],
    "sub": "E isso afasta",
-   "say": "Seu cliente percebe quando o texto foi feito por IA. E isso afasta."
+   "say": "Seu cliente percebe quando o texto foi feito por IA. E isso afasta.",
+   "pre": "Seu cliente percebe",
+   "big": "Quando é IA",
+   "accent": "e isso afasta.",
+   "post": "2 sinais e a solução"
   },
   {
    "type": "item",
@@ -18,7 +22,8 @@
     "ninguém"
    ],
    "body": "“Potencialize”, “descubra”, “transforme sua jornada”...",
-   "say": "Sinal número um: palavras que ninguém fala, tipo potencialize e descubra."
+   "say": "Sinal número um: palavras que ninguém fala, tipo potencialize e descubra.",
+   "tag": "Sinal 1"
   },
   {
    "type": "item",
@@ -28,7 +33,8 @@
     "genérico"
    ],
    "body": "“Qualidade e excelência” serve pra qualquer empresa.",
-   "say": "Sinal dois: elogio genérico, que serve pra qualquer empresa."
+   "say": "Sinal dois: elogio genérico, que serve pra qualquer empresa.",
+   "tag": "Sinal 2"
   },
   {
    "type": "item",
@@ -39,7 +45,8 @@
    ],
    "body": "Cole 3 mensagens que você já mandou.",
    "prompt": "Escreva do jeito que eu escrevo nessas 3 mensagens",
-   "say": "A solução: cola três mensagens que você já mandou e pede pra IA escrever do seu jeito."
+   "say": "A solução: cola três mensagens que você já mandou e pede pra IA escrever do seu jeito.",
+   "tag": "A solução"
   },
   {
    "type": "cta",
@@ -49,7 +56,13 @@
    ],
    "sub": "Segue a Ciello pra mais dicas de IA.",
    "save_label": "Salva esse vídeo",
-   "say": "Salva pra usar na próxima legenda, e segue a Ciello pra mais dicas."
+   "say": "Salva pra usar na próxima legenda, e segue a Ciello pra mais dicas.",
+   "kicker": "Use hoje",
+   "pre": "Na sua próxima",
+   "big": "Legenda",
+   "accent": "escreva do seu jeito.",
+   "button": "Segue a Ciello",
+   "save": "Salva esse vídeo"
   }
  ]
 }
