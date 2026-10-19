@@ -16,7 +16,7 @@ Toda semana ele pesquisa os vídeos de IA que estão viralizando, adapta 3 temas
 - `docs/clone-digital.md` — clone digital hiper-realista com modelos abertos e o modelo `CloneReel`
 - `docs/teste-de-hoje.md` — roteiro de teste de todas as ferramentas
 - `docs/plano-sequencia.md` + `reels/src/plano/` — vídeos em plano-sequência (padrão do reel de referência) e `central/analisar_video.py` (oráculo de ritmo)
-- `Ciello.cmd` — **Ciello OS**: área de trabalho com barra de tarefas, janelas que movem e redimensionam, o escritório pixel-agents fixado e um app para cada área (`central/escritorio/servidor.py` + `web/`) · `Escritorio-Ciello.cmd` — só o escritório, no navegador
+- `Ciello.cmd` — **Ciello OS**: área de trabalho com barra de tarefas, janelas que movem e redimensionam, o escritório de agentes de fundo e um app para cada área (`central/escritorio/servidor.py` + `web/`; o escritório é a tela de `escritorio/` com o núcleo em Python de `central/escritorio/nucleo/`, sem Node)
 - `radar/` — assuntos em alta por pilar · `conhecimento/ganchos.csv` — biblioteca de ganchos · `metricas/` — retratos semanais e relatórios
 - `reels/capa.mjs` — capa do reel a partir do roteiro
 - `central/sdr.py` + `comercial/icp.json` — prospecção: leads, abordagem por wa.me, cadência e CSV do CRM

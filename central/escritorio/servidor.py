@@ -1,8 +1,10 @@
-"""Ciello OS: o assistente inteiro numa área de trabalho. O fundo é o Escritório (o pixel-agents original, porta 3100),
-com a barra de tarefas embaixo e janelas que movem e redimensionam. Os apps ficam no menu Iniciar.
+"""Ciello OS: o assistente inteiro numa área de trabalho. O fundo é o Escritório (a tela pixel em web/escritorio/,
+fork MIT do pixel-agents em escritorio/, servida pelo núcleo em Python de nucleo/, sem Node), com a barra de tarefas
+embaixo e janelas que movem e redimensionam. Os apps ficam no menu Iniciar.
 
-O escritório é servido pelo mesmo endereço do Ciello OS (/escritorio/, repasse local sem alterar o pixel-agents) para
-a ponte (web/ponte-escritorio.js) ouvir o clique num personagem e abrir a janela daquele agente.
+O escritório é servido pelo mesmo endereço do Ciello OS (/escritorio/) para a ponte (web/ponte-escritorio.js) ouvir o
+clique num personagem e abrir a janela daquele agente. Cada sessão do Claude Code aberta na pasta do assistente vira
+um personagem; com os hooks (o escritório pergunta na primeira vez), os movimentos são instantâneos.
 
   python central/escritorio/servidor.py              # ou clique duas vezes em Ciello.cmd
   python central/escritorio/servidor.py --sem-escritorio --sem-navegador
@@ -27,12 +29,11 @@ import os
 import re
 import secrets
 import shutil
-import socket
 import subprocess
 import sys
 import threading
 import time
-import urllib.error
+import urllib.parse
 import urllib.request
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -45,14 +46,17 @@ sys.path.insert(0, str(AQUI.parent))
 import status  # noqa: E402
 import briefing  # noqa: E402
 import financeiro  # noqa: E402
+from nucleo import websocket  # noqa: E402
+from nucleo.sala import Sala  # noqa: E402
 
 ETAPAS_FUNIL = ["novo", "contatado", "respondeu", "demo", "proposta", "cliente"]
 PY = sys.executable
 TOKEN = secrets.token_urlsafe(24)
-PIXEL = 3100
-DIRETO = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+TELA = WEB / "escritorio"  # build da tela do escritório (escritorio/webview-ui: npx vite build)
 TIPOS = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8",
-         ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".mp4": "video/mp4"}
+         ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".mp4": "video/mp4",
+         ".ttf": "font/ttf", ".ico": "image/x-icon", ".json": "application/json", ".webmanifest": "application/manifest+json"}
+sala = None  # o escritório (nucleo.sala.Sala), criado no main
 
 # O que os botões das janelas podem rodar: id -> (rótulo, agente, argumentos). Nada fora desta lista roda.
 ACOES = {
@@ -157,20 +161,10 @@ def equipe():
     return agentes
 
 
-def pixel_no_ar():
-    try:
-        with DIRETO.open(f"http://127.0.0.1:{PIXEL}/api/health", timeout=1) as r:
-            return r.status == 200
-    except OSError:
-        return False
-
-
 def app_escritorio():
-    if not pixel_no_ar():
+    if sala is None or not (TELA / "index.html").exists():
         return {"no_ar": False}
-    token_arq = Path.home() / ".pixel-agents" / "standalone-token"
-    token = token_arq.read_text(encoding="utf-8").strip() if token_arq.exists() else ""
-    return {"no_ar": True, "url": "/escritorio/" + (f"?token={token}" if token else "")}
+    return {"no_ar": True, "url": f"/escritorio/?token={TOKEN}"}
 
 
 def app_briefing():
@@ -264,15 +258,6 @@ def rodar(acao):
     return ex
 
 
-def ligar_escritorio():
-    """Sobe o pixel-agents original em segundo plano (o mesmo lançador do Escritorio-Ciello.cmd)."""
-    if pixel_no_ar():
-        return
-    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-    subprocess.Popen([PY, str(AQUI / "abrir.py"), "--sem-navegador"], cwd=RAIZ, stdout=subprocess.DEVNULL,
-                     stderr=subprocess.DEVNULL, creationflags=flags)
-
-
 # ---------------------------------------------------------------- servidor
 
 class Painel(BaseHTTPRequestHandler):
@@ -307,53 +292,25 @@ class Painel(BaseHTTPRequestHandler):
             return self._json({"erro": "não encontrado"}, 404)
         self._enviar(alvo.read_bytes(), TIPOS[alvo.suffix.lower()])
 
-    def _repassar(self, destino):
-        """Escritório no mesmo endereço do Ciello OS: HTTP e WebSocket vão para o pixel-agents como estão.
-        Só a página inicial ganha a ponte (um script que ouve o clique nos personagens)."""
-        if (self.headers.get("Upgrade") or "").lower() == "websocket":
-            try:
-                alvo = socket.create_connection(("127.0.0.1", PIXEL), timeout=5)
-            except OSError:
-                return self._json({"erro": "escritório desligado"}, 502)
-            # o pixel-agents confere Host e Origin: o pedido chega como se viesse do próprio endereço dele
-            cab = [f"GET {destino} HTTP/1.1", f"Host: 127.0.0.1:{PIXEL}", f"Origin: http://127.0.0.1:{PIXEL}"]
-            cab += [f"{k}: {v}" for k, v in self.headers.items() if k.lower() not in ("host", "origin")]
-            alvo.sendall(("\r\n".join(cab) + "\r\n\r\n").encode("latin-1"))
-            alvo.settimeout(None)
-            self.connection.settimeout(None)
+    def _tela(self, rel):
+        """A tela do escritório. Só a página inicial ganha a ponte (o script que ouve o clique nos personagens)."""
+        if rel in ("", "index.html"):
+            html = (TELA / "index.html").read_bytes()
+            html = html.replace(b"<head>", b'<head><script src="/web/pixel-ptbr.js"></script><script src="/web/ponte-escritorio.js"></script>', 1)
+            html = html.replace(b'<html lang="en">', b'<html lang="pt-BR">', 1).replace(b"<title>Pixel Agents</title>", "<title>Escritório</title>".encode(), 1)
+            return self._enviar(html, TIPOS[".html"])
+        return self._arquivo(TELA, urllib.request.unquote(rel))
 
-            def tubo(de, para):
-                try:
-                    while dado := de.recv(65536):
-                        para.sendall(dado)
-                except OSError:
-                    pass
-                finally:
-                    for s_ in (de, para):
-                        try:
-                            s_.shutdown(socket.SHUT_RDWR)
-                        except OSError:
-                            pass
-
-            volta = threading.Thread(target=tubo, args=(alvo, self.connection), daemon=True)
-            volta.start()
-            tubo(self.connection, alvo)
-            volta.join(timeout=2)
-            alvo.close()
-            self.close_connection = True
-            return
-        cabecalhos = {k: v for k, v in self.headers.items() if k.lower() in ("accept", "accept-language", "authorization")}
-        try:
-            r = DIRETO.open(urllib.request.Request(f"http://127.0.0.1:{PIXEL}{destino}", headers=cabecalhos), timeout=15)
-            corpo, codigo, tipo = r.read(), r.status, r.headers.get("Content-Type", "application/octet-stream")
-        except urllib.error.HTTPError as e:
-            corpo, codigo, tipo = e.read(), e.code, e.headers.get("Content-Type", "text/plain")
-        except OSError:
-            return self._json({"erro": "escritório desligado"}, 502)
-        if "text/html" in tipo:
-            corpo = corpo.replace(b"<head>", b'<head><script src="/web/pixel-ptbr.js"></script><script src="/web/ponte-escritorio.js"></script>', 1)
-            corpo = corpo.replace(b'<html lang="en">', b'<html lang="pt-BR">', 1).replace(b"<title>Pixel Agents</title>", b"<title>Escrit\xc3\xb3rio</title>", 1)
-        self._enviar(corpo, tipo, codigo)
+    def _websocket(self):
+        """O escritório conversa por aqui. Com o token do Ciello OS a tela pode mudar coisas; sem ele, só olha."""
+        if sala is None:
+            return self._json({"erro": "escritório desligado"}, 503)
+        consulta = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+        privilegiada = secrets.compare_digest((consulta.get("token") or [""])[0], TOKEN)
+        conexao = websocket.aceitar(self)
+        if conexao is None:
+            return self._json({"erro": "esperava WebSocket"}, 400)
+        sala.conectar(conexao, privilegiada)
 
     def do_GET(self):
         if not self._local():
@@ -373,9 +330,9 @@ class Painel(BaseHTTPRequestHandler):
             self.send_header("Location", "/escritorio/" + self.path[len("/escritorio"):])
             return self.end_headers()
         if caminho.startswith("/escritorio/"):
-            return self._repassar(self.path[len("/escritorio"):])
-        if caminho == "/ws" or caminho.startswith("/terminal/"):  # o pixel-agents abre o WebSocket na raiz
-            return self._repassar(self.path)
+            return self._tela(caminho[len("/escritorio/"):])
+        if caminho == "/ws":  # a tela abre o WebSocket na raiz do endereço
+            return self._websocket()
         if caminho in ("/", "/index.html"):
             html = (WEB / "index.html").read_text(encoding="utf-8").replace("__CIELLO_TOKEN__", TOKEN)
             return self._enviar(html.encode("utf-8"), TIPOS[".html"])
@@ -399,6 +356,8 @@ class Painel(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._local():
             return
+        if self.path == "/api/ganchos/claude":
+            return self._gancho()
         if self.headers.get("X-Ciello-Token") != TOKEN:
             return self._json({"erro": "token inválido"}, 403)
         tam = int(self.headers.get("Content-Length") or 0)
@@ -407,10 +366,23 @@ class Painel(BaseHTTPRequestHandler):
             if pedido.get("acao") not in ACOES:
                 return self._json({"erro": "ação desconhecida"}, 400)
             return self._json(rodar(pedido["acao"]))
-        if self.path == "/api/escritorio/ligar":
-            ligar_escritorio()
-            return self._json({"ok": True})
         return self._json({"erro": "não encontrado"}, 404)
+
+    def _gancho(self):
+        """Evento de hook do Claude Code (central/escritorio/gancho.py), com o token anotado em servidor.json."""
+        if sala is None:
+            return self._json({"erro": "escritório desligado"}, 503)
+        if not secrets.compare_digest(self.headers.get("Authorization") or "", f"Bearer {sala.token_gancho}"):
+            return self._json({"erro": "token inválido"}, 401)
+        tam = int(self.headers.get("Content-Length") or 0)
+        if tam > 65536:
+            return self._json({"erro": "evento grande demais"}, 413)
+        try:
+            evento = json.loads(self.rfile.read(tam) or b"{}")
+        except ValueError:
+            return self._json({"erro": "JSON inválido"}, 400)
+        sala.gancho(evento)
+        self._enviar(b"ok", "text/plain; charset=utf-8")
 
 
 def abrir_como_app(url):
@@ -432,13 +404,15 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--porta", type=int, default=3200)
     ap.add_argument("--sem-navegador", action="store_true")
-    ap.add_argument("--sem-escritorio", action="store_true", help="não liga o pixel-agents junto")
+    ap.add_argument("--sem-escritorio", action="store_true", help="não liga o escritório de agentes")
     a = ap.parse_args()
+    global sala
     srv = ThreadingHTTPServer(("127.0.0.1", a.porta), Painel)
     url = f"http://127.0.0.1:{a.porta}"
     print("Ciello OS em", url, "(Ctrl+C para sair)")
     if not a.sem_escritorio:
-        ligar_escritorio()
+        sala = Sala(TELA, RAIZ, a.porta)
+        print("Escritório acompanhando as sessões do Claude Code em", sala.iniciar())
     if not a.sem_navegador:
         threading.Timer(0.6, lambda: abrir_como_app(url)).start()
     try:

@@ -33,17 +33,13 @@ Origem dos 4 novos: o reel "10 agentes de IA que toda empresa devia ter". Avalia
 
 Também dá para chamar um agente direto: "use o sdr para gerar 20 leads de odontologia em Xanxerê".
 
-## Escritório: pixel-agents original
+## Escritório de agentes
 
-O escritório é o [pixel-agents](https://github.com/pablodelucca/pixel-agents) **original**, sem nenhuma alteração no código. É instalado pelo npm na versão fixada **1.5.0** (MIT, © Pablo De Lucca; personagens baseados no [Metro City, de JIK-A-4](https://jik-a-4.itch.io/metrocity-free-topdown-character-pack)). Ele roda em modo standalone, no navegador, sem VS Code.
+O escritório é nosso: a tela pixel (`escritorio/`) começou como fork do [pixel-agents](https://github.com/pablodelucca/pixel-agents) v1.5.0 (MIT, © Pablo De Lucca; personagens baseados no [Metro City, de JIK-A-4](https://jik-a-4.itch.io/metrocity-free-topdown-character-pack)) e quem a alimenta é o núcleo em Python do Ciello OS (`central/escritorio/nucleo/`). **Não precisa de Node** e abre junto com o `Ciello.cmd`. A aparência é a mesma do pixel-agents (sprites, móveis e layout conferidos pixel a pixel com o 1.5.0); daqui para frente dá para mudar o que quiser (personagens, escritório, menus).
 
-**Abrir:** clique duas vezes em `Escritorio-Ciello.cmd` (ou `python central/escritorio/abrir.py`). O lançador:
-1. confere o Node.js 20+;
-2. instala na primeira vez o layout da Ciello em `~/.pixel-agents/layout.json`, guardando backup do anterior (`--layout` reinstala);
-3. sobe `npx pixel-agents@1.5.0 --port 3100` **na pasta do assistente**, que é o que faz o escritório acompanhar as sessões do Claude Code desta pasta;
-4. abre o navegador com o token.
+**Como funciona:** o núcleo acompanha toda sessão do Claude Code aberta na pasta do assistente (`~/.claude/projects/<pasta>`): cada sessão vira um personagem, cada ferramenta vira animação, subagentes aparecem ao lado de quem os chamou. Na primeira vez o layout da Ciello é instalado em `~/.ciello/escritorio/layout.json` (se você já usava o pixel-agents, o seu layout de `~/.pixel-agents` é trazido).
 
-**Primeira vez:** a apresentação do pixel-agents pede para instalar os hooks do Claude Code. Aceite: é o modo mais preciso.
+**Primeira vez:** a apresentação do escritório pergunta se pode instalar os **hooks** do Claude Code (o modo instantâneo). Aceite: o escritório adiciona `central/escritorio/gancho.py` aos eventos em `~/.claude/settings.json`, guarda uma cópia (`settings.json.ciello.backup`) e troca os hooks antigos do pixel-agents, se houver. Sem hooks também funciona, só que o "pedindo permissão" e o "terminou" são estimados pelo tempo.
 
 **O layout da Ciello** (`central/escritorio/layout-ciello.json`, gerado por `gerar_layout.py` com os mesmos móveis e módulos do layout padrão):
 
@@ -53,18 +49,18 @@ O escritório é o [pixel-agents](https://github.com/pablodelucca/pixel-agents) 
 | Meio | **Comercial**: mesa da equipe de vendas e sofás para demonstração | 4 cadeiras + sofás |
 | Direita | **Análise & Anúncios** (em cima) e **Postagem** (embaixo) | 4 estações |
 
-O editor **Layout** do próprio pixel-agents continua funcionando para mudar o que quiser.
+O editor **Layout** do escritório (engrenagem → Layout) continua funcionando para mudar o que quiser.
 
 **Como os agentes aparecem:**
 - **Com equipes ligadas** (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` no `.claude/settings.json` do seu PC): `/semana`, `/comercial` e `/segunda` criam teammates com o nome de cada agente (sdr, closer, pesquisador-mercado…). Cada um senta numa mesa com o nome em cima. As equipes são experimentais e gastam mais uso.
 - **Sem equipes:** os agentes rodam como subagentes e aparecem como personagens ao lado do coordenador, com o balão mostrando "sdr: follow-ups do dia".
-- **Animações do próprio pixel-agents:** digitando quando trabalha, "…" quando pede permissão, ✓ quando termina, passeio pelo escritório quando está livre.
+- **Animações:** digitando quando trabalha, "…" quando pede permissão, ✓ quando termina, passeio pelo escritório quando está livre.
 
 ## Ciello OS: o app inteiro numa área de trabalho
 
 Clique duas vezes em **`Ciello.cmd`**. Abre numa janela própria do Edge (ou Chrome), sem barra de endereço, como um programa instalado.
 
-- **O fundo da área de trabalho é o Escritório**: o pixel-agents original, ao vivo, **em português** e no azul da Ciello, centralizado ao abrir. O `Ciello.cmd` liga o escritório junto; se estiver desligado, o fundo mostra a logo e o botão **Ligar o escritório**.
+- **O fundo da área de trabalho é o Escritório**, ao vivo, **em português** e no azul da Ciello, centralizado ao abrir. Ele roda dentro do próprio Ciello OS (`--sem-escritorio` desliga; aí o fundo mostra a logo).
 - **Engrenagem na barra de tarefas:** os botões de personalização do pixel-agents (+ Agente, Layout, Configurações, zoom, versão) ficam escondidos; a engrenagem mostra e esconde.
 - **Mover e dar zoom:** segure o **botão do meio (scroll)** e arraste para mover o escritório; **Ctrl + scroll** aproxima e afasta, entre **2x e 6x** (`ZOOM_MIN`/`ZOOM_MAX` em `web/ponte-escritorio.js`). O scroll sozinho também move. Menu Iniciar → **Centralizar escritório** volta para o meio.
 - **Clicar num personagem do escritório abre a janela daquele agente**. Para isso funcionar, o agente precisa ter nome: teammate com o nome do agente (equipes ligadas) ou subagente com a descrição começando pelo nome (`sdr: follow-ups do dia`), como os comandos `/bom-dia`, `/comercial`, `/semana` já pedem. Clicar no coordenador abre a janela de quem está trabalhando com ele; sem ninguém, abre a Equipe.
@@ -76,7 +72,7 @@ Clique duas vezes em **`Ciello.cmd`**. Abre numa janela própria do Edge (ou Chr
 
 **Tradução:** `web/pixel-ptbr.js` tem todos os textos do pixel-agents 1.5.0 em português. A ponte troca só o que aparece na tela; as mensagens internas continuam em inglês, porque o pixel-agents depende delas. Ao atualizar a versão do pixel-agents, confira se apareceu texto novo em inglês e acrescente no arquivo.
 
-**Como o clique chega no app sem alterar o pixel-agents:** o Ciello OS serve o escritório no mesmo endereço dele (`/escritorio/`, um repasse local para a porta 3100) e acrescenta à página um script pequeno, a ponte (`web/ponte-escritorio.js`). A ponte só observa a conexão que o pixel-agents já usa: aprende o nome de cada agente e, quando ele avisa que um personagem foi clicado (`focusAgent`), manda o aviso para a área de trabalho. Atualizar o pixel-agents continua sendo trocar a versão em `abrir.py`.
+**Como o clique chega no app:** o Ciello OS serve a tela do escritório no mesmo endereço (`/escritorio/`) e acrescenta à página a ponte (`web/ponte-escritorio.js`), que aprende o nome de cada agente e, quando um personagem é clicado (`focusAgent`), avisa a área de trabalho.
 
 ![Ciello OS](img/ciello-os-escritorio-fundo-e-apps.png)
 

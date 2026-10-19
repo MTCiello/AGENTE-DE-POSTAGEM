@@ -1,0 +1,237 @@
+"""A sala: junta ativos, vigia e hooks, e conversa com cada tela do escritório pelo WebSocket.
+
+A ordem do aperto de mão (webviewReady) é a do original: acesso, capacidades, ativos, preferências, hooks, áreas,
+agentes, layout e, por fim, o que cada agente está fazendo agora.
+"""
+from __future__ import annotations
+
+import json
+import os
+import secrets
+import threading
+from pathlib import Path
+
+from . import ganchos as G
+from . import persistencia as P
+from .agentes import LEITURA, PALETAS, SUBAGENTE, Laco, Loja, limpar
+from .ativos import Ativos
+from .ganchos import Ganchos
+from .vigia import Vigia, pasta_de_sessoes
+
+VERSAO = "1.5.0"
+MATIZ_MAX = 360
+
+
+class Sala:
+    def __init__(self, raiz_build: Path, projeto: Path, porta: int, raiz_sessoes=None):
+        self.ativos = Ativos(raiz_build)
+        self.laco = Laco()
+        self.loja = Loja(self.laco, P.gravar_agentes)
+        self.loja.qtd_paletas = self.ativos.qtd_paletas or PALETAS
+        self.vigia = Vigia(self.laco, self.loja, raiz_sessoes)
+        self.ganchos = Ganchos(self.vigia)
+        self.projeto, self.porta = projeto, porta
+        self.token_gancho = secrets.token_urlsafe(24)
+
+    # ---------------------------------------------------------- ciclo de vida
+    def iniciar(self):
+        cfg = P.config()
+        self.vigia.ganchos_ligados = cfg["hooks"] is True and G.instalados()
+        self.vigia.ver_todas = bool(cfg["preferencias"]["watchAllSessions"])
+        self._anotar_servidor()
+        pasta = pasta_de_sessoes(self.projeto, self.vigia.raiz_sessoes)
+        self.vigia.acompanhar(pasta)
+        self.vigia.iniciar()
+        self.laco.iniciar()
+        return pasta
+
+    def _anotar_servidor(self):
+        """O script do hook lê daqui para onde mandar o evento (só este PC lê: fica na pasta do usuário)."""
+        arq = P.CASA / "servidor.json"
+        P.CASA.mkdir(parents=True, exist_ok=True)
+        arq.write_text(json.dumps({"porta": self.porta, "token": self.token_gancho, "pid": os.getpid()}), encoding="utf-8")
+        try:
+            os.chmod(arq, 0o600)
+        except OSError:
+            pass
+
+    # ---------------------------------------------------------- telas conectadas
+    def conectar(self, conexao, privilegiada: bool):
+        """Atende uma tela até ela fechar (roda na thread da conexão)."""
+        def ouvir(msg):
+            if not conexao.enviar(msg):
+                self.laco.chamar(self._desligar, ouvir)
+
+        self.laco.chamar(self.loja.ouvintes.append, ouvir)
+        try:
+            while (texto := conexao.receber()) is not None:
+                try:
+                    msg = json.loads(texto)
+                except ValueError:
+                    continue
+                if isinstance(msg, dict) and msg.get("type"):
+                    self.laco.chamar(self.mensagem, msg, conexao, privilegiada)
+        finally:
+            self.laco.chamar(self._desligar, ouvir)
+
+    def _desligar(self, ouvir):
+        if ouvir in self.loja.ouvintes:
+            self.loja.ouvintes.remove(ouvir)
+
+    def gancho(self, evento: dict):
+        """Evento vindo do script do hook (thread HTTP)."""
+        if isinstance(evento, dict) and evento.get("session_id") and evento.get("hook_event_name"):
+            self.laco.chamar(self.ganchos.evento, evento)
+
+    # ---------------------------------------------------------- mensagens da tela
+    def mensagem(self, msg, conexao, privilegiada):
+        enviar = lambda m: conexao.enviar(limpar(m))
+        tipo = msg.get("type")
+        if tipo == "webviewReady":
+            return self.pronta(enviar, privilegiada)
+        if not privilegiada:
+            return self._recusar(tipo, enviar)
+        if tipo == "closeAgent":
+            self.vigia.fechar(msg.get("id"))
+        elif tipo == "requestDiagnostics":
+            enviar({"type": "agentDiagnostics", "agents": self._diagnostico()})
+        elif tipo == "saveLayout" and isinstance(msg.get("layout"), dict):
+            P.gravar_layout(msg["layout"])
+        elif tipo == "saveAgentSeats" and isinstance(msg.get("seats"), dict):
+            for chave, meta in msg["seats"].items():
+                a = self.loja.get(int(chave)) if str(chave).isdigit() else None
+                if not a or not isinstance(meta, dict):
+                    continue
+                p, h = meta.get("palette"), meta.get("hueShift")
+                if isinstance(p, int) and not isinstance(p, bool) and 0 <= p < self.loja.qtd_paletas:
+                    a.paleta = p
+                if isinstance(h, int) and not isinstance(h, bool) and 0 <= h <= MATIZ_MAX:
+                    a.matiz = h
+            P.gravar_lugares(msg["seats"])
+        elif tipo in ("setSoundEnabled", "setAlwaysShowLabels", "setGhostHeadlessAgents", "setShowAreas"):
+            P.definir_preferencia({"setSoundEnabled": "soundEnabled", "setAlwaysShowLabels": "alwaysShowLabels",
+                                   "setGhostHeadlessAgents": "ghostHeadlessAgents", "setShowAreas": "showAreas"}[tipo],
+                                  msg.get("enabled"))
+        elif tipo == "setLastSeenVersion":
+            P.definir_preferencia("lastSeenVersion", msg.get("version"))
+        elif tipo == "setWatchAllSessions":
+            P.definir_preferencia("watchAllSessions", bool(msg.get("enabled")))
+            self.vigia.ver_todas = bool(msg.get("enabled"))
+        elif tipo == "setHooksInfoShown":
+            P.definir_preferencia("hooksInfoShown", True)
+        elif tipo == "setBypassPermissions" and isinstance(msg.get("enabled"), bool):
+            P.definir_preferencia("bypassPermissions", msg["enabled"])
+            self.loja.transmitir({"type": "bypassPermissionsUpdated", "enabled": msg["enabled"]})
+        elif tipo == "setHooksEnabled":
+            self._hooks(bool(msg.get("enabled")), enviar)
+        elif tipo == "hooksConsentResponse":
+            escolha = msg.get("choice")
+            if escolha == "install":
+                self._hooks(True, enviar)
+            elif escolha == "never":
+                self._hooks(False, enviar)
+            else:  # "agora não": pergunta de novo na próxima vez
+                enviar({"type": "hooksStatus", "providerId": "claude", "installed": G.instalados()})
+        elif tipo == "saveAreaMappings" and isinstance(msg.get("mappings"), dict):
+            c = P.config()
+            c["areas"] = msg["mappings"]
+            P.gravar_config(c)
+        elif tipo in ("addExternalAssetDirectory", "removeExternalAssetDirectory"):
+            enviar({"type": "externalAssetDirectoriesUpdated", "dirs": P.config()["pastasDeAtivos"]})
+        # launchAgent, focusAgent e pastas: a tela do Ciello OS cuida (abrir agente é com a janela do app)
+
+    def _hooks(self, ligar, enviar):
+        try:
+            if ligar:
+                G.instalar()
+            elif G.instalados():
+                G.desinstalar()
+        except (OSError, ValueError) as e:
+            print(f"[escritório] não deu para {'instalar' if ligar else 'tirar'} os hooks: {e}")
+        instalado = G.instalados()
+        c = P.config()
+        c["hooks"] = ligar if instalado == ligar else c["hooks"]
+        P.gravar_config(c)
+        self.vigia.ganchos_ligados = ligar and instalado
+        enviar({"type": "hooksStatus", "providerId": "claude", "installed": instalado})
+
+    def _recusar(self, tipo, enviar):
+        if tipo == "setHooksEnabled":
+            enviar({"type": "hooksStatus", "providerId": "claude", "installed": G.instalados()})
+        elif tipo in ("setSoundEnabled", "setAlwaysShowLabels", "setGhostHeadlessAgents", "setWatchAllSessions",
+                      "setShowAreas", "setBypassPermissions", "setShowHostDirectories"):
+            enviar(self._preferencias())
+        elif tipo == "saveAreaMappings":
+            enviar({"type": "areaMappingsLoaded", "mappings": P.config()["areas"]})
+
+    def _preferencias(self):
+        cfg = P.config()
+        p = cfg["preferencias"]
+        return {"type": "settingsLoaded", "soundEnabled": p["soundEnabled"], "lastSeenVersion": p["lastSeenVersion"],
+                "extensionVersion": VERSAO, "watchAllSessions": p["watchAllSessions"],
+                "alwaysShowLabels": p["alwaysShowLabels"], "ghostHeadlessAgents": p["ghostHeadlessAgents"],
+                "hooksEnabled": cfg["hooks"] is not False, "hooksInfoShown": p["hooksInfoShown"],
+                "externalAssetDirectories": cfg["pastasDeAtivos"], "showAreas": p["showAreas"],
+                "bypassPermissions": p["bypassPermissions"], "showHostDirectories": p["showHostDirectories"]}
+
+    def pronta(self, enviar, privilegiada):
+        enviar({"type": "officeAccess", "readOnly": not privilegiada})
+        enviar({"type": "providerCapabilities", "readingTools": list(LEITURA), "subagentToolNames": sorted(SUBAGENTE, key=["Task", "Agent"].index)})
+        for m in self.ativos.mensagens():
+            enviar(m)
+        cfg = P.config()
+        prefs = self._preferencias()
+        enviar(prefs)
+        instalado = G.instalados()
+        enviar({"type": "areaMappingsLoaded", "mappings": cfg["areas"]})
+        self.vigia.ver_todas = prefs["watchAllSessions"]
+        self.vigia.ganchos_ligados = cfg["hooks"] is True and instalado
+        self.vigia.restaurar(P.estado()["agentes"])
+        lugares = P.estado()["lugares"]
+        ids, meta, nomes, externos = [], {}, {}, {}
+        for aid, a in self.loja:
+            ids.append(aid)
+            if a.pasta_nome:
+                nomes[aid] = a.pasta_nome
+            if a.externo:
+                externos[aid] = True
+            meta[aid] = limpar({"palette": a.paleta, "hueShift": a.matiz, "seatId": (lugares.get(str(aid)) or {}).get("seatId")})
+        enviar({"type": "existingAgents", "agents": ids, "agentMeta": meta, "directoryNames": nomes, "externalAgents": externos})
+        enviar({"type": "layoutLoaded", "layout": P.ler_layout() or self.ativos.layout_padrao})
+        self._reenviar_atividade(enviar)
+        # o original manda o estado dos hooks depois (é assíncrono lá); a tela trata em qualquer ordem
+        enviar({"type": "hooksStatus", "providerId": "claude", "installed": instalado})
+        if not instalado and cfg["hooks"] is None and privilegiada:
+            enviar({"type": "hooksConsentRequest", "providerId": "claude", "headline": G.TITULO_CONSENTIMENTO,
+                    "disclosure": G.TEXTO_CONSENTIMENTO})
+
+    def _reenviar_atividade(self, enviar):
+        for aid, a in self.loja:
+            if a.equipe or a.nome or a.lider:
+                enviar(a.info_equipe(teamUsesTmux=a.equipe_tmux))
+            for tid, (st, nome) in list(a.ferramentas.items()):
+                if tid in a.segundo_plano:
+                    continue
+                enviar({"type": "agentToolStart", "id": aid, "toolId": tid, "status": st, "toolName": nome or ""})
+            for tid in a.segundo_plano:
+                if self.loja.promovido(aid, tid) or not a.status(tid):
+                    continue
+                enviar({"type": "agentToolStart", "id": aid, "toolId": tid, "status": a.status(tid),
+                        "toolName": a.nome_ferramenta(tid), "runInBackground": True,
+                        "isTeammateSpawn": (tid in a.spawns_colega) or None})
+            if a.esperando:
+                enviar({"type": "agentStatus", "id": aid, "status": "waiting"})
+            if a.contexto > 0:
+                enviar({"type": "agentContextUsage", "id": aid, "contextTokens": a.contexto, "maxContextTokens": a.contexto_max})
+
+    def _diagnostico(self):
+        saida = []
+        for a in self.loja.valores():
+            try:
+                tam, existe = os.path.getsize(a.jsonl), True
+            except OSError:
+                tam, existe = 0, False
+            saida.append({"id": a.id, "projectDir": a.pasta_projeto, "projectDirExists": os.path.exists(a.pasta_projeto),
+                          "jsonlFile": a.jsonl, "jsonlExists": existe, "fileSize": tam, "fileOffset": a.deslocamento,
+                          "lastDataAt": int(a.ultimo_dado * 1000), "linesProcessed": a.linhas})
+        return saida

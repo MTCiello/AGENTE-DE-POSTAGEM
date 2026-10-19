@@ -429,30 +429,20 @@ async function rodarAcao(acao) {
   } catch { /* o aviso de servidor desligado já apareceu */ }
 }
 
-// ------------------------------------------------------------------ o escritório (pixel-agents) como fundo da área de trabalho
-let fundo = { noAr: null, url: '', falhas: 0, ligando: 0 };
+// ------------------------------------------------------------------ o escritório de agentes como fundo da área de trabalho
+let fundo = { noAr: null, url: '' };
 async function fundoEscritorio() {
   let d; try { d = await api('/api/app/escritorio'); } catch { return; }
   if (typeof d.no_ar !== 'boolean') return; // resposta com erro: não mexe no que está na tela
-  if (d.no_ar) fundo.falhas = 0;
-  else if (fundo.noAr && ++fundo.falhas < 3) return; // uma demora do pixel-agents não derruba o escritório
-  if (d.no_ar === fundo.noAr && (d.url || '') === fundo.url) {
-    const b = $('#ligar'); // a ligação falhou (sem Node, porta ocupada): deixa tentar de novo
-    if (b && b.disabled && Date.now() - fundo.ligando > 90000) { b.disabled = false; b.textContent = 'Tentar ligar de novo'; }
-    return;
-  }
+  if (d.no_ar === fundo.noAr && (d.url || '') === fundo.url) return;
   fundo.noAr = d.no_ar; fundo.url = d.url || '';
   if (d.no_ar) {
-    $('#fundo').innerHTML = `<iframe id="escritorio" src="${esc(d.url)}" title="Escritório de agentes (pixel-agents)" allow="clipboard-write"></iframe>`;
+    $('#fundo').innerHTML = `<iframe id="escritorio" src="${esc(d.url)}" title="Escritório de agentes" allow="clipboard-write"></iframe>`;
     $('#escritorio').addEventListener('load', enviarControles);
     return;
   }
   $('#fundo').innerHTML = `<div class="papel-parede"><img src="/web/logo-marfim.svg" alt=""><b>CIELLO</b><span>assistente comercial</span>
-    <button class="bt ouro" id="ligar">Ligar o escritório</button><small>O escritório de agentes (pixel-agents) é o fundo desta área de trabalho.</small></div>`;
-  $('#ligar').onclick = async (e) => {
-    e.target.disabled = true; e.target.textContent = 'Ligando… (até 1 minuto na 1ª vez)'; fundo.ligando = Date.now();
-    try { await api('/api/escritorio/ligar', {}); } catch { e.target.disabled = false; }
-  };
+    <small>O escritório de agentes está desligado (o Ciello OS foi aberto com --sem-escritorio).</small></div>`;
 }
 
 // a ponte (web/ponte-escritorio.js, dentro do escritório) avisa quando um personagem é clicado

@@ -67,7 +67,7 @@ def node():
     _, out = rodar(["node", "--version"])
     maior = int(re.findall(r"\d+", out)[0])
     if maior < 20:
-        return FALHA, f"Node {out}: o pixel-agents e o Remotion precisam do 20 ou mais novo"
+        return FALHA, f"Node {out}: o Remotion precisa do 20 ou mais novo"
     if not (RAIZ / "reels" / "node_modules").exists():
         return AVISO, f"Node {out}, mas falta 'npm install' na pasta reels (o instalar.cmd faz isso)"
     return OK, f"Node {out} e reels/node_modules"
@@ -259,11 +259,16 @@ def capa():
 
 
 def escritorio():
-    if not shutil.which("npx"):
-        return FALHA, "npx não encontrado (vem com o Node.js)"
-    if not (RAIZ / "central" / "escritorio" / "layout-ciello.json").exists():
-        return FALHA, "layout-ciello.json não encontrado"
-    return OK, "pronto: clique em Escritorio-Ciello.cmd (pixel-agents 1.5.0 + layout da Ciello)"
+    """O escritório roda em Python dentro do Ciello OS: confere a tela compilada e se os sprites carregam."""
+    tela = RAIZ / "central" / "escritorio" / "web" / "escritorio"
+    if not (tela / "index.html").exists():
+        return FALHA, "tela do escritório não compilada (escritorio/webview-ui: npm install e npx vite build)"
+    sys.path.insert(0, str(RAIZ / "central" / "escritorio"))
+    from nucleo.ativos import Ativos
+    a = Ativos(tela)
+    if not a.personagens or not a.moveis:
+        return FALHA, "sprites do escritório não carregaram (pasta assets do build)"
+    return OK, f"pronto no Ciello.cmd: {len(a.personagens)} personagens, {len(a.moveis['catalog'])} móveis, sem Node"
 
 
 def voz():
@@ -286,7 +291,7 @@ def main():
              ("Testes automáticos", testes), ("Montagem final (mixar)", montagem), ("Oráculo de ritmo", oraculo),
              ("Relatório semanal", relatorio), ("Biblioteca de ganchos", ganchos), ("SDR", sdr),
              ("Financeiro (mês simulado)", financeiro), ("Briefing do dia", briefing), ("Ciello OS (porta 3200)", painel),
-             ("Equipe de agentes e comandos", equipe), ("Escritório (pixel-agents)", escritorio), ("Voz (opcional)", voz)]
+             ("Equipe de agentes e comandos", equipe), ("Escritório de agentes", escritorio), ("Voz (opcional)", voz)]
     if not a.rapido:
         lista += [("Radar (internet)", radar), ("Vigia de concorrentes (internet)", vigia), ("Capa (Remotion)", capa)]
     for nome, f in lista:

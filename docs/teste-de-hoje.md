@@ -38,7 +38,7 @@ Ele roda cada função de ponta a ponta e mostra `[ok]`, `[aviso]` ou `[FALHA]`:
 
 ## 4. Ciello OS e escritório · clique duas vezes em `Ciello.cmd`
 
-- [ ] Abriu a área de trabalho com o **escritório pixel-agents de fundo** e a barra de tarefas (numa janela própria do Edge). Na 1ª vez o escritório demora até 1 minuto; aceite a instalação dos hooks na apresentação dele.
+- [ ] Abriu a área de trabalho com o **escritório de agentes de fundo** e a barra de tarefas (numa janela própria do Edge). O escritório abre na hora (não precisa de Node); aceite a instalação dos hooks na apresentação dele.
 - [ ] Os apps estão no **menu Iniciar** (botão da nuvem).
 - [ ] Rode `/bom-dia` no Claude Code e **clique num personagem** que aparecer: abriu a janela daquele agente?
 - [ ] Arrastar, redimensionar, maximizar (duplo clique na barra) e encaixar na metade da tela (arrastar até a borda) funcionam?

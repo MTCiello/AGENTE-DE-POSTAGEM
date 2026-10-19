@@ -21,3 +21,6 @@ estado/
 # financeiro (clientes, faturas, extrato) fica no PC: só as regras de categoria vão para o git
 financeiro/*
 !financeiro/categorias.json
+
+# escritório (fork do pixel-agents): dependências de build ficam fora; o build compilado vai para o git
+escritorio/webview-ui/node_modules/
