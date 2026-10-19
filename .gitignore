@@ -1,3 +1,5 @@
 __pycache__/
 *.wav
 frames/
+reels/node_modules/
+reels/public/clone/*.mp4

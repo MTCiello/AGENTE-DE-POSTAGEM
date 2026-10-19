@@ -11,6 +11,7 @@ Toda semana ele pesquisa os vídeos de IA que estão viralizando, adapta 3 temas
 - `historico.md` — o que já foi postado
 - `central/` — narração, legendas e montagem final no PC, sem créditos (ver `central/README.md`)
 - `docs/app-comercial.md` — arquitetura do app de agentes (conteúdo + comercial)
+- `docs/clone-digital.md` — clone digital hiper-realista com modelos abertos e o modelo `CloneReel`
 
 Gerar um reel manualmente:
 

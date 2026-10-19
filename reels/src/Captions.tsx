@@ -6,7 +6,10 @@ import { C, F } from "./theme";
 // palavras vão escurecendo conforme são faladas. Palavras entre *asteriscos* ganham grifo dourado.
 export type Line = { from: number; to: number; text: string };
 
-export const Karaoke: React.FC<{ frame: number; fps: number; lines: Line[]; y?: number }> = ({ frame, fps, lines, y = 1350 }) => {
+// tema "video": para cenas com filmagem/clone ao fundo — letras claras com sombra.
+export const Karaoke: React.FC<{ frame: number; fps: number; lines: Line[]; y?: number; tema?: "claro" | "video" }> = ({ frame, fps, lines, y = 1350, tema = "claro" }) => {
+  const [de, para] = tema === "video" ? ["#B9B4A8", C.papel] : [C.cinzaTexto, C.carvao];
+  const sombra = tema === "video" ? "0 3px 14px rgba(0,0,0,0.75), 0 1px 2px rgba(0,0,0,0.9)" : "0 2px 0 rgba(255,255,255,0.35)";
   const t = frame / fps;
   const cur = lines.find((l) => t >= l.from && t < l.to);
   if (!cur) return null;
@@ -18,14 +21,14 @@ export const Karaoke: React.FC<{ frame: number; fps: number; lines: Line[]; y?: 
   const lift = interpolate(t - cur.from, [0, 0.25], [18, 0], { extrapolateRight: "clamp" });
   return (
     <div style={{ position: "absolute", left: 80, right: 80, top: y, textAlign: "center", opacity: fadeIn, transform: `translateY(${lift}px)` }}>
-      <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 68, lineHeight: 1.12, textTransform: "uppercase", letterSpacing: 1, textShadow: "0 2px 0 rgba(255,255,255,0.35)" }}>
+      <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 68, lineHeight: 1.12, textTransform: "uppercase", letterSpacing: 1, textShadow: sombra }}>
         {words.map((w, i) => {
           const clean = w.replace(/\*/g, "");
           const hl = w.includes("*");
           const ws = cur.from + (acc / total) * span;
           acc += clean.length + 1;
           const spoken = interpolate(t, [ws - 0.05, ws + 0.12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-          const color = mix(C.cinzaTexto, C.carvao, spoken);
+          const color = mix(de, para, spoken);
           return (
             <span key={i} style={{ color, position: "relative", display: "inline-block", marginRight: 16 }}>
               {clean}
