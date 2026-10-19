@@ -82,7 +82,17 @@ def libs_python():
 
 def testes():
     cod, out = rodar([PY, "-m", "unittest", "discover", "central/testes"])
-    return (OK if cod == 0 else FALHA), ultima(out, 2)
+    if cod == 0:
+        return OK, ultima(out, 2)
+    # nomeia o que falhou e a última linha do erro de cada um (vai também para estado/verificacao.txt)
+    motivos = []
+    for bloco in re.split(r"^={50,}$", out, flags=re.M)[1:]:
+        partes = re.split(r"^-{50,}$", bloco, flags=re.M)
+        if len(partes) < 2:
+            continue
+        erro = [l for l in partes[1].strip().splitlines() if l.strip()]
+        motivos.append(f"{partes[0].strip().split(' (')[0]} -> {erro[-1].strip()[:160] if erro else '?'}")
+    return FALHA, ultima(out, 1) + ("\n         " + "\n         ".join(motivos) if motivos else "")
 
 
 def montagem():

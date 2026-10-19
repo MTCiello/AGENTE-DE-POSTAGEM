@@ -27,7 +27,8 @@ https://github.com/MTCiello/AGENTE-DE-POSTAGEM/archive/refs/heads/ccr-75504115-g
 
 - Se faltar Git, Node, ffmpeg ou Python, ele instala pelo winget e pede para **fechar e rodar de novo**.
 - Depois cria o ambiente Python (`.venv`) e instala o Remotion (`reels`, o único que ainda usa Node).
-- No fim pergunta se instala a voz: **pode responder "N" hoje** (são uns 3 GB).
+- No fim pergunta se instala a voz (uns 3 GB). Se responder **S** e o seu Python for o 3.13, ele instala o Python 3.12 e refaz o ambiente do assistente nele, porque a voz ainda não roda no 3.13 (se pedir, feche e rode o `instalar.cmd` de novo).
+- O aviso amarelo `npm warn install-scripts ... esbuild` é só aviso do npm novo: pode ignorar.
 - Se o Windows avisar "o Windows protegeu o computador" num `.cmd`: **Mais informações → Executar assim mesmo**.
 
 ## 3. Verificar tudo (5 a 10 min) · clique duas vezes em `testar.cmd`

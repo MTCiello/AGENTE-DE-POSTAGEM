@@ -254,7 +254,9 @@ class TesteAtivos(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             self.assertEqual(pasta_de_sessoes("C:\\Users\\mateus\\AGENTE-DE-POSTAGEM", d).name, "C--Users-mateus-AGENTE-DE-POSTAGEM")
             (Path(d) / "c--users-mateus-agente-de-postagem").mkdir()
-            self.assertEqual(pasta_de_sessoes("C:\\Users\\mateus\\AGENTE-DE-POSTAGEM", d).name, "c--users-mateus-agente-de-postagem")
+            achada = pasta_de_sessoes("C:\\Users\\mateus\\AGENTE-DE-POSTAGEM", d)
+            self.assertTrue(achada.is_dir())  # no Windows o nome com outra caixa já é a mesma pasta
+            self.assertEqual(achada.name.lower(), "c--users-mateus-agente-de-postagem")
 
 
 if __name__ == "__main__":
