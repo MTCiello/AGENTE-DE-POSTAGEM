@@ -73,6 +73,12 @@ class TesteCielloOS(unittest.TestCase):
         self.assertEqual(st["codigo"], 0)
         self.assertIn("ola do teste", st["saida"])
 
+    def test_erro_numa_rota_vira_500_e_nao_derruba_a_conexao(self):
+        with mock.patch.object(servidor, "equipe", side_effect=IndexError("agente sem cabeçalho")):
+            cod, dado = self.pedir("GET", "/api/equipe")
+        self.assertEqual(cod, 500)
+        self.assertIn("IndexError", json.loads(dado)["erro"])
+
 
 class PixelFalso(BaseHTTPRequestHandler):
     """Faz o papel do pixel-agents: uma página HTML e um WebSocket que devolve o Host/Origin recebidos e ecoa."""
@@ -121,12 +127,15 @@ class TesteRepasseEscritorio(unittest.TestCase):
         self.assertIn(b"Pixel Agents", html)
 
     def test_websocket_passa_nos_dois_sentidos(self):
-        s_ = socket.create_connection(("127.0.0.1", self.srv.server_address[1]), timeout=10)
-        s_.sendall(b"GET /ws?token=abc HTTP/1.1\r\nHost: 127.0.0.1:3200\r\nOrigin: http://127.0.0.1:3200\r\n"
-                   b"Upgrade: websocket\r\nConnection: Upgrade\r\n\r\n")
+        porta_os = self.srv.server_address[1]
+        s_ = socket.create_connection(("127.0.0.1", porta_os), timeout=10)
+        s_.sendall(f"GET /ws?token=abc HTTP/1.1\r\nHost: 127.0.0.1:{porta_os}\r\nOrigin: http://127.0.0.1:{porta_os}\r\n"
+                   "Upgrade: websocket\r\nConnection: Upgrade\r\n\r\n".encode())
         recebido = b""
         while b"\n" not in recebido.split(b"\r\n\r\n", 1)[-1] or b"\r\n\r\n" not in recebido:
-            recebido += s_.recv(1000)
+            pedaco = s_.recv(1000)
+            self.assertTrue(pedaco, recebido)  # conexão fechada antes da resposta completa
+            recebido += pedaco
         self.assertTrue(recebido.startswith(b"HTTP/1.1 101"))
         caminho, host, origem = recebido.split(b"\r\n\r\n", 1)[1].decode().strip().split("|")
         porta = self.pixel.server_address[1]
@@ -134,6 +143,18 @@ class TesteRepasseEscritorio(unittest.TestCase):
         s_.sendall(b"ola")
         self.assertEqual(s_.recv(100), b"eco:ola")
         s_.close()
+
+
+    def test_outro_site_nao_abre_o_websocket_do_escritorio(self):
+        for origem in (b"https://site-malicioso.com", b"http://127.0.0.1:3100"):
+            s_ = socket.create_connection(("127.0.0.1", self.srv.server_address[1]), timeout=10)
+            s_.sendall(b"GET /ws?token=abc HTTP/1.1\r\nHost: 127.0.0.1:3200\r\nOrigin: " + origem +
+                       b"\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n")
+            resposta = b""
+            while chunk := s_.recv(1000):
+                resposta += chunk
+            s_.close()
+            self.assertTrue(resposta.startswith(b"HTTP/1.0 403"), resposta[:40])
 
 
 if __name__ == "__main__":

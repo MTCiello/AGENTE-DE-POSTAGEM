@@ -291,10 +291,13 @@ class Painel(BaseHTTPRequestHandler):
         self._enviar(json.dumps(dado, ensure_ascii=False, default=str).encode("utf-8"), "application/json; charset=utf-8", codigo)
 
     def _local(self):
-        """Só responde para quem chama pelo endereço local (evita outro site falando com o app pelo navegador)."""
+        """Só responde para o próprio app: endereço local no Host e, quando o navegador manda Origin (WebSocket,
+        POST), a origem tem de ser o Ciello OS. Sem isso, outro site aberto no navegador poderia ler o escritório."""
         host = (self.headers.get("Host") or "").split(":")[0]
-        if host not in ("127.0.0.1", "localhost"):
-            self._json({"erro": "só no endereço local"}, 403)
+        porta = self.server.server_address[1]
+        origem = self.headers.get("Origin")
+        if host not in ("127.0.0.1", "localhost") or (origem and origem not in (f"http://127.0.0.1:{porta}", f"http://localhost:{porta}")):
+            self._json({"erro": "só pelo próprio Ciello OS"}, 403)
             return False
         return True
 
@@ -354,6 +357,15 @@ class Painel(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self._local():
             return
+        try:
+            self._get()
+        except Exception as e:  # noqa: BLE001  um arquivo com problema vira erro 500, não "servidor desligado"
+            try:
+                self._json({"erro": f"{type(e).__name__}: {e}"}, 500)
+            except OSError:
+                pass
+
+    def _get(self):
         caminho = self.path.split("?")[0]
         if caminho == "/escritorio":
             self.send_response(301)
@@ -377,10 +389,7 @@ class Painel(BaseHTTPRequestHandler):
         if caminho == "/api/equipe":
             return self._json(equipe())
         if caminho.startswith("/api/app/") and caminho[9:] in APPS:
-            try:
-                return self._json(APPS[caminho[9:]]())
-            except Exception as e:  # noqa: BLE001
-                return self._json({"erro": f"{type(e).__name__}: {e}"}, 500)
+            return self._json(APPS[caminho[9:]]())
         if caminho.startswith("/api/execucao/"):
             ex = execucoes.get(caminho[14:])
             return self._json(ex) if ex else self._json({"erro": "execução não encontrada"}, 404)

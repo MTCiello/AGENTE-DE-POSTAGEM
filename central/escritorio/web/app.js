@@ -2,6 +2,7 @@
    menu Iniciar e janelas que movem e redimensionam. Clicar num personagem do escritório abre a janela daquele agente.
    Os dados vêm do servidor local (central/escritorio/servidor.py); os botões só rodam as ações da lista dele. */
 'use strict';
+const TOKEN = window.CIELLO_TOKEN; delete window.CIELLO_TOKEN; // fica só aqui dentro, não em window
 
 // ------------------------------------------------------------------ ícones (traço branco, 24x24)
 const SVG = {
@@ -60,7 +61,7 @@ const area = () => ({ w: $('#mesa').clientWidth, h: $('#mesa').clientHeight });
 let offline = false;
 
 async function api(caminho, corpo) {
-  const op = corpo ? { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Ciello-Token': window.CIELLO_TOKEN }, body: JSON.stringify(corpo) } : {};
+  const op = corpo ? { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Ciello-Token': TOKEN }, body: JSON.stringify(corpo) } : {};
   try {
     const r = await fetch(caminho, op);
     if (offline) { offline = false; aviso({ titulo: 'Conectado de novo', texto: 'O servidor do Ciello OS voltou.', cor: '#1F8A4C' }); }
@@ -416,16 +417,23 @@ async function rodarAcao(acao) {
 }
 
 // ------------------------------------------------------------------ o escritório (pixel-agents) como fundo da área de trabalho
-let fundoNoAr = null;
+let fundo = { noAr: null, url: '', falhas: 0, ligando: 0 };
 async function fundoEscritorio() {
   let d; try { d = await api('/api/app/escritorio'); } catch { return; }
-  if (d.no_ar === fundoNoAr) return;
-  fundoNoAr = d.no_ar;
+  if (typeof d.no_ar !== 'boolean') return; // resposta com erro: não mexe no que está na tela
+  if (d.no_ar) fundo.falhas = 0;
+  else if (fundo.noAr && ++fundo.falhas < 3) return; // uma demora do pixel-agents não derruba o escritório
+  if (d.no_ar === fundo.noAr && (d.url || '') === fundo.url) {
+    const b = $('#ligar'); // a ligação falhou (sem Node, porta ocupada): deixa tentar de novo
+    if (b && b.disabled && Date.now() - fundo.ligando > 90000) { b.disabled = false; b.textContent = 'Tentar ligar de novo'; }
+    return;
+  }
+  fundo.noAr = d.no_ar; fundo.url = d.url || '';
   if (d.no_ar) { $('#fundo').innerHTML = `<iframe id="escritorio" src="${esc(d.url)}" title="Escritório de agentes (pixel-agents)" allow="clipboard-write"></iframe>`; return; }
   $('#fundo').innerHTML = `<div class="papel-parede"><img src="/web/logo-marfim.svg" alt=""><b>CIELLO</b><span>assistente comercial</span>
     <button class="bt ouro" id="ligar">Ligar o escritório</button><small>O escritório de agentes (pixel-agents) é o fundo desta área de trabalho.</small></div>`;
   $('#ligar').onclick = async (e) => {
-    e.target.disabled = true; e.target.textContent = 'Ligando… (até 1 minuto na 1ª vez)';
+    e.target.disabled = true; e.target.textContent = 'Ligando… (até 1 minuto na 1ª vez)'; fundo.ligando = Date.now();
     try { await api('/api/escritorio/ligar', {}); } catch { e.target.disabled = false; }
   };
 }
@@ -446,12 +454,22 @@ function abrirDoEscritorio(agente, tarefa) {
   abrir(`agente:${agente}`);
 }
 window.addEventListener('message', (e) => {
-  if (e.origin !== location.origin || !e.data || e.data.ciello !== 'escritorio' || e.data.evento !== 'clique') return;
+  const f = $('#escritorio');
+  if (e.origin !== location.origin || !f || e.source !== f.contentWindow || !e.data || e.data.ciello !== 'escritorio') return;
+  if (e.data.evento === 'terminou') { // o subagente acabou: some o "pedido no escritório" da janela dele
+    (e.data.rotulos || []).map(agenteDoRotulo).filter(Boolean).forEach((a) => { noEscritorio[a] = null; const j = janelas.get(`agente:${a}`); if (j) desenhar(j, true); });
+    return;
+  }
+  if (e.data.evento !== 'clique') return;
   const proprio = agenteDoRotulo(e.data.nome);
   if (proprio) return void abrirDoEscritorio(proprio, '');
   // o coordenador e os subagentes dele dividem o mesmo id: abre quem está trabalhando com ele ("sdr: follow-ups" -> SDR)
-  const ajudantes = (e.data.ajudantes || []).map((r) => [agenteDoRotulo(r), r.split(':').slice(1).join(':').trim()]).filter(([a]) => a);
-  if (ajudantes.length) return void ajudantes.slice(0, 3).forEach(([a, t]) => abrirDoEscritorio(a, t));
+  const porAgente = new Map();
+  for (const r of e.data.ajudantes || []) {
+    const a = agenteDoRotulo(r); if (!a) continue;
+    porAgente.set(a, [...(porAgente.get(a) || []), r.split(':').slice(1).join(':').trim()]);
+  }
+  if (porAgente.size) return void [...porAgente].slice(-3).forEach(([a, t]) => abrirDoEscritorio(a, t.join(' · ')));
   abrir('equipe');
 });
 
@@ -563,7 +581,7 @@ async function renderAgente(j) {
   const s = estadoAgente(a.nome);
   const eventos = estadoCache.eventos.filter((e) => e.agente === a.nome).slice(0, 10);
   const resto = a.descricao.split(': ').slice(1);
-  j.corpo.innerHTML = `<div class="cab-agente"><div class="avatar">${sprite(a.nome, 44)}</div><div><h1>${esc(nome(a.nome))}</h1><p>${esc(papel(a.descricao))}</p><div style="margin-top:8px">${tarefaNoEscritorio(a.nome) ? `${chipEstado('trabalhando')} <small class="neutro">no escritório: ${esc(tarefaNoEscritorio(a.nome))}</small>` : `${chipEstado(s.estado)} ${s.tarefa && s.estado !== 'parado' ? `<small class="neutro">${esc(s.tarefa)}</small>` : ''}`}</div></div></div>
+  j.corpo.innerHTML = `<div class="cab-agente"><div class="avatar">${sprite(a.nome, 44)}</div><div><h1>${esc(nome(a.nome))}</h1><p>${esc(papel(a.descricao))}</p><div style="margin-top:8px">${chipEstado(s.estado)} ${s.tarefa && s.estado !== 'parado' ? `<small class="neutro">${esc(s.tarefa)}</small>` : ''}${tarefaNoEscritorio(a.nome) ? `<small class="neutro" style="display:block;margin-top:4px">pedido no escritório: ${esc(tarefaNoEscritorio(a.nome))}</small>` : ''}</div></div></div>
   <div class="pagina"><h2 style="margin-top:0">O que faz</h2><p>${esc(resto.join(': ').replace(/ Use proactively.*$/, '') || a.descricao)}</p>
   ${a.acoes.length ? `<h2>Rodar agora</h2><div class="acoes" style="margin-top:0">${a.acoes.map((x, i) => `<button class="bt ${i ? '' : 'pri'}" data-acao="${esc(x.id)}">${icone('play')} ${esc(x.rotulo)}</button>`).join('')}</div>` : ''}
   ${COMANDOS[a.nome] ? `<h2>No Claude Code</h2><p class="comandos">${COMANDOS[a.nome].map((c) => `<code>${c}</code>`).join('')} ou "use o ${esc(a.nome)} para…"</p>` : ''}
@@ -601,7 +619,8 @@ async function iniciar() {
   await Promise.all([puxarEquipe(), puxarEstado()]);
   setInterval(puxarEstado, 1500); setInterval(puxarEquipe, 15000);
   const pedido = new URLSearchParams(location.hash.slice(1)).get('abrir');
-  const lista = pedido ? pedido.split(',') : (SALVO.abertas.length ? SALVO.abertas : ['briefing']);
+  // um link só abre janelas (nunca roda ação) e no máximo 6
+  const lista = (pedido ? pedido.split(',') : (SALVO.abertas.length ? SALVO.abertas : ['briefing'])).filter((k) => { const d = definicao(k); return d && !d.acao; }).slice(0, 6);
   lista.forEach((k) => abrir(k));
 }
 iniciar();

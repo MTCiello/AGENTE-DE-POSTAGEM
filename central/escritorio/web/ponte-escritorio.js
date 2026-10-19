@@ -12,6 +12,8 @@
   function recebido(m) {
     if (!m || typeof m !== 'object') return;
     if (m.type === 'existingAgents') {
+      // retrato completo (também depois de o pixel-agents reiniciar e os ids recomeçarem): esquece o que sabia
+      nomes.clear(); ajudantes.clear();
       for (const id of m.agents || []) {
         const meta = (m.agentMeta || {})[id] || {};
         if (meta.agentName || meta.teammateName) nomes.set(id, meta.agentName || meta.teammateName);
@@ -27,7 +29,14 @@
         ajudantes.get(m.id).set(m.toolId, st.slice(8).trim());
       }
     } else if (m.type === 'subagentClear') {
+      const rotulo = ajudantes.get(m.id)?.get(m.parentToolId);
       ajudantes.get(m.id)?.delete(m.parentToolId);
+      if (rotulo) avisar({ evento: 'terminou', rotulos: [rotulo] });
+    } else if (m.type === 'agentToolsClear') {
+      // fim do turno ou Esc: o pixel-agents limpa os subagentes sem mandar subagentClear (os de 2º plano voltam em seguida)
+      const rotulos = [...(ajudantes.get(m.id) || new Map()).values()];
+      ajudantes.delete(m.id);
+      if (rotulos.length) avisar({ evento: 'terminou', rotulos });
     } else if (m.type === 'agentClosed') {
       nomes.delete(m.id); ajudantes.delete(m.id);
     }
