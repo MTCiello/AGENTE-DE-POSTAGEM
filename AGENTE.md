@@ -36,6 +36,7 @@ Procedimento semanal que o agente segue toda vez que roda. Este arquivo é a fon
 11. **Avisar o Mateus** com um resumo curto: os 3 temas, por que cada um, e os horários agendados.
 
 ## Regras
+- **GitHub primeiro.** Antes de construir qualquer função nova, procurar um repositório aberto que já resolva (licença que permita uso comercial, mantido, bem avaliado) e integrar. Código próprio só para costurar as peças ou quando não existir nada pronto.
 - Se qualquer passo falhar (vidIQ sem créditos, push rejeitado, Metricool recusou), não publique pela metade: agende como rascunho (`draft: true`) e avise o que falhou.
 - Não repostar vídeo de terceiros, não usar logo/marca de outras empresas além de citar o nome do produto.
 - Toda a comunicação em português do Brasil.
