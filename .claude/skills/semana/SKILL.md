@@ -15,4 +15,4 @@ Coordene a equipe para produzir e agendar os 3 reels da próxima semana (seg/qua
 5. **postagem**: legendas e agendamento no Metricool (rascunho se faltar algo).
 6. Resumo final em uma tabela: tema, gancho, horário, status, link do Metricool.
 
-Sempre chame os agentes pelo nome, para que apareçam como personagens separados no pixel-agents.
+**Escritório (pixel-agents):** chame cada agente pelo nome. Com as equipes do Claude Code ligadas (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`), crie **teammates** com o tipo e o nome do agente (ex.: teammate `sdr` do tipo `sdr`): cada um ganha personagem e mesa com o nome. Sem equipes, use subagentes com a descrição começando pelo nome do agente (ex.: `sdr: follow-ups do dia`), que aparece no balão do personagem.

@@ -25,28 +25,40 @@ Nove agentes especialistas em `.claude/agents/`, coordenados por três comandos 
 
 Também dá para chamar um agente direto: "use o sdr para gerar 20 leads de odontologia em Xanxerê".
 
-## Ver quem está trabalhando: Escritório Ciello
+## Escritório: pixel-agents original
 
-Painel próprio, sem Claude Code, VS Code ou Docker: só Python e o navegador.
+O escritório é o [pixel-agents](https://github.com/pablodelucca/pixel-agents) **original**, sem nenhuma alteração no código. É instalado pelo npm na versão fixada **1.5.0** (MIT, © Pablo De Lucca; personagens baseados no [Metro City, de JIK-A-4](https://jik-a-4.itch.io/metrocity-free-topdown-character-pack)). Ele roda em modo standalone, no navegador, sem VS Code.
 
-```powershell
-python central/escritorio/servidor.py          # abre http://127.0.0.1:3100
-python central/escritorio/servidor.py --demo   # personagens animados de teste
-```
+**Abrir:** clique duas vezes em `Escritorio-Ciello.cmd` (ou `python central/escritorio/abrir.py`). O lançador:
+1. confere o Node.js 20+;
+2. instala na primeira vez o layout da Ciello em `~/.pixel-agents/layout.json`, guardando backup do anterior (`--layout` reinstala);
+3. sobe `npx pixel-agents@1.5.0 --port 3100` **na pasta do assistente**, que é o que faz o escritório acompanhar as sessões do Claude Code desta pasta;
+4. abre o navegador com o token.
 
-- **Escritório em pixel art** (desenhado em código, sem imagens de terceiros): um personagem por agente, por setor (Pesquisa, Estúdio, Postagem, Análise & Anúncios, Comercial), com a I.V.A. coordenando.
-  - **Trabalhando:** digitando, com o monitor aceso.
-  - **Pensando:** balão "…".
-  - **Precisa de você:** balão "!" e acenando.
-  - **Pronto:** balão "✓".
-  - **Erro:** balão "×".
-- **Crescimento:** seguidores, alcance, tempo médio no reel (meta 6 s) e salvamentos (meta 1%), a partir de `metricas/`.
-- **Comercial:** funil novo → contatado → respondeu → demo → proposta → cliente, com a conversão de cada etapa (`comercial/leads.csv`).
-- **Anúncios:** investido, conversas, custo por conversa e custo por cliente (`anuncios/*.json`).
-- **De onde vem o estado:**
-  - as ferramentas avisam sozinhas (`radar`, `ganchos`, `sdr`, `relatorio`, `voz`, `mixar`);
-  - os agentes do Claude avisam com `python central/status.py <agente> trabalhando|esperando|pronto "tarefa"`;
-  - tudo cai em `estado/eventos.jsonl`, que fica fora do git.
+**Primeira vez:** a apresentação do pixel-agents pede para instalar os hooks do Claude Code. Aceite: é o modo mais preciso.
+
+**O layout da Ciello** (`central/escritorio/layout-ciello.json`, gerado por `gerar_layout.py` com os mesmos móveis e módulos do layout padrão):
+
+| Sala | Áreas | Lugares |
+|---|---|---|
+| Esquerda | **Pesquisa** (em cima) e **Estúdio** (embaixo) | 4 estações |
+| Meio | **Comercial**: mesa da equipe de vendas e sofás para demonstração | 4 cadeiras + sofás |
+| Direita | **Análise & Anúncios** (em cima) e **Postagem** (embaixo) | 4 estações |
+
+O editor **Layout** do próprio pixel-agents continua funcionando para mudar o que quiser.
+
+**Como os agentes aparecem:**
+- **Com equipes ligadas** (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` no `.claude/settings.json` do seu PC): `/semana`, `/comercial` e `/segunda` criam teammates com o nome de cada agente (sdr, closer, pesquisador-mercado…). Cada um senta numa mesa com o nome em cima. As equipes são experimentais e gastam mais uso.
+- **Sem equipes:** os agentes rodam como subagentes e aparecem como personagens ao lado do coordenador, com o balão mostrando "sdr: follow-ups do dia".
+- **Animações do próprio pixel-agents:** digitando quando trabalha, "…" quando pede permissão, ✓ quando termina, passeio pelo escritório quando está livre.
+
+## Painel de crescimento (separado do escritório)
+
+`python central/escritorio/servidor.py` abre `http://127.0.0.1:3200` com:
+- Instagram: seguidores, alcance, tempo médio e salvamentos;
+- funil comercial;
+- anúncios: investido, custo por conversa e custo por cliente;
+- atividade das ferramentas Python (`central/status.py`).
 
 ## Próximas integrações candidatas (foco: métricas, anúncios e crescimento)
 

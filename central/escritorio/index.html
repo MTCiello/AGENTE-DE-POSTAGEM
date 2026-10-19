@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Escritório Ciello</title>
+<title>Painel Ciello</title>
 <style>
   :root { --carvao:#161616; --carvao2:#222120; --linha:#34322f; --marfim:#F7F4EC; --cinza:#9A958A; --ouro:#E0A81C; --verde:#3DBE6E; --vermelho:#E2553E; }
   * { box-sizing: border-box; }
@@ -12,10 +12,9 @@
   header b { font-family: Oswald, "Arial Narrow", sans-serif; letter-spacing:6px; font-size:18px; }
   header span { color:var(--cinza); font-size:13px; }
   header .ponto { width:10px; height:10px; border-radius:50%; background:var(--ouro); box-shadow:0 0 10px var(--ouro); }
-  main { display:grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); gap:18px; padding:18px 22px; }
+  main { display:grid; grid-template-columns: 1fr 1fr; gap:18px; padding:18px 22px; }
   .card { background:var(--carvao2); border:1px solid var(--linha); border-radius:14px; padding:16px 18px; }
   .card h2 { margin:0 0 12px; font-size:12px; letter-spacing:4px; color:var(--ouro); font-weight:600; text-transform:uppercase; }
-  canvas { width:100%; height:auto; display:block; border-radius:10px; image-rendering: pixelated; }
   .lado { display:flex; flex-direction:column; gap:18px; }
   .kpis { display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; }
   .kpi { background:#1b1a19; border-radius:10px; padding:10px 12px; }
@@ -26,124 +25,27 @@
   .funil div { display:flex; align-items:center; gap:8px; margin:5px 0; font-size:12px; }
   .funil i { display:block; height:16px; background:var(--ouro); border-radius:4px; min-width:2px; }
   .funil span { width:78px; color:var(--cinza); } .funil b { width:30px; text-align:right; }
-  .agora div, .feed div { font-size:12px; padding:5px 0; border-bottom:1px solid #2a2927; display:flex; gap:8px; }
-  .agora .nome { width:128px; color:var(--cinza); } .feed time { color:var(--cinza); width:42px; }
+  .feed div { font-size:12px; padding:5px 0; border-bottom:1px solid #2a2927; display:flex; gap:8px; }
+  .feed time { color:var(--cinza); width:42px; }
   .vazio { color:var(--cinza); font-size:12px; }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
-<header><div class="ponto"></div><b>ESCRITÓRIO CIELLO</b><span id="relogio"></span></header>
+<header><div class="ponto"></div><b>PAINEL CIELLO</b><span>crescimento · comercial · anúncios — o escritório dos agentes é o pixel-agents (porta 3100)</span><span id="relogio"></span></header>
 <main>
   <div class="lado">
-    <div class="card"><canvas id="sala" width="960" height="600"></canvas></div>
-    <div class="card"><h2>Agora</h2><div class="agora" id="agora"></div></div>
+    <div class="card"><h2>Crescimento · Instagram</h2><div id="insta" class="kpis"></div><svg id="serie" width="100%" height="46"></svg></div>
+    <div class="card"><h2>Anúncios</h2><div id="ads" class="kpis"></div></div>
   </div>
   <div class="lado">
-    <div class="card"><h2>Crescimento · Instagram</h2><div id="insta" class="kpis"></div><svg id="serie" width="100%" height="46"></svg></div>
     <div class="card"><h2>Comercial · funil</h2><div id="funil" class="funil"></div></div>
-    <div class="card"><h2>Anúncios</h2><div id="ads" class="kpis"></div></div>
-    <div class="card"><h2>Atividade</h2><div id="feed" class="feed"></div></div>
+    <div class="card"><h2>Atividade das ferramentas</h2><div id="feed" class="feed"></div></div>
   </div>
 </main>
 <script>
-// ------------------------------------------------------------------ escritório em pixel art (desenhado em código)
-const cv = document.getElementById('sala'), g = cv.getContext('2d');
-g.imageSmoothingEnabled = false;
-const P = 4; // tamanho do "pixel"
-const px = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(x) * P, Math.round(y) * P, w * P, h * P); };
-
-const AGENTES = {
-  'pesquisador-mercado': { nome: 'Pesquisa',   cor: '#2FB7C4', cabelo: '#3b2a20', x: 22,  y: 52 },
-  'roteirista':          { nome: 'Roteiro',    cor: '#B9B4A8', cabelo: '#111111', x: 62,  y: 52 },
-  'produtor-video':      { nome: 'Vídeo',      cor: '#D9533B', cabelo: '#6b3e1f', x: 112, y: 52 },
-  'produtor-imagem':     { nome: 'Imagem',     cor: '#EE8A2B', cabelo: '#2b1b12', x: 152, y: 52 },
-  'postagem':            { nome: 'Postagem',   cor: '#3DBE6E', cabelo: '#c9a15c', x: 200, y: 52 },
-  'analista':            { nome: 'Análise',    cor: '#8E6BD8', cabelo: '#1d1d1d', x: 22,  y: 104 },
-  'gestor-anuncios':     { nome: 'Anúncios',   cor: '#E06AA8', cabelo: '#5a3622', x: 62,  y: 104 },
-  'sdr':                 { nome: 'SDR',        cor: '#3E7BD9', cabelo: '#2a1a10', x: 136, y: 104 },
-  'closer':              { nome: 'Closer',     cor: '#E0A81C', cabelo: '#141414', x: 176, y: 104 },
-};
-const SETORES = [
-  { nome: 'PESQUISA', x: 10, y: 34, w: 88 }, { nome: 'ESTÚDIO', x: 100, y: 34, w: 88 }, { nome: 'POSTAGEM', x: 190, y: 34, w: 44 },
-  { nome: 'ANÁLISE & ANÚNCIOS', x: 10, y: 86, w: 88 }, { nome: 'COMERCIAL', x: 124, y: 86, w: 88 },
-];
-let estado = {};
-
-function cenario(t) {
-  // parede com janelas e o horizonte de Chapecó
-  px(0, 0, 240, 30, '#2a2724');
-  for (let i = 0; i < 6; i++) {
-    const wx = 8 + i * 39;
-    px(wx, 5, 30, 18, '#1d2a3a');
-    for (let b = 0; b < 7; b++) { const h = 4 + ((b * 7 + i * 3) % 9); px(wx + b * 4 + 1, 23 - h, 3, h, '#2c3e55'); }
-    px(wx, 5, 30, 1, '#4a4540'); px(wx + 14, 5, 1, 18, '#4a4540');
-  }
-  px(0, 30, 240, 2, '#3a3632');
-  // piso em tábuas
-  for (let y = 32; y < 150; y += 4) for (let x = 0; x < 240; x += 16) px(x + ((y / 4) % 2) * 8, y, 15, 3, (x + y) % 32 ? '#3b3530' : '#383230');
-  // setores
-  for (const s of SETORES) { px(s.x, s.y, s.w, 1, '#E0A81C55'); g.fillStyle = '#E0A81C'; g.font = '600 13px Oswald, Arial Narrow, sans-serif'; g.fillText(s.nome, s.x * P, (s.y - 1) * P); }
-  // café e plantas
-  px(222, 92, 10, 14, '#5c5650'); px(224, 94, 6, 4, '#1d1d1d'); px(226, 99, 2, 3, '#E0A81C');
-  px(104, 118, 6, 8, '#6b4a2e'); px(102, 112, 10, 7, '#2f7d4a'); px(104, 110, 6, 3, '#3a9a5c');
-  // I.V.A., a mascote, coordenando
-  const bob = Math.sin(t / 500) * 0.6;
-  px(108, 92 + bob, 12, 10, '#2D3884'); px(109, 93 + bob, 10, 6, '#3A4D57');
-  const pisca = (Math.floor(t / 1700) % 6) === 0;
-  if (!pisca) { px(111, 95 + bob, 2, 2, '#3CF5F0'); px(115, 95 + bob, 2, 2, '#3CF5F0'); }
-  px(112, 97 + bob, 4, 1, '#3CF5F0'); px(109, 102 + bob, 10, 2, '#1F2766'); px(117, 100 + bob, 1, 1, '#F26B24');
-}
-
-function mesa(a, st, t) {
-  const { x, y, cor } = a;
-  const ligado = st === 'trabalhando' || st === 'pensando';
-  // monitor
-  px(x + 4, y - 14, 16, 10, '#1a1a1a');
-  px(x + 5, y - 13, 14, 8, ligado ? '#10202a' : '#0c0c0c');
-  if (ligado) for (let l = 0; l < 4; l++) { const w = 3 + ((Math.floor(t / 180) + l * 5) % 9); px(x + 6, y - 12 + l * 2, w, 1, l % 2 ? cor : '#7fd3c8'); }
-  px(x + 11, y - 4, 2, 2, '#2a2a2a');
-  // mesa
-  px(x, y - 2, 24, 3, '#8a6a46'); px(x, y + 1, 24, 1, '#5e4630'); px(x + 1, y + 2, 2, 8, '#5e4630'); px(x + 21, y + 2, 2, 8, '#5e4630');
-}
-
-function pessoa(a, st, t) {
-  const { x, y, cor, cabelo } = a;
-  const cx = x + 9, cy = y + 4;
-  const bob = st === 'parado' ? Math.round(Math.sin(t / 700 + x) * 0.5) : 0;
-  const pulo = st === 'esperando' ? -Math.abs(Math.round(Math.sin(t / 160) * 2)) : 0;
-  const yy = cy + bob + pulo;
-  px(cx, yy + 6, 6, 5, cor);                    // tronco
-  px(cx + 1, yy + 11, 4, 3, '#2b2b35');         // pernas
-  px(cx + 1, yy, 4, 5, '#e2b08a');              // rosto
-  px(cx, yy - 1, 6, 2, cabelo); px(cx, yy, 1, 2, cabelo);
-  if (st === 'trabalhando') {                   // digitando: braços alternando
-    const f = Math.floor(t / 120) % 2;
-    px(cx - 1, yy + 6 + f, 1, 3, cor); px(cx + 6, yy + 7 - f, 1, 3, cor);
-  } else if (st === 'esperando') {              // acenando
-    px(cx + 6, yy + 3 + Math.round(Math.sin(t / 120)), 1, 4, cor);
-  } else { px(cx - 1, yy + 7, 1, 3, cor); px(cx + 6, yy + 7, 1, 3, cor); }
-  // balão
-  const balao = { pensando: ['…', '#F7F4EC'], esperando: ['!', '#E0A81C'], pronto: ['✓', '#3DBE6E'], erro: ['×', '#E2553E'] }[st];
-  if (balao) {
-    px(cx - 1, yy - 9, 8, 6, balao[1]); px(cx + 1, yy - 3, 2, 1, balao[1]);
-    g.fillStyle = '#161616'; g.font = 'bold 18px Arial'; g.textAlign = 'center'; g.fillText(balao[0], (cx + 3) * P, (yy - 4.3) * P); g.textAlign = 'left';
-  }
-  // nome
-  g.fillStyle = st === 'parado' ? '#8a857a' : '#F7F4EC'; g.font = '600 12px Inter, Arial, sans-serif';
-  g.fillText(a.nome, x * P, (y + 20) * P);
-}
-
-function desenhar(t) {
-  g.clearRect(0, 0, cv.width, cv.height);
-  cenario(t);
-  for (const [id, a] of Object.entries(AGENTES)) {
-    const st = (estado[id] || {}).estado || 'parado';
-    mesa(a, st, t); pessoa(a, st, t);
-  }
-  requestAnimationFrame(desenhar);
-}
-requestAnimationFrame(desenhar);
+const NOMES = { 'pesquisador-mercado': 'Pesquisa', roteirista: 'Roteiro', 'produtor-video': 'Vídeo', 'produtor-imagem': 'Imagem', postagem: 'Postagem',
+  analista: 'Análise', 'gestor-anuncios': 'Anúncios', sdr: 'SDR', closer: 'Closer' };
 
 // ------------------------------------------------------------------ dados
 const fmt = n => (n ?? 0).toLocaleString('pt-BR');
@@ -153,13 +55,8 @@ const COR = { trabalhando: 'bom', pensando: 'neutro', esperando: 'ruim', pronto:
 async function puxarEstado() {
   try {
     const r = await (await fetch('/api/estado')).json();
-    estado = r.agentes;
-    document.getElementById('agora').innerHTML = Object.entries(AGENTES).map(([id, a]) => {
-      const e = estado[id] || { estado: 'parado', tarefa: '' };
-      return `<div><span class="nome">${a.nome}</span><span class="${COR[e.estado]}">${ROTULO[e.estado] || e.estado}</span><span class="neutro">${e.tarefa || ''}</span></div>`;
-    }).join('');
-    document.getElementById('feed').innerHTML = r.eventos.slice(0, 8).map(e =>
-      `<div><time>${e.ts.slice(11, 16)}</time><span>${(AGENTES[e.agente] || { nome: e.agente }).nome}: ${ROTULO[e.estado] || e.estado} · ${e.tarefa}</span></div>`).join('') || '<p class="vazio">Sem atividade ainda.</p>';
+    document.getElementById('feed').innerHTML = r.eventos.slice(0, 12).map(e =>
+      `<div><time>${e.ts.slice(11, 16)}</time><span>${NOMES[e.agente] || e.agente}: ${ROTULO[e.estado] || e.estado} · ${e.tarefa}</span></div>`).join('') || '<p class="vazio">Sem atividade ainda.</p>';
   } catch (e) { /* servidor fora do ar: tenta de novo */ }
 }
 

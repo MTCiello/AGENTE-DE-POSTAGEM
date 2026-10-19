@@ -1,9 +1,8 @@
-"""Escritório Ciello: quem está trabalhando e como a empresa está crescendo, num painel só.
+"""Painel Ciello: como a empresa está crescendo (Instagram, funil comercial, anúncios) e o que as ferramentas rodaram.
 
-Não depende de Claude Code nem de VS Code: só Python e o navegador.
+O escritório dos agentes é o pixel-agents original (central/escritorio/abrir.py, porta 3100); este painel fica na 3200.
 
-  python central/escritorio/servidor.py          # abre http://127.0.0.1:3100
-  python central/escritorio/servidor.py --demo   # agentes animados de mentira, para ver o escritório funcionando
+  python central/escritorio/servidor.py          # abre http://127.0.0.1:3200
 
 Fontes (todas locais):
   estado/eventos.jsonl     o que cada agente está fazendo (central/status.py)
@@ -14,7 +13,6 @@ Fontes (todas locais):
 import argparse
 import csv
 import json
-import random
 import sys
 import threading
 import time
@@ -98,35 +96,14 @@ class Painel(BaseHTTPRequestHandler):
         self.wfile.write(corpo)
 
 
-def demo():
-    tarefas = {
-        "pesquisador-mercado": ["radar da semana", "reels dos concorrentes", "checando fonte oficial"],
-        "roteirista": ["roteiro: 5 comandos do ChatGPT", "gancho no formato lista"],
-        "produtor-video": ["narração da cena 2", "render do reel", "mixando trilha"],
-        "produtor-imagem": ["capa do reel", "carrossel de 7 telas"],
-        "postagem": ["legenda + hashtags", "agendando sex 10h"],
-        "analista": ["retrato da semana", "relatório de segunda"],
-        "sdr": ["leads de odontologia em Chapecó", "15 abordagens", "follow-ups do dia"],
-        "closer": ["proposta para imobiliária", "roteiro da demo"],
-        "gestor-anuncios": ["plano de teste R$ 15/dia", "lendo custo por conversa"],
-    }
-    while True:
-        a = random.choice(list(tarefas))
-        status.registrar(a, random.choice(["trabalhando", "trabalhando", "pensando", "esperando", "pronto"]), random.choice(tarefas[a]))
-        time.sleep(random.uniform(0.8, 2.2))
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--porta", type=int, default=3100)
-    ap.add_argument("--demo", action="store_true")
+    ap.add_argument("--porta", type=int, default=3200)
     ap.add_argument("--sem-navegador", action="store_true")
     a = ap.parse_args()
-    if a.demo:
-        threading.Thread(target=demo, daemon=True).start()
     srv = ThreadingHTTPServer(("127.0.0.1", a.porta), Painel)
     url = f"http://127.0.0.1:{a.porta}"
-    print("Escritório Ciello em", url, "(Ctrl+C para sair)")
+    print("Painel Ciello em", url, "(Ctrl+C para sair)")
     if not a.sem_navegador:
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()
     try:

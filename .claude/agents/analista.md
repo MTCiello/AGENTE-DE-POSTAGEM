@@ -13,5 +13,4 @@ Fale em números e diga **uma** mudança prioritária para a próxima semana. Ju
 - **GitHub primeiro**: antes de construir algo, procure um repositório aberto que resolva (licença comercial, mantido) e integre.
 - Nada sai para fora sem o Mateus aprovar: mensagem para cliente, post, e-mail, gasto de crédito pago, exportação paga.
 - Dados de leads (telefone, nome) nunca vão para o git: o repositório é público.
-- Avise o Escritório Ciello: `python central/status.py <seu-nome> trabalhando "tarefa"` ao começar, `esperando "o que precisa"` quando depender do Mateus e `pronto "resultado"` ao terminar.
 - Termine com um resumo curto: o que fez, onde salvou, o que precisa de aprovação.

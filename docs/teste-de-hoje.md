@@ -76,12 +76,12 @@ python central/sdr.py abordar --top 10
 - [ ] As empresas do topo são de fato bons clientes para o CRM? Anote 2 que estão fora do lugar.
 - [ ] Me mande o modelo de planilha de importação do CIELLO CRM (só o cabeçalho), para eu ajustar o `crm`.
 
-## 8. Escritório Ciello · ~2 min
-```powershell
-python central/escritorio/servidor.py --demo
-```
-- [ ] Abriu no navegador o escritório com os 9 personagens se mexendo e o painel com seguidores, alcance e funil.
-- [ ] Sem o `--demo`: rode o `sdr.py` ou o `radar.py` em outro terminal e veja o personagem certo começar a trabalhar.
+## 8. Escritório (pixel-agents original) · ~5 min
+Clique duas vezes em `Escritorio-Ciello.cmd`.
+- [ ] Abriu no navegador o pixel-agents com as 3 salas da Ciello (Pesquisa/Estúdio, Comercial, Análise/Postagem).
+- [ ] Na apresentação, aceite a instalação dos hooks.
+- [ ] Abra o Claude Code nesta pasta (pelo **+ Agent** do escritório ou num terminal) e rode `/comercial`: o coordenador senta numa mesa e os agentes aparecem trabalhando.
+- [ ] Opcional: ligue as equipes (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`) para cada agente ter mesa com o nome.
 
 ## 9. Voz e montagem final (opcional hoje)
 ```powershell
