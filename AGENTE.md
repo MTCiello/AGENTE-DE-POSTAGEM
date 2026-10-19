@@ -29,11 +29,12 @@ Procedimento semanal que o agente segue toda vez que roda. Este arquivo é a fon
 7. **Montar o final**: `python central/mixar.py midia/X.mp4 audio/<slug>/narracao.wav midia/final/X.mp4 --inicio-trilha N` (voz + trilha `midia/trilhas/trilha-01.mp3` com ducking, -14 LUFS; variar `--inicio-trilha` entre os reels).
 8. **Publicar a mídia**: commit + push em `main`. URL pública do vídeo final:
    `https://raw.githubusercontent.com/MTCiello/agente-de-postagem/main/midia/final/X.mp4`
-9. **Agendar no Metricool** com a URL do vídeo final (`createScheduledPost`): Instagram `type: REEL`, `autoPublish: true`, `videoCoverMilliseconds: 1500`. Plano grátis: **20 posts por mês** e **30 dias de histórico**, então não passe de 20 agendamentos no mês.
+9. **Capa**: `cd reels && node capa.mjs ../roteiros/X.json ../midia/capas/X.jpg` (usa o gancho do roteiro; bloco `"capa"` no roteiro ou `--selo=`, `--tema=creme`, `--iva=` para ajustar). O título fica na faixa central 3:4, que é o que aparece na grade do perfil.
+10. **Agendar no Metricool** com a URL do vídeo final (`createScheduledPost`): Instagram `type: REEL`, `autoPublish: true`, `videoThumbnailUrl` = URL pública da capa (`.../main/midia/capas/X.jpg`). Plano grátis: **20 posts por mês** e **30 dias de histórico**, então não passe de 20 agendamentos no mês.
    - Datas: **segunda, quarta e sexta às 10:00** (America/Sao_Paulo) da semana seguinte.
    - Legenda: 1ª linha = gancho; 3–5 linhas curtas de valor; CTA ("Chama no direct" ou "Comenta IA"); palavras-chave em texto corrido (ex.: "inteligência artificial para pequenas empresas", "automação", "Chapecó"); 3–5 hashtags no fim.
-10. **Registrar** em `historico.md` (data, tema, fonte do viral, URL do vídeo, link do Metricool) e fazer commit.
-11. **Avisar o Mateus** com um resumo curto: os 3 temas, por que cada um, e os horários agendados.
+11. **Registrar** em `historico.md` (data, tema, fonte do viral, URL do vídeo, link do Metricool) e fazer commit.
+12. **Avisar o Mateus** com um resumo curto: os 3 temas, por que cada um, e os horários agendados.
 
 ## Regras
 - **GitHub primeiro.** Antes de construir qualquer função nova, procurar um repositório aberto que já resolva (licença que permita uso comercial, mantido, bem avaliado) e integrar. Código próprio só para costurar as peças ou quando não existir nada pronto.
