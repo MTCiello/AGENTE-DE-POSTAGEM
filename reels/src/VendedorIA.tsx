@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { C, F } from "./theme";
 import { Disc, Person, Pin, Shop, iso } from "./iso";
-import { Iva, Pontinho } from "./Iva";
+import { Iva, Pontinho, IVA_LED, IVA_VB } from "./Iva";
 import { Karaoke, Line } from "./Captions";
 import { CLOUD_PATH } from "./cloudPath";
 
@@ -59,23 +59,25 @@ export const VendedorIA: React.FC = () => {
   const tagP = (k: number, j: number) => spring({ frame: frame - Math.round((T.s2 + 0.7 + 1.4 * k + 0.25 * j) * fps), fps, config: { damping: 13 } });
 
   // ---------------- I.V.A. ----------------
-  const ivaHome = (p: [number, number], dx = -40, dy = -330) => [p[0] + dx, p[1] + dy] as [number, number];
-  const iv0 = [700, 560], ivA = ivaHome(toScreen(shopCenter(1)) as any), ivB = ivaHome(toScreen(shopCenter(3)) as any), ivC = ivaHome(toScreen(shopCenter(5)) as any);
-  const ivX = kf(t, [[0, iv0[0]], [T.s1 + 1, iv0[0]], [T.s1 + 1.2, 640], [T.s2, ivA[0]], [T.s2 + 1.4, ivB[0]], [T.s2 + 2.9, ivC[0]], [T.s3 - 0.1, ivC[0]], [T.s3 + 0.7, 70], [T.s4, 70], [T.s4 + 0.8, 380]]);
-  const ivY = kf(t, [[0, iv0[1]], [T.s1 + 1, iv0[1]], [T.s1 + 1.2, 470], [T.s2, ivA[1]], [T.s2 + 1.4, ivB[1]], [T.s2 + 2.9, ivC[1]], [T.s3 - 0.1, ivC[1]], [T.s3 + 0.7, 1060], [T.s4, 1060], [T.s4 + 0.8, 520]]);
+  const ivaHome = (p: [number, number], dx = -20, dy = -420) => [p[0] + dx, p[1] + dy] as [number, number];
+  const iv0 = [700, 430], ivA = ivaHome(toScreen(shopCenter(1)) as any), ivB = ivaHome(toScreen(shopCenter(3)) as any), ivC = ivaHome(toScreen(shopCenter(5)) as any);
+  const ivX = kf(t, [[0, iv0[0]], [T.s1 + 1, iv0[0]], [T.s1 + 1.2, 640], [T.s2, ivA[0]], [T.s2 + 1.4, ivB[0]], [T.s2 + 2.9, ivC[0]], [T.s3 - 0.1, ivC[0]], [T.s3 + 0.7, 50], [T.s4, 50], [T.s4 + 0.8, 425]]);
+  const ivY = kf(t, [[0, iv0[1]], [T.s1 + 1, iv0[1]], [T.s1 + 1.2, 470], [T.s2, ivA[1]], [T.s2 + 1.4, ivB[1]], [T.s2 + 2.9, ivC[1]], [T.s3 - 0.1, ivC[1]], [T.s3 + 0.7, 1000], [T.s4, 1000], [T.s4 + 0.8, 380]]);
   const ivIn = spring({ frame: frame - 6, fps, config: { damping: 12 } });
   const bob = Math.sin(t * 2.4) * 10;
-  const ivSize = t > T.s3 && t < T.s4 ? 230 : 270;
+  const ivSize = t > T.s3 && t < T.s4 ? 230 : t < T.s1 || t > T.s4 ? 300 : 260;
   const mood = t < T.s1 ? "idle" : t < T.s2 ? "idle" : t < T.s3 ? "think" : t > T.s4 + 0.6 ? "happy" : "idle";
   // pontinho: sai do lugar dele no logo e vai até o que a I.V.A. está mostrando
-  const dotHome: [number, number] = [ivX + ivSize * (810 / 878), ivY + bob + ivSize * (481 / 878) * (411 / 481)];
+  const ivH = (ivSize * IVA_VB.h) / IVA_VB.w;
+  const dotHome: [number, number] = [ivX + ivSize * IVA_LED.x, ivY + bob + ivH * IVA_LED.y];
   let dotTarget = dotHome;
   if (t > T.s1 + 1.0 && t < T.s2) {
     const k = Math.min(2, Math.floor((t - T.s1 - 1.2) / 0.45));
     if (k >= 0) { const s = toScreen(iso(SHOPS[[1, 3, 5][k]].x + 1.1 * SS, SHOPS[[1, 3, 5][k]].y + 0.8 * SS, 2.1)); dotTarget = [s[0], s[1] - 130 * zoom]; }
   }
-  const dotX = dotHome[0] + (dotTarget[0] - dotHome[0]) * (t > T.s1 + 1.0 && t < T.s2 ? kf(t, [[T.s1 + 1.0, 0], [T.s1 + 1.3, 1]]) : 0);
-  const dotY = dotHome[1] + (dotTarget[1] - dotHome[1]) * (t > T.s1 + 1.0 && t < T.s2 ? kf(t, [[T.s1 + 1.0, 0], [T.s1 + 1.3, 1]]) : 0);
+  const away = t > T.s1 + 1.0 && t < T.s2 ? kf(t, [[T.s1 + 1.0, 0], [T.s1 + 1.3, 1], [T.s2 - 0.3, 1], [T.s2, 0]]) : 0;
+  const dotX = dotHome[0] + (dotTarget[0] - dotHome[0]) * away;
+  const dotY = dotHome[1] + (dotTarget[1] - dotHome[1]) * away;
 
   // ---------------- títulos (topo) ----------------
   const titleIn = spring({ frame: frame - 3, fps, config: { damping: 14 } });
@@ -233,10 +235,10 @@ export const VendedorIA: React.FC = () => {
 
       {/* ---------- I.V.A. ---------- */}
       <div style={{ position: "absolute", left: ivX, top: ivY + bob + (1 - ivIn) * 700, opacity: (1 - endP) }}>
-        <div style={{ position: "absolute", left: ivSize * 0.12, top: ivSize * 0.62, width: ivSize * 0.7, height: 34, borderRadius: "50%", background: "rgba(40,30,10,0.18)", filter: "blur(10px)", transform: `translateY(${180 - bob}px) scale(${1 - bob / 80})` }} />
-        <Iva frame={frame} fps={fps} size={ivSize} talking={t < T.end} mood={mood as any} look={t > T.s3 && t < T.s4 ? [1, -0.3] : [0, 0.3]} />
+        <div style={{ position: "absolute", left: ivSize * 0.1, top: ivSize * 0.86, width: ivSize * 0.8, height: 30, borderRadius: "50%", background: "rgba(40,30,10,0.18)", filter: "blur(10px)", transform: `translateY(${60 - bob}px) scale(${1 - bob / 80})` }} />
+        <Iva frame={frame} fps={fps} size={ivSize} talking={t < T.end && mood !== "happy"} mood={mood as any} look={t > T.s3 && t < T.s4 ? [1, -0.3] : [0, 0.3]} ledOn={away < 0.05} />
       </div>
-      <div style={{ opacity: 1 - endP }}><Pontinho x={dotX} y={dotY} r={ivSize * 0.075} /></div>
+      {away > 0.02 ? <div style={{ opacity: 1 - endP }}><Pontinho x={dotX} y={dotY} r={ivSize * (0.02 + 0.045 * away)} /></div> : null}
 
       {/* véu claro atrás da legenda (o mundo continua por baixo, como no reel da 6x1) */}
       <div style={{ position: "absolute", left: 0, right: 0, top: 1180, height: 740, opacity: 1 - endP, background: `linear-gradient(180deg, rgba(226,221,207,0) 0%, rgba(226,221,207,0.82) 28%, rgba(222,216,202,0.95) 100%)` }} />
