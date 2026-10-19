@@ -68,3 +68,13 @@ O editor **Layout** do próprio pixel-agents continua funcionando para mudar o q
 | Atribuição de lead por anúncio ou post | Link do WhatsApp com texto de origem (`?text=Vim pelo anúncio X`) e a etapa no `sdr.py` | nenhuma |
 | Agendar demonstrações | Link de agenda do Google Agenda (agendamento de horários) | nenhuma |
 | Previsão de crescimento | Projeção de seguidores e clientes no painel a partir dos retratos semanais | nenhuma |
+
+## Funções futuras
+
+- **Agentes com mesa e nome no escritório:** ligar as equipes do Claude Code (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` no `.claude/settings.json` do PC). Até lá, os agentes aparecem como ajudantes do coordenador, com o nome no balão.
+- **Resultado dos anúncios no painel:** Meta Ads conectado ao Metricool, alimentando `anuncios/`.
+- **Atribuição de lead por anúncio ou post:** texto de origem no link do WhatsApp.
+- **Link de agendamento de demo** no Google Agenda.
+- **Previsão de crescimento** no painel, a partir dos retratos semanais.
+- **Telas reais do CIELLO CRM** no plano-sequência, a partir de prints.
+
