@@ -31,21 +31,13 @@ Para testar o fluxo sem baixar nenhum modelo, use `--motor teste` no passo 1 (to
 
 ## Instalação no Windows (PC com AMD de 8 GB)
 
-**Por que CPU:** o PyTorch para placas AMD no Windows ainda é experimental (só algumas RX 7000/9000 e com builds alfa). Uma narração de reel tem ~25 s e a CPU gera isso em poucos minutos, então começamos na CPU, que é estável. A GPU fica para depois (ver abaixo).
+Clique duas vezes em `instalar.cmd` na raiz do repositório e depois em `testar.cmd`. Passo a passo em `docs/teste-de-hoje.md`.
 
-1. **Python 3.11**: `winget install Python.Python.3.11` (o Chatterbox foi testado no 3.11)
-2. **ffmpeg**: `winget install Gyan.FFmpeg`
-3. **Node.js** (Remotion): `winget install OpenJS.NodeJS.LTS`
-4. **espeak-ng** (o Kokoro usa para pronúncia): instalar o `.msi` em github.com/espeak-ng/espeak-ng/releases
-5. No terminal, dentro da pasta do repositório:
-
-```powershell
-py -3.11 -m venv .venv
-.venv\Scripts\activate
-pip install -r central/requirements.txt
-```
-
-Na primeira execução, cada motor baixa o seu modelo do Hugging Face (Kokoro ~300 MB, Chatterbox ~2 GB, whisper small ~500 MB).
+- **Base** (`central/requirements.txt`): numpy e soundfile. É rápida.
+- **Voz** (`central/requirements-voz.txt`): Kokoro, Chatterbox e faster-whisper. São ~3 GB; o instalador pergunta.
+- **Por que CPU:** o PyTorch para placas AMD no Windows ainda é experimental. A CPU gera ~25 s de narração em poucos minutos.
+- **Modelos:** cada motor de voz baixa o seu na primeira execução (Kokoro ~300 MB, Chatterbox ~2 GB, Whisper small ~500 MB).
+- **Verificação:** `python central/verificar.py` (ou `testar.cmd`) roda cada função e grava `estado/verificacao.txt`.
 
 ## Clonar a voz do Mateus (Chatterbox)
 

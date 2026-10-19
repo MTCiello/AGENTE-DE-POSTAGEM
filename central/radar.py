@@ -276,6 +276,8 @@ def main():
     ranqueados = pontuar(itens, desde)
     a.saida.mkdir(parents=True, exist_ok=True)
     base = a.saida / hoje.isoformat()
+    if base.with_suffix(".md").exists():  # nunca sobrescreve um radar do dia (pode ter sido feito à mão)
+        base = a.saida / f"{hoje.isoformat()}-{dt.datetime.now():%H%M}"
     base.with_suffix(".json").write_text(json.dumps({"data": hoje.isoformat(), "dias": a.dias, "erros": erros, "itens": ranqueados},
                                                     ensure_ascii=False, indent=1), encoding="utf-8")
     base.with_suffix(".md").write_text(relatorio(ranqueados, erros, hoje, a.dias), encoding="utf-8")

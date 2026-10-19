@@ -1,5 +1,7 @@
 # AGENTE DE POSTAGEM
 
+**Instalar e testar no Windows:** `instalar.cmd` → `testar.cmd` → `Escritorio-Ciello.cmd`. Passo a passo em `docs/teste-de-hoje.md`.
+
 Agente semanal de reels da **Ciello** (@ciellotec).
 
 Toda semana ele pesquisa os vídeos de IA que estão viralizando, adapta 3 temas para pequenos negócios, gera os reels com a identidade da marca e agenda no Metricool (segunda, quarta e sexta às 10h).

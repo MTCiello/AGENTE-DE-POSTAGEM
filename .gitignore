@@ -16,3 +16,4 @@ founder/*
 !founder/idea.md
 comercial/bin/
 estado/
+.venv/
