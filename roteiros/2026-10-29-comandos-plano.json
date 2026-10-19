@@ -1,0 +1,13 @@
+{
+ "_composicao": "ComandosPlano (reels/src/plano/ComandosPlano.tsx) — plano-sequência do pilar Comandos; com a voz pronta, ajuste os tempos de cada comando (digita, envia, resposta) e VIRA, SAIJ, PONTE, CTA pelo tempos.json",
+ "capa": {"tag": "IA pro seu negócio", "linhas": [["3 comandos", "marfim"], ["do ChatGPT", "cinza"], ["que respondem", "ouro"], ["cliente", "ouro"]], "apoio": "Salva pra usar hoje", "selo": "copia e cola", "iva": "happy"},
+ "scenes": [
+  {"type": "hook", "say": "Três comandos do ChatGPT que respondem cliente por você. Salva antes de fechar o vídeo."},
+  {"type": "comando", "say": "Primeiro: responda como atendente da minha loja, educado, curto e sempre com uma pergunta no final. Ele responde no seu tom."},
+  {"type": "comando", "say": "Segundo: transforme esta conversa em um orçamento com itens, valor e prazo. A conversa vira orçamento em segundos."},
+  {"type": "comando", "say": "Terceiro: escreva três mensagens curtas pro cliente que sumiu depois do orçamento."},
+  {"type": "ponte", "say": "Agora imagina isso no WhatsApp da equipe toda. É o CIELLO CRM."},
+  {"type": "cta", "say": "Salva pra usar hoje e comenta COMANDOS que eu te mando os três por escrito."}
+ ],
+ "fontes": ["Comandos genéricos de uso do ChatGPT (sem afirmação sobre recurso novo); exemplos de resposta marcados como 'exemplo' na tela"]
+}
