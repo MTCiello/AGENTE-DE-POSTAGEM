@@ -28,6 +28,24 @@ class TesteGanchos(unittest.TestCase):
         self.assertEqual(l["multiplicador"], "3.00")
         self.assertEqual(l["pilar"], "comandos")
 
+    def test_importar_metricool(self):
+        import json, tempfile
+        from types import SimpleNamespace as NS
+        tmp = Path(tempfile.mkdtemp())
+        original = ganchos.CSV
+        ganchos.CSV = tmp / "ganchos.csv"
+        try:
+            reels = [{"perfil": "iacomjota", "texto": f"Dica {i}", "url": f"https://ig/{i}", "data": "2026-10-10", "interacoes": v}
+                     for i, v in enumerate([100, 120, 110, 900])]
+            (tmp / "c.json").write_text(json.dumps(reels), encoding="utf-8")
+            ganchos.cmd_importar_metricool(NS(arquivo=str(tmp / "c.json"), minimo=1.5))
+            linhas = ganchos.ler()
+            self.assertEqual(len(linhas), 1)  # só o reel de 900 passa de 1,5x a mediana (115)
+            self.assertEqual(linhas[0]["perfil"], "@iacomjota")
+            self.assertAlmostEqual(float(linhas[0]["multiplicador"]), 900 / 115, places=1)
+        finally:
+            ganchos.CSV = original
+
 
 if __name__ == "__main__":
     unittest.main()

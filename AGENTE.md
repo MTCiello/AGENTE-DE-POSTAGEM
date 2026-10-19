@@ -9,7 +9,11 @@ Procedimento semanal que o agente segue toda vez que roda. Este arquivo é a fon
 - **Motor de vídeo: Remotion (`reels/`)**, no padrão do reel "fim da escala 6x1" (o favorito do Mateus): fundo creme em degradê radial, **um mundo isomérico que continua de cena em cena** com a câmera andando (zoom/pan), pessoinhas, lojas, pinos, cards e celular entrando com molas suaves, legenda karaokê centralizada (palavras escurecem quando faladas, grifo dourado nas palavras-chave), I.V.A. em SVG — computador retrô azul-marinho do protótipo (`marca/iva-prototipo.png`), rosto ciano "O O" com sorrisinho, painel turquesa e disquete; o botão laranja vira o Pontinho que aponta, cartão final escuro "Comente PALAVRA". Exemplos de referência: `reels/src/VendedorIA.tsx`, `TesteIdeia.tsx` e `TextoIA.tsx`. Peças prontas em `reels/src/common.tsx` (TopTitle, Pill, Chip com risco, Bubble, Billboard com troca de texto, Coins, PhoneChat, IvaActor com Pontinho, EndCard) e `reels/src/iso.tsx` (Disc, Shop, Person, Pin): monte cada reel novo com elas e registre a composição em `reels/src/Root.tsx`. Renderizar: `cd reels && npm install && node render.mjs <Composicao> ../midia/X.mp4`. O gerador Python (`gerador/`) fica só como reserva.
 - Ângulo editorial: pegar o que está viral no nicho de IA e traduzir para **"IA aplicada ao seu negócio"**, para que as views virem clientes.
 
+## Equipe
+Nove agentes em `.claude/agents/` (pesquisador-mercado, roteirista, produtor-video, produtor-imagem, postagem, analista, sdr, closer, gestor-anuncios), coordenados por `/semana`, `/comercial` e `/segunda`. Visão completa e pixel-agents em `docs/equipe.md`.
+
 ## Perfis de referência
+Cadastrar como **concorrentes no Metricool** (API oficial, sem risco para a conta) para o pesquisador puxar os reels toda semana.
 @iacomjota · @viniciusguimaraes.ia · @gabrieltomaz.ia · @theodacoda
 
 ## Passo a passo semanal (roda domingo à noite)

@@ -15,6 +15,8 @@ Toda semana ele pesquisa os vídeos de IA que estão viralizando, adapta 3 temas
 - `docs/teste-de-hoje.md` — roteiro de teste de todas as ferramentas
 - `radar/` — assuntos em alta por pilar · `conhecimento/ganchos.csv` — biblioteca de ganchos · `metricas/` — retratos semanais e relatórios
 - `reels/capa.mjs` — capa do reel a partir do roteiro
+- `central/sdr.py` + `comercial/icp.json` — prospecção: leads, abordagem por wa.me, cadência e CSV do CRM
+- `.claude/agents/` + `.claude/skills/` — equipe de agentes e comandos `/semana`, `/comercial`, `/segunda` (ver `docs/equipe.md`)
 
 Gerar um reel manualmente:
 

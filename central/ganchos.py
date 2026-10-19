@@ -9,7 +9,8 @@ Uso:
   python central/ganchos.py modelos --pilar comandos # 5 modelos prontos para o roteiro da semana
   python central/ganchos.py adicionar --perfil @x --gancho "..." --views 120000 --mediana 30000 --porque "..."
   python central/ganchos.py reclassificar           # refaz formato/pilar depois de mudar as regras
-  python central/ganchos.py importar @gabrieltomaz.ia @iacomjota --sessao seu_usuario   # puxa os reels (instaloader)
+  python central/ganchos.py importar-metricool conhecimento/concorrentes/2026-10-26.json   # concorrentes do Metricool (seguro)
+  python central/ganchos.py importar @gabrieltomaz.ia @iacomjota --sessao seu_usuario   # último recurso (instaloader)
 
 O importar usa o instaloader (github.com/instaloader/instaloader, MIT): `pip install instaloader` e
 `instaloader --login SEU_USUARIO` uma vez. Use uma conta secundária: coletar dados do Instagram fora da
@@ -160,6 +161,38 @@ def cmd_importar(a):
     print(f"{novos} ganchos novos acima de {a.minimo}x a mediana")
 
 
+def cmd_importar_metricool(a):
+    """Reels dos concorrentes cadastrados no Metricool (API oficial, sem risco para a conta).
+
+    O agente salva o retorno do Metricool (IGCR01 perfil, IGCR03 texto, IGCR04 url, IGCR05 data,
+    IGCR07 curtidas, IGCR08 comentários, IGCR09 interações) como lista de objetos com as chaves
+    perfil, texto, url, data, curtidas, comentarios, interacoes.
+    """
+    import json
+    reels = json.loads(Path(a.arquivo).read_text(encoding="utf-8"))
+    linhas = ler()
+    urls = {l["url"] for l in linhas}
+    por_perfil = {}
+    for r in reels:
+        por_perfil.setdefault(r["perfil"], []).append(r)
+    novos = 0
+    for perfil, rs in por_perfil.items():
+        inter = [num(r.get("interacoes")) or (num(r.get("curtidas")) or 0) + (num(r.get("comentarios")) or 0) for r in rs]
+        mediana = statistics.median(inter) or 1
+        for r, i in zip(rs, inter):
+            if r["url"] in urls or i < mediana * a.minimo:
+                continue
+            gancho = (r.get("texto") or "").strip().split("\n")[0][:160]
+            linhas.append(completar({"data": (r.get("data") or "")[:10], "perfil": "@" + perfil.lstrip("@"), "gancho": gancho,
+                                     "multiplicador": f"{i / mediana:.2f}", "url": r["url"],
+                                     "porque": f"a analisar · {int(i)} interações (mediana {int(mediana)}) · Metricool"}))
+            urls.add(r["url"])
+            novos += 1
+        print(f"@{perfil.lstrip('@')}: {len(rs)} reels, mediana {int(mediana)} interações")
+    gravar(linhas)
+    print(f"{novos} ganchos novos acima de {a.minimo}x a mediana")
+
+
 def _ranking_formatos(linhas):
     fora = [l for l in linhas if l.get("nosso") != "sim" and num(l.get("multiplicador"))]
     grupos = {}
@@ -223,6 +256,10 @@ def main():
     s.add_argument("--max", type=int, default=30, help="reels por perfil")
     s.add_argument("--minimo", type=float, default=1.5, help="só guarda reels acima de N x a mediana do perfil")
     s.set_defaults(f=cmd_importar)
+    s = sub.add_parser("importar-metricool")
+    s.add_argument("arquivo", help="JSON salvo pelo agente a partir dos concorrentes do Metricool")
+    s.add_argument("--minimo", type=float, default=1.5)
+    s.set_defaults(f=cmd_importar_metricool)
     s = sub.add_parser("reclassificar")
     s.set_defaults(f=cmd_reclassificar)
     s = sub.add_parser("ranking")
