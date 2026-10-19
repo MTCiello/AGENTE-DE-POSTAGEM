@@ -144,4 +144,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from status import trabalhando
+    with trabalhando("produtor-video", "narração"):
+        main()

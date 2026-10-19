@@ -2,7 +2,7 @@
 
 Fluxo:
   1. consultas   gera as buscas do Google Maps a partir do perfil ideal (comercial/icp.json)
-  2. buscar      roda o gosom/google-maps-scraper (MIT, Docker) e guarda o resultado bruto
+  2. buscar      roda o gosom/google-maps-scraper (MIT; executável em comercial/bin/, Docker opcional)
   3. qualificar  lê o resultado, pontua cada empresa (0–100) e junta em comercial/leads.csv
   4. abordar     monta a 1ª mensagem personalizada de cada lead com link wa.me (você envia do seu WhatsApp, 1 a 1)
   5. marcar      registra o que aconteceu (contatado, respondeu, demo, cliente, perdido, nao_contatar)
@@ -11,7 +11,7 @@ Fluxo:
 
 Uso:
   python central/sdr.py consultas --segmentos imobiliaria odontologia --cidades "Chapecó SC"
-  python central/sdr.py buscar                       # precisa do Docker
+  python central/sdr.py buscar                       # executável do gosom em comercial/bin/ (sem Docker)
   python central/sdr.py qualificar comercial/bruto/resultados.csv
   python central/sdr.py abordar --top 15
   python central/sdr.py marcar 12 contatado
@@ -88,11 +88,19 @@ def cmd_buscar(a):
     bruto = PASTA / "bruto"
     if not (bruto / "consultas.txt").exists():
         sys.exit("Rode antes: python central/sdr.py consultas")
-    if not shutil.which("docker"):
-        sys.exit("Precisa do Docker Desktop (docker.com). O scraper é o gosom/google-maps-scraper.")
-    cmd = ["docker", "run", "--rm", "-v", "gmaps-playwright-cache:/opt", "-v", f"{bruto.resolve()}:/work",
-           "gosom/google-maps-scraper", "-input", "/work/consultas.txt", "-results", "/work/resultados.csv",
-           "-depth", str(a.profundidade), "-lang", "pt", "-exit-on-inactivity", "3m"]
+    opcoes = ["-depth", str(a.profundidade), "-lang", "pt", "-exit-on-inactivity", "3m"]
+    # 1º o executável do gosom (sem Docker): baixe em github.com/gosom/google-maps-scraper/releases e salve em comercial/bin/
+    binario = a.binario or next((str(p) for p in sorted((PASTA / "bin").glob("google*maps*scraper*")) if p.is_file()), None)
+    if binario:
+        cmd = [binario, "-input", str(bruto / "consultas.txt"), "-results", str(bruto / "resultados.csv"), *opcoes]
+    elif shutil.which("docker"):
+        cmd = ["docker", "run", "--rm", "-v", "gmaps-playwright-cache:/opt", "-v", f"{bruto.resolve()}:/work",
+               "gosom/google-maps-scraper", "-input", "/work/consultas.txt", "-results", "/work/resultados.csv", *opcoes]
+    else:
+        sys.exit("Baixe o executável do gosom/google-maps-scraper (Windows) em\n"
+                 "  https://github.com/gosom/google-maps-scraper/releases\n"
+                 "e salve em comercial/bin/ (ou passe --binario CAMINHO). Docker não é necessário.\n"
+                 "Sem scraper: qualquer CSV com colunas title, phone, website, review_count, review_rating serve para o 'qualificar'.")
     if a.email:
         cmd.append("-email")
     print(" ".join(cmd))
@@ -317,14 +325,16 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("consultas"); s.add_argument("--segmentos", nargs="*"); s.add_argument("--cidades", nargs="*"); s.set_defaults(f=cmd_consultas)
-    s = sub.add_parser("buscar"); s.add_argument("--profundidade", type=int, default=2); s.add_argument("--email", action="store_true"); s.set_defaults(f=cmd_buscar)
+    s = sub.add_parser("buscar"); s.add_argument("--profundidade", type=int, default=2); s.add_argument("--binario", help="caminho do executável do gosom"); s.add_argument("--email", action="store_true"); s.set_defaults(f=cmd_buscar)
     s = sub.add_parser("qualificar"); s.add_argument("arquivo"); s.add_argument("--segmento", default=""); s.add_argument("--minimo", type=int, default=35); s.set_defaults(f=cmd_qualificar)
     s = sub.add_parser("abordar"); s.add_argument("--top", type=int, default=15); s.add_argument("--assinatura", default="Mateus"); s.set_defaults(f=cmd_abordar)
     s = sub.add_parser("marcar"); s.add_argument("id", type=int); s.add_argument("etapa", choices=ETAPAS); s.add_argument("--obs", default=""); s.set_defaults(f=cmd_marcar)
     s = sub.add_parser("hoje"); s.set_defaults(f=cmd_hoje)
     s = sub.add_parser("crm"); s.add_argument("--todos", action="store_true", help="inclui leads ainda não contatados"); s.add_argument("--separador", default=";"); s.set_defaults(f=cmd_crm)
     a = ap.parse_args()
-    a.f(a)
+    from status import trabalhando
+    with trabalhando("sdr", a.cmd):
+        a.f(a)
 
 
 if __name__ == "__main__":

@@ -269,7 +269,9 @@ def main():
     s.add_argument("--pilar", choices=list(PILARES))
     s.set_defaults(f=cmd_modelos)
     a = ap.parse_args()
-    a.f(a)
+    from status import trabalhando
+    with trabalhando("pesquisador-mercado", f"ganchos: {a.cmd}"):
+        a.f(a)
 
 
 if __name__ == "__main__":

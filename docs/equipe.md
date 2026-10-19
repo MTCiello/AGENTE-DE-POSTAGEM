@@ -25,28 +25,34 @@ Nove agentes especialistas em `.claude/agents/`, coordenados por três comandos 
 
 Também dá para chamar um agente direto: "use o sdr para gerar 20 leads de odontologia em Xanxerê".
 
-## Ver quem está trabalhando: pixel-agents
+## Ver quem está trabalhando: Escritório Ciello
 
-O [pixel-agents](https://github.com/pablodelucca/pixel-agents) (MIT) mostra cada sessão do Claude Code como um personagem num escritório em pixel art. A animação muda conforme o agente escreve, lê ou roda comandos, e os subagentes aparecem como personagens ligados ao coordenador. Aparece um balão quando o agente precisa de aprovação.
+Painel próprio, sem Claude Code, VS Code ou Docker: só Python e o navegador.
 
-**Instalar no PC (funciona com o Claude Code local, não com a sessão na nuvem):**
-1. VS Code 1.105 ou mais novo e Claude Code instalado (`npm install -g @anthropic-ai/claude-code`).
-2. Extensões do VS Code → instalar **Pixel Agents** (`pablodelucca.pixel-agents`).
-3. Abrir a pasta `agente-de-postagem` no VS Code → painel **Pixel Agents** → **+ Agent** (abre o Claude Code já ligado ao escritório).
-4. Rodar `/semana`, `/comercial` ou `/segunda`: cada agente chamado aparece como um personagem.
+```powershell
+python central/escritorio/servidor.py          # abre http://127.0.0.1:3100
+python central/escritorio/servidor.py --demo   # personagens animados de teste
+```
 
-Sem VS Code: `npx pixel-agents` na pasta do projeto abre o escritório no navegador (`http://127.0.0.1:3100`).
+- **Escritório em pixel art** (desenhado em código, sem imagens de terceiros): um personagem por agente, por setor (Pesquisa, Estúdio, Postagem, Análise & Anúncios, Comercial), com a I.V.A. coordenando.
+  - **Trabalhando:** digitando, com o monitor aceso.
+  - **Pensando:** balão "…".
+  - **Precisa de você:** balão "!" e acenando.
+  - **Pronto:** balão "✓".
+  - **Erro:** balão "×".
+- **Crescimento:** seguidores, alcance, tempo médio no reel (meta 6 s) e salvamentos (meta 1%), a partir de `metricas/`.
+- **Comercial:** funil novo → contatado → respondeu → demo → proposta → cliente, com a conversão de cada etapa (`comercial/leads.csv`).
+- **Anúncios:** investido, conversas, custo por conversa e custo por cliente (`anuncios/*.json`).
+- **De onde vem o estado:**
+  - as ferramentas avisam sozinhas (`radar`, `ganchos`, `sdr`, `relatorio`, `voz`, `mixar`);
+  - os agentes do Claude avisam com `python central/status.py <agente> trabalhando|esperando|pronto "tarefa"`;
+  - tudo cai em `estado/eventos.jsonl`, que fica fora do git.
 
-**Montar o escritório da Ciello:** no editor **Layout**, crie áreas com o nome de cada setor (Pesquisa, Estúdio, Postagem, Comercial, Análise) e exporte o layout em JSON para `.claude/pixel-agents-layout.json`, para não perder.
+## Próximas integrações candidatas (foco: métricas, anúncios e crescimento)
 
-> Equipes com "teammates" (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`) também aparecem no pixel-agents, cada um como sessão completa. São experimentais e gastam bem mais uso, então começamos com subagentes.
-
-## Próximas integrações candidatas (GitHub primeiro, a verificar)
-
-| Para | Repositório | Por quê |
+| Para | Como | Dependência |
 |---|---|---|
-| Agendar demonstrações | [Cal.com](https://github.com/calcom/cal.com) | Link de agenda no WhatsApp; o lead escolhe o horário e cai no Google Agenda |
-| Caixa de entrada única (Instagram DM + WhatsApp oficial) | [Chatwoot](https://github.com/chatwoot/chatwoot) | Comentário → DM e respostas num lugar só, via APIs oficiais |
-| Validar e-mail antes de prospectar | [Reacher](https://github.com/reacherhq/check-if-email-exists) | Evita e-mail inválido e queda de reputação do domínio |
-| Cadência de e-mail B2B | [listmonk](https://github.com/knadh/listmonk) | Sequências de e-mail com descadastro (LGPD) |
-| Leads por CNPJ (cidade + CNAE) | [minha-receita](https://github.com/cuducos/minha-receita) | Base aberta da Receita para completar o Google Maps |
+| Resultado dos anúncios no painel | Meta Ads conectado ao Metricool (conectores `metaAds`/`facebookAds`) → `anuncios/*.json` | nenhuma nova |
+| Atribuição de lead por anúncio ou post | Link do WhatsApp com texto de origem (`?text=Vim pelo anúncio X`) e a etapa no `sdr.py` | nenhuma |
+| Agendar demonstrações | Link de agenda do Google Agenda (agendamento de horários) | nenhuma |
+| Previsão de crescimento | Projeção de seguidores e clientes no painel a partir dos retratos semanais | nenhuma |

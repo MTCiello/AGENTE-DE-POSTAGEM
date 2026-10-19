@@ -285,4 +285,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from status import trabalhando
+    with trabalhando("pesquisador-mercado", "radar da semana"):
+        main()

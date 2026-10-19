@@ -10,7 +10,7 @@ Procedimento semanal que o agente segue toda vez que roda. Este arquivo é a fon
 - Ângulo editorial: pegar o que está viral no nicho de IA e traduzir para **"IA aplicada ao seu negócio"**, para que as views virem clientes.
 
 ## Equipe
-Nove agentes em `.claude/agents/` (pesquisador-mercado, roteirista, produtor-video, produtor-imagem, postagem, analista, sdr, closer, gestor-anuncios), coordenados por `/semana`, `/comercial` e `/segunda`. Visão completa e pixel-agents em `docs/equipe.md`.
+Nove agentes em `.claude/agents/` (pesquisador-mercado, roteirista, produtor-video, produtor-imagem, postagem, analista, sdr, closer, gestor-anuncios), coordenados por `/semana`, `/comercial` e `/segunda`. Visão completa em `docs/equipe.md`. Quem está trabalhando e os números da empresa: `python central/escritorio/servidor.py` (Escritório Ciello).
 
 ## Perfis de referência
 Cadastrar como **concorrentes no Metricool** (API oficial, sem risco para a conta) para o pesquisador puxar os reels toda semana.

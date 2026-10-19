@@ -64,7 +64,8 @@ node render.mjs CloneReel ../midia/teste-clone.mp4
 ```
 - [ ] O reel saiu com as suas 2 cenas, as cenas 3 e 4 como rascunho, legenda e cartão final.
 
-## 7. SDR · ~10 min (precisa do Docker Desktop)
+## 7. SDR · ~10 min
+Baixe o executável para Windows em [gosom/google-maps-scraper/releases](https://github.com/gosom/google-maps-scraper/releases) e salve em `comercial/bin/`. Não precisa de Docker.
 ```powershell
 python central/sdr.py consultas --segmentos imobiliaria odontologia --cidades "Chapecó SC"
 python central/sdr.py buscar
@@ -75,9 +76,12 @@ python central/sdr.py abordar --top 10
 - [ ] As empresas do topo são de fato bons clientes para o CRM? Anote 2 que estão fora do lugar.
 - [ ] Me mande o modelo de planilha de importação do CIELLO CRM (só o cabeçalho), para eu ajustar o `crm`.
 
-## 8. Equipe no pixel-agents · ~10 min
-VS Code → extensão **Pixel Agents** → abrir a pasta do projeto → **+ Agent** → digitar `/comercial`.
-- [ ] O sdr e o closer apareceram como personagens trabalhando.
+## 8. Escritório Ciello · ~2 min
+```powershell
+python central/escritorio/servidor.py --demo
+```
+- [ ] Abriu no navegador o escritório com os 9 personagens se mexendo e o painel com seguidores, alcance e funil.
+- [ ] Sem o `--demo`: rode o `sdr.py` ou o `radar.py` em outro terminal e veja o personagem certo começar a trabalhar.
 
 ## 9. Voz e montagem final (opcional hoje)
 ```powershell
