@@ -9,6 +9,8 @@ Toda semana ele pesquisa os vídeos de IA que estão viralizando, adapta 3 temas
 - `roteiros/` — roteiros de cada reel
 - `midia/` — vídeos publicados (servidos ao Metricool por link público)
 - `historico.md` — o que já foi postado
+- `central/` — narração, legendas e montagem final no PC, sem créditos (ver `central/README.md`)
+- `docs/app-comercial.md` — arquitetura do app de agentes (conteúdo + comercial)
 
 Gerar um reel manualmente:
 

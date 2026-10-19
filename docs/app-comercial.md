@@ -146,7 +146,7 @@ Relatório semanal toda segunda: top e pior post, por quê, e o que muda na pró
 | Vídeo | Remotion + ffmpeg (já existe) | — |
 | Voz | VoiceStudio ou Chatterbox via API local | — |
 | Painel | Começa com relatório + aprovação por mensagem; depois painel web | Entrega valor antes de ter tela bonita |
-| Infra | VPS pequena (Radar, banco, painel) + **GPU sob demanda** para voz (PC com NVIDIA ou GPU serverless cobrada por segundo, como RunPod ou Modal) | Não paga GPU parada |
+| Infra | **Agora:** PC do Mateus (CPU) + Claude na nuvem. **Com investimento:** VPS pequena para Radar, banco e painel, e GPU sob demanda (RunPod ou Modal, cobrança por segundo) | Começa com R$ 0 |
 
 **Custo mensal:** VPS, chamadas de LLM e alguns minutos de GPU. A tendência é ficar abaixo de vidIQ + Metricool pagos, mas os valores exatos dependem do volume e precisam ser medidos no primeiro mês.
 
@@ -174,13 +174,25 @@ Relatório semanal toda segunda: top e pior post, por quê, e o que muda na pró
 
 ---
 
-## 11. Decisões pendentes
+## 11. Decisões (19/10/2026)
 
-1. **Hardware:** existe um PC com placa NVIDIA (quantos GB)? Isso define voz local ou GPU por segundo.
-2. **CIELLO CRM:** tem API ou importação de planilha para receber os leads?
-3. **Metricool:** plano grátis ou pago? Manter até o Publicador próprio ficar pronto ou migrar para o Postiz?
-4. **Uso:** o app é só interno ou a ideia é vender para clientes? Isso muda as escolhas de licença.
-5. **Orçamento mensal** para VPS, LLM e GPU.
+| Pergunta | Resposta | O que muda |
+|---|---|---|
+| Hardware | PC com placa **AMD de 8 GB** | Voz e legendas rodam na **CPU** (estável no Windows). GPU AMD fica para depois (ROCm no Windows ainda é alfa) |
+| CIELLO CRM | Importa **planilha** | O SDR entrega um CSV no formato de importação do CRM |
+| Metricool | **Grátis**: 20 posts/mês, 30 dias de histórico | Continua como publicador. O Analista salva um retrato semanal das métricas em `metricas/` para não perder o histórico |
+| Uso | **Só interno** (assistente pessoal de comercial, redes e anúncios) | Licenças AGPL, Remotion grátis (até 3 pessoas) e n8n estão liberadas |
+| Orçamento | **R$ 0 por enquanto**, tudo no PC | Sem VPS e sem GPU alugada. Investimento entra depois |
+
+**Divisão de trabalho com custo zero**
+
+| Parte | Onde roda | Faz |
+|---|---|---|
+| **Cérebro** (Claude, pela assinatura) | Sessão agendada na nuvem ou Claude Code no PC | Radar, roteiros, checagem, análise, mensagens de venda, agendamento no Metricool |
+| **Músculos** (`central/`) | PC do Mateus | Voz (`voz.py`), legendas (`legendas.py`), render (Remotion) e montagem (`mixar.py`) |
+| **LLM local** (opcional) | LM Studio/Ollama com Vulkan na AMD | Triagem em volume (centenas de leads) sem gastar uso do Claude |
+
+**Fase 0 (feita):** `central/mixar.py` monta o reel final localmente (testado: -14,1 LUFS, AAC 48 kHz). `central/voz.py` gera a narração com Kokoro ou com a voz clonada no Chatterbox e calcula os tempos das cenas. `central/legendas.py` tira o tempo de cada palavra. A trilha foi trazida para `midia/trilhas/`. Falta rodar Kokoro e Chatterbox no PC (os modelos não baixam neste ambiente de nuvem) e gravar a referência da voz.
 
 ---
 
@@ -207,3 +219,5 @@ Relatório semanal toda segunda: top e pior post, por quê, e o que muda na pró
 - Leads: [google-maps-scraper](https://github.com/gosom/google-maps-scraper) · [base CNPJ com DuckDB](https://www.tabnews.com.br/jeffev/transformei-a-base-aberta-do-cnpj-73-milhoes-de-estabelecimentos-em-buscas-de-segundos-sem-servidor-e-sem-banco-de-dados) · [prospecção com CNPJ](https://www.tabnews.com.br/antoniorincon/prospeccao-b2b-com-dados-publicos-de-cnpj-achar-enriquecer)
 - LGPD: [legítimo interesse na visão da ANPD](https://www.bmalaw.com.br/conteudo/direito-digital-protecao-de-dados-e-cybersecurity/artigos-e-noticias/o-legitimo-interesse-na-visao-da-anpd/pdf) · [prospecção pelo CNPJ](https://www.socialhub.pro/?p=32858)
 - GPU serverless: [RunPod × Modal](https://lyceum.technology/magazine/modal-vs-runpod-for-serverless-gpu-inference/)
+- AMD: [ROCm em Radeon (oficial)](https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/index.html) · [PyTorch AMD no Windows](https://github.com/sfinktah/amd-torch/) · [instalação AMD do Wan2GP (TheRock)](https://github.com/deepbeepmeep/Wan2GP/blob/main/docs/AMD-INSTALLATION.md) · [IA local em AMD 2026](https://www.mindstudio.ai/blog/running-local-ai-amd-rocm-ollama-lm-studio)
+- Metricool grátis: [limites 2026](https://www.costbench.com/software/social-media-management/metricool/free-plan/)

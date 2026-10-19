@@ -1,0 +1,5 @@
+numpy
+soundfile
+kokoro>=0.9.4
+chatterbox-tts
+faster-whisper
