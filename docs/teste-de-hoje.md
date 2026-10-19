@@ -36,9 +36,12 @@ Ele roda cada função de ponta a ponta e mostra `[ok]`, `[aviso]` ou `[FALHA]`:
 
 - [ ] Terminou com **0 falhas**.
 
-## 4. Escritório (pixel-agents) · clique duas vezes em `Escritorio-Ciello.cmd`
+## 4. Ciello OS e escritório · clique duas vezes em `Ciello.cmd`
 
-- [ ] Abriu no navegador o pixel-agents com as 3 salas da Ciello (Pesquisa/Estúdio, Comercial, Análise/Postagem).
+- [ ] Abriu a área de trabalho azul com a logo e a barra de tarefas (numa janela própria do Edge).
+- [ ] Ícone **Escritório de agentes**: o pixel-agents com as 3 salas da Ciello abriu dentro da janela (na 1ª vez demora até 1 minuto).
+- [ ] Arrastar, redimensionar, maximizar (duplo clique na barra) e encaixar na metade da tela (arrastar até a borda) funcionam?
+- [ ] Botão **Atualizar briefing** na janela Bom dia: abriu a janela com a saída ao vivo?
 - [ ] Na apresentação, aceite a instalação dos hooks.
 - [ ] Abra o Claude Code nesta pasta (botão **+ Agent** do escritório ou um terminal) e rode `/comercial`: o coordenador senta numa mesa e os agentes aparecem ao lado dele trabalhando.
 
@@ -48,7 +51,6 @@ Ele roda cada função de ponta a ponta e mostra `[ok]`, `[aviso]` ou `[FALHA]`:
 - [ ] `midia\capas\`: as capas da semana.
 - [ ] `radar\2026-10-19.md`: a pauta sugerida para a semana de 26/10.
 - [ ] `metricas\relatorio-2026-10-19.md`: o primeiro relatório do perfil.
-- [ ] Painel de crescimento: `.venv\Scripts\python central\escritorio\servidor.py` (abre a porta 3200).
 
 ## 6. SDR de verdade (opcional hoje, ~15 min)
 

@@ -188,7 +188,7 @@ def painel():
     with socket.socket() as s_:
         s_.bind(("127.0.0.1", 0))
         porta = s_.getsockname()[1]
-    proc = subprocess.Popen([PY, "central/escritorio/servidor.py", "--porta", str(porta), "--sem-navegador"], cwd=RAIZ,
+    proc = subprocess.Popen([PY, "central/escritorio/servidor.py", "--porta", str(porta), "--sem-navegador", "--sem-escritorio"], cwd=RAIZ,
                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     try:
         abridor = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # localhost não passa por proxy
@@ -202,9 +202,11 @@ def painel():
         else:
             return FALHA, "o painel não respondeu: " + (proc.stderr.read(400).decode(errors="replace") if proc.poll() is not None else "sem resposta")
         faltam = [c for c in ("instagram", "funil", "anuncios", "financeiro", "prioridades") if c not in k]
-        if faltam or "PAINEL CIELLO" not in html:
+        if faltam or "Ciello OS" not in html:
             return FALHA, f"API incompleta: faltam {faltam}"
-        return OK, f"porta 3200 ok (testado na {porta}): {len(k['prioridades'])} prioridades, Instagram {'com' if k['instagram'] else 'sem'} dados"
+        js = abridor.open(f"http://127.0.0.1:{porta}/web/app.js", timeout=2).read()
+        equipe = __import__("json").loads(abridor.open(f"http://127.0.0.1:{porta}/api/equipe", timeout=5).read())
+        return OK, f"Ciello OS ok (testado na porta {porta}): área de trabalho, {len(equipe)} agentes, {len(k['prioridades'])} prioridades ({len(js) // 1024} KB de interface)"
     finally:
         proc.terminate()
 
@@ -283,7 +285,7 @@ def main():
     lista = [("Python", python_versao), ("ffmpeg", ffmpeg), ("Node", node), ("Bibliotecas Python", libs_python),
              ("Testes automáticos", testes), ("Montagem final (mixar)", montagem), ("Oráculo de ritmo", oraculo),
              ("Relatório semanal", relatorio), ("Biblioteca de ganchos", ganchos), ("SDR", sdr),
-             ("Financeiro (mês simulado)", financeiro), ("Briefing do dia", briefing), ("Painel (porta 3200)", painel),
+             ("Financeiro (mês simulado)", financeiro), ("Briefing do dia", briefing), ("Ciello OS (porta 3200)", painel),
              ("Equipe de agentes e comandos", equipe), ("Escritório (pixel-agents)", escritorio), ("Voz (opcional)", voz)]
     if not a.rapido:
         lista += [("Radar (internet)", radar), ("Vigia de concorrentes (internet)", vigia), ("Capa (Remotion)", capa)]

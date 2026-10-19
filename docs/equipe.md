@@ -60,15 +60,20 @@ O editor **Layout** do próprio pixel-agents continua funcionando para mudar o q
 - **Sem equipes:** os agentes rodam como subagentes e aparecem como personagens ao lado do coordenador, com o balão mostrando "sdr: follow-ups do dia".
 - **Animações do próprio pixel-agents:** digitando quando trabalha, "…" quando pede permissão, ✓ quando termina, passeio pelo escritório quando está livre.
 
-## Painel de crescimento (separado do escritório)
+## Ciello OS: o app inteiro numa área de trabalho
 
-`python central/escritorio/servidor.py` abre `http://127.0.0.1:3200` com:
-- Instagram: seguidores, alcance, tempo médio e salvamentos;
-- funil comercial;
-- anúncios: investido, custo por conversa e custo por cliente;
-- **as 3 prioridades de hoje** (as mesmas do `/bom-dia`);
-- financeiro: MRR, caixa e previsão de 30 dias, faturas atrasadas, fôlego;
-- atividade das ferramentas Python (`central/status.py`).
+Clique duas vezes em **`Ciello.cmd`**. Abre numa janela própria do Edge (ou Chrome), sem barra de endereço, como um programa instalado: fundo azul com a logo da Ciello, ícones na área de trabalho e uma **barra de tarefas** embaixo, igual ao Windows.
+
+- **Escritório de agentes** (ícone fixado com o alfinete dourado): o pixel-agents original dentro de uma janela, com a lista da equipe ao lado. O `Ciello.cmd` liga o pixel-agents sozinho; se estiver desligado, a janela tem o botão **Ligar escritório**.
+- **Clicar em um agente** (no escritório, no menu Iniciar ou em Equipe) abre a janela dele: o que faz, o que está fazendo agora, botões para rodar as funções dele e as últimas atividades.
+- **Quando um agente começa a trabalhar**, aparece um aviso no canto e a janela dele abre sozinha (desligue no menu Iniciar).
+- **Botões das janelas** (ex.: "Cobranças do dia", "Checar concorrentes agora") rodam a ferramenta e abrem uma janela com a saída ao vivo. Só rodam as ações da lista fixa do `servidor.py`, e só a partir do próprio app.
+- **Janelas:** arrastar pela barra de título, redimensionar pelas bordas e cantos, duplo clique para maximizar, arrastar até a borda esquerda/direita para ocupar metade da tela (até o topo maximiza), minimizar para a barra de tarefas. A posição de cada janela fica salva.
+- **Apps:** Bom dia (3 prioridades), Financeiro, Comercial, Conteúdo e Instagram (com as capas), Tendências, Concorrentes, Anúncios, Equipe, Atividade e Verificação.
+
+![Ciello OS](img/ciello-os-3-bom-dia-e-financeiro-lado-a-lado.png)
+
+Interface em `central/escritorio/web/` (HTML, CSS e JavaScript sem dependências; fontes Oswald e Inter, licença OFL).
 
 ## Próximas integrações candidatas (foco: métricas, anúncios e crescimento)
 
