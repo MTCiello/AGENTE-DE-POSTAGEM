@@ -1,0 +1,24 @@
+{
+  "name": "ciello-reels",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "@fontsource/anton": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/oswald": "^5.3.0",
+    "@fontsource/source-serif-4": "^5.3.1",
+    "@remotion/bundler": "^4.0.536",
+    "@remotion/cli": "^4.0.536",
+    "@remotion/media-utils": "^4.0.536",
+    "@remotion/noise": "^4.0.536",
+    "@remotion/renderer": "^4.0.536",
+    "@remotion/shapes": "^4.0.536",
+    "@remotion/transitions": "^4.0.536",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "remotion": "^4.0.536"
+  }
+}
