@@ -1,0 +1,17 @@
+{
+ "_sobre": "Perfil de cliente ideal do CIELLO CRM. prioridade 1-5 (5 = vende pelo WhatsApp com equipe e perde lead fácil). termos = como o negócio aparece no Google Maps.",
+ "cidades": ["Chapecó SC", "Xanxerê SC", "Concórdia SC", "São Miguel do Oeste SC", "Pinhalzinho SC", "Xaxim SC", "Palmitos SC", "Maravilha SC"],
+ "segmentos": {
+  "imobiliaria":   {"prioridade": 5, "termos": ["imobiliária"], "dor": "corretor demora pra responder e o cliente fecha com outra imobiliária", "valor": "cada visita agendada vale uma comissão"},
+  "veiculos":      {"prioridade": 5, "termos": ["loja de veículos seminovos", "concessionária"], "dor": "lead do anúncio chega no WhatsApp de um vendedor e some", "valor": "um carro vendido paga o CRM por anos"},
+  "odontologia":   {"prioridade": 5, "termos": ["clínica odontológica"], "dor": "paciente pede orçamento no WhatsApp e ninguém faz o retorno", "valor": "um tratamento fechado a mais por mês"},
+  "estetica":      {"prioridade": 4, "termos": ["clínica de estética"], "dor": "agenda cheia de mensagem e horário vago que ninguém oferece", "valor": "encaixe de horários vagos"},
+  "moveis":        {"prioridade": 4, "termos": ["loja de móveis planejados", "loja de colchões"], "dor": "orçamento enviado e esquecido, sem follow-up", "valor": "projeto de planejados tem ticket alto"},
+  "construcao":    {"prioridade": 4, "termos": ["materiais de construção"], "dor": "vários vendedores no mesmo WhatsApp e cliente sem resposta", "valor": "orçamentos de obra com follow-up"},
+  "academia":      {"prioridade": 3, "termos": ["academia"], "dor": "interessado pergunta preço e não recebe retorno", "valor": "matrícula de quem só perguntou o preço"},
+  "escola_cursos": {"prioridade": 3, "termos": ["escola de idiomas", "curso profissionalizante"], "dor": "matrícula perdida por falta de retorno", "valor": "turmas cheias"},
+  "otica":         {"prioridade": 3, "termos": ["ótica"], "dor": "cliente pede preço de lente e some", "valor": "venda de óculos com retorno no prazo"},
+  "autopecas":     {"prioridade": 3, "termos": ["autopeças"], "dor": "pedido de peça pelo WhatsApp sem controle", "valor": "pedidos organizados por vendedor"},
+  "pet":           {"prioridade": 2, "termos": ["pet shop"], "dor": "agendamento de banho e tosa perdido no WhatsApp", "valor": "agenda cheia"}
+ }
+}

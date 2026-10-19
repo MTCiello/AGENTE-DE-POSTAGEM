@@ -3,3 +3,10 @@ __pycache__/
 frames/
 reels/node_modules/
 reels/public/clone/*.mp4
+
+# dados de leads (telefone, nome) nunca vão para o repositório público
+comercial/leads.csv
+comercial/abordagens/
+comercial/bruto/
+comercial/crm-*.csv
+comercial/nao-contatar.txt
