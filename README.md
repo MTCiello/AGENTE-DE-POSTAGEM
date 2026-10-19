@@ -12,6 +12,9 @@ Toda semana ele pesquisa os vídeos de IA que estão viralizando, adapta 3 temas
 - `central/` — narração, legendas e montagem final no PC, sem créditos (ver `central/README.md`)
 - `docs/app-comercial.md` — arquitetura do app de agentes (conteúdo + comercial)
 - `docs/clone-digital.md` — clone digital hiper-realista com modelos abertos e o modelo `CloneReel`
+- `docs/teste-de-hoje.md` — roteiro de teste de todas as ferramentas
+- `radar/` — assuntos em alta por pilar · `conhecimento/ganchos.csv` — biblioteca de ganchos · `metricas/` — retratos semanais e relatórios
+- `reels/capa.mjs` — capa do reel a partir do roteiro
 
 Gerar um reel manualmente:
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, CalculateMetadataFunction, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, CalculateMetadataFunction, OffthreadVideo, Sequence, getStaticFiles, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { C, F } from "./theme";
 import { Karaoke, Line } from "./Captions";
 import { EndCard, EndLayer, Pill, kf, sp } from "./common";
@@ -9,7 +9,7 @@ import { EndCard, EndLayer, Pill, kf, sp } from "./common";
 // os clipes ficam em reels/public/clone/ e a narração entra depois, no central/mixar.py.
 
 export type CenaClone = {
-  video?: string; // caminho dentro de reels/public (ex.: "clone/fala-1.mp4"); sem vídeo vira um quadro de rascunho
+  video?: string; // caminho dentro de reels/public (ex.: "clone/fala-1.mp4"); sem vídeo (ou arquivo ainda não gerado) vira um quadro de rascunho
   de: number; // segundos no reel
   ate: number;
   inicioClip?: number; // de onde o clipe começa, em segundos
@@ -49,7 +49,7 @@ const Cena: React.FC<{ cena: CenaClone; i: number }> = ({ cena, i }) => {
   return (
     <AbsoluteFill style={{ opacity: i === 0 ? 1 : entra }}>
       <AbsoluteFill style={{ transform: `scale(${zoom})` }}>
-        {cena.video ? (
+        {cena.video && getStaticFiles().some((f) => f.name === cena.video) ? (
           <OffthreadVideo src={staticFile(cena.video)} muted startFrom={Math.round((cena.inicioClip ?? 0) * fps)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
           <Rascunho cena={cena} i={i} />

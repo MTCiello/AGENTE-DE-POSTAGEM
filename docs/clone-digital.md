@@ -31,6 +31,22 @@ Esses modelos têm 14B de parâmetros e foram feitos para placas NVIDIA de 16 a 
 
 Ordem de grandeza: numa T4, um clipe de 5 s em 480p com a LoRA de aceleração (4 a 8 passos) leva minutos, e um minuto de InfiniteTalk pode levar bem mais. As 30 h semanais cobrem 3 reels e os testes. **Estimativa a medir no primeiro teste.**
 
+## Solução pronta escolhida: Wan2GP no Kaggle
+
+Seguindo o "GitHub primeiro": em vez de montar cada modelo separado, o **[Wan2GP](https://github.com/deepbeepmeep/Wan2GP)** já junta todos numa tela só e baixa cada modelo sozinho na primeira vez:
+- InfiniteTalk e LongCat Avatar (fala);
+- Wan 2.2 5B FastWan e LTX-2.5 (movimento);
+- Qwen Image Edit Plus 2511 (identidade);
+- Lynx (troca de rosto);
+- Qwen3 TTS e OmniVoice (voz).
+
+A licença (WanGP Community License 2.0) libera uso dentro da empresa e venda do que for gerado.
+
+- **Notebook:** `central/clone/ciello_clone_kaggle.ipynb`. No Kaggle: *File → Import Notebook*, GPU T4 x2, Internet On, *Run All* e abrir o link `gradio.live`.
+- Foi baseado em dois notebooks da comunidade: [jigs10/ltx-2.5-kaggle-wan2gp](https://github.com/jigs10/ltx-2.5-kaggle-wan2gp) (LTX-2.5 a ~15 min por 5 s de vídeo numa T4) e [Square-Zero-Labs/Wan2GP-on-Colab](https://github.com/Square-Zero-Labs/Wan2GP-on-Colab) (indica o Wan 2.2 5B FastWan em 480p para 16 GB).
+- Alternativa só para fala: [sruckh/InfiniteTalk-Google-Collab](https://github.com/sruckh/InfiniteTalk-Google-Collab) (ComfyUI, MIT) com o fluxo oficial `wanvideo_2_1_14B_I2V_InfiniteTalk_example_03.json` do [ComfyUI-WanVideoWrapper](https://github.com/kijai/ComfyUI-WanVideoWrapper).
+- **Ainda não testado no Kaggle por mim:** este ambiente não acessa o Kaggle nem o Hugging Face. O primeiro teste é o do Mateus (`docs/teste-de-hoje.md`).
+
 ## Fluxo no gerador
 
 ```

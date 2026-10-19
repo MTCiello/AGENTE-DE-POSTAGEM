@@ -7,6 +7,12 @@ Ferramentas que rodam no PC do Mateus e substituem o que o vidIQ cobrava (narra�
 | `voz.py` | Narração de cada cena do roteiro e tempos das cenas | `vidiq_voiceover_generate` |
 | `legendas.py` | Tempo real de cada palavra (karaokê) | estimativa pelo tamanho da palavra |
 | `mixar.py` | Vídeo + voz + trilha com ducking, -14 LUFS | `vidiq_compose` |
+| `radar.py` | Assuntos em alta nos 5 pilares, com nota 0–100 (só biblioteca padrão) | pesquisa manual / outliers do vidIQ |
+| `ganchos.py` | Biblioteca de ganchos validados (multiplicador sobre a mediana do criador) | `vidiq_ig_profile_reels` |
+| `relatorio.py` | Relatório semanal a partir de `metricas/` | histórico pago do Metricool |
+| `clone/ciello_clone_kaggle.ipynb` | Wan2GP na GPU grátis do Kaggle: clone falando, andando, identidade e voz | HeyGen / Higgsfield |
+
+Testes (sem internet): `python -m unittest discover central/testes`
 
 ## Fluxo de um reel
 
