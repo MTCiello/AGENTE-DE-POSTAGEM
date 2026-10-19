@@ -15,13 +15,15 @@ Procedimento semanal que o agente segue toda vez que roda. Este arquivo é a fon
 ## Passo a passo semanal (roda domingo à noite)
 
 1. **Pesquisar virais da semana**
+   - **Radar**: no PC, `python central/radar.py` (GitHub, Hacker News, Reddit, Google Notícias BR, Google Trends BR, blogs oficiais) → `radar/AAAA-MM-DD.md` com nota 0–100 por pilar. Na nuvem, onde essas fontes são bloqueadas, montar o radar com WebSearch no mesmo formato (exemplo: `radar/2026-10-19.md`).
+   - **Ganchos**: no PC, `python central/ganchos.py importar @iacomjota @viniciusguimaraes.ia @gabrieltomaz.ia @theodacoda --sessao <conta secundária>` guarda os reels que passaram de 1,5x a mediana do criador.
    - vidIQ `vidiq_instagram_tiktok_outlier_search`: query sobre IA/Claude/ChatGPT/automação, `descriptionLanguage: ["pt"]`, últimos 7 dias, audiência `Culture/Region: Brazil/Brazilian; Global: false; Demographics: donos de pequenos negócios e profissionais curiosos por IA, 22-45;`. Repetir com `embeddingType: "hook"` para pegar ganchos.
    - vidIQ `vidiq_ig_profile_reels` nos 4 perfis de referência; ranquear reels dos últimos 7 dias por views.
    - WebSearch: lançamentos e novidades de IA da semana (Claude, ChatGPT, Gemini, ferramentas novas).
 2. **Escolher 3 temas** com maior potencial (views acima da mediana do criador + assunto que dá para aplicar a pequenos negócios). Não repetir temas de `historico.md`.
 3. **Checar fatos.** Toda afirmação sobre um produto ou recurso precisa ser confirmada numa fonte oficial ou confiável da semana. Se não der para confirmar, troque o tema.
 4. **Roteirizar** cada reel em `roteiros/AAAA-MM-DD-slug.json` no formato do gerador (hook → 2 a 4 itens → cta), 18–28s no total. Adaptar formato e gancho; **nunca copiar texto, roteiro ou visual de outro criador**.
-   - Gancho: até 9 palavras, com uma palavra em destaque.
+   - Gancho: até 9 palavras, com uma palavra em destaque. Antes de escrever, rode `python central/ganchos.py modelos --pilar <pilar>` e use um dos formatos que mais performam (adaptar o padrão, nunca o texto).
    - CTA sempre com "Salva pra testar depois" (saves e shares são o que mais distribui).
 5. **Narração (local, sem créditos)**: escrever a fala completa de cada reel em português do Brasil coloquial ("pra", "tá", "você"), dividida por cena no campo `say` do roteiro. Gerar no PC do Mateus com `python central/voz.py roteiros/X.json --saida audio/<slug> --nome <PREFIXO>` (motor `chatterbox` com `--ref marca/voz-mateus.wav` quando a voz clonada estiver aprovada; até lá, `kokoro`). O script imprime os `*_TIMES` e grava os tempos das falas em `audio/<slug>/tempos.json`. Detalhes em `central/README.md`.
    - **Reel com o clone digital do Mateus** (em vez do mundo isométrico): descrever as cenas numa montagem JSON (modelo em `reels/src/montagens/exemplo-clone.json`), gerar os clipes conforme `docs/clone-digital.md` e renderizar com `node render.mjs CloneReel X.mp4 --props=montagem.json`. Postar com `isAiGenerated: true`.
@@ -33,8 +35,15 @@ Procedimento semanal que o agente segue toda vez que roda. Este arquivo é a fon
 10. **Agendar no Metricool** com a URL do vídeo final (`createScheduledPost`): Instagram `type: REEL`, `autoPublish: true`, `videoThumbnailUrl` = URL pública da capa (`.../main/midia/capas/X.jpg`). Plano grátis: **20 posts por mês** e **30 dias de histórico**, então não passe de 20 agendamentos no mês.
    - Datas: **segunda, quarta e sexta às 10:00** (America/Sao_Paulo) da semana seguinte.
    - Legenda: 1ª linha = gancho; 3–5 linhas curtas de valor; CTA ("Chama no direct" ou "Comenta IA"); palavras-chave em texto corrido (ex.: "inteligência artificial para pequenas empresas", "automação", "Chapecó"); 3–5 hashtags no fim.
-11. **Registrar** em `historico.md` (data, tema, fonte do viral, URL do vídeo, link do Metricool) e fazer commit.
+11. **Registrar** em `historico.md` (data, tema, fonte do viral, URL do vídeo, link do Metricool) e fazer commit. Sete dias depois de cada post, lançar o resultado na biblioteca: `python central/ganchos.py adicionar --nosso --perfil @ciellotec --gancho "..." --views N --salvamentos N --compartilhamentos N --retencao S`.
 12. **Avisar o Mateus** com um resumo curto: os 3 temas, por que cada um, e os horários agendados.
+
+## Analista (toda segunda de manhã)
+1. Puxar do Metricool (`getAnalyticsDataByMetrics`, últimos 30 dias): seguidores (IGEV01), alcance (IGEV06), contas engajadas (IGEV42) e os reels (IGRE01, IGRE03, IGRE23, IGRE11, IGRE12, IGRE21, IGRE07, IGRE24). Puxar também `getBestTimeToPostByNetwork` (instagram, próxima semana).
+2. Salvar em `metricas/AAAA-MM-DD.json` no mesmo formato de `metricas/2026-10-19.json`. O plano grátis só guarda 30 dias, então **este arquivo é o histórico**.
+3. `python central/relatorio.py` → `metricas/relatorio-AAAA-MM-DD.md` e resumo para o Mateus.
+4. Lançar na biblioteca de ganchos os posts que completaram 7 dias (`central/ganchos.py adicionar --nosso`).
+5. Horário: o principal sai do relatório (hoje **10h**). Uma vez por semana, testar o horário de teste (hoje **18h**) e comparar depois de 4 semanas.
 
 ## Regras
 - **GitHub primeiro.** Antes de construir qualquer função nova, procurar um repositório aberto que já resolva (licença que permita uso comercial, mantido, bem avaliado) e integrar. Código próprio só para costurar as peças ou quando não existir nada pronto.
