@@ -64,7 +64,22 @@ node render.mjs CloneReel ../midia/teste-clone.mp4
 ```
 - [ ] O reel saiu com as suas 2 cenas, as cenas 3 e 4 como rascunho, legenda e cartão final.
 
-## 7. Voz e montagem final (opcional hoje)
+## 7. SDR · ~10 min (precisa do Docker Desktop)
+```powershell
+python central/sdr.py consultas --segmentos imobiliaria odontologia --cidades "Chapecó SC"
+python central/sdr.py buscar
+python central/sdr.py qualificar comercial/bruto/resultados.csv
+python central/sdr.py abordar --top 10
+```
+- [ ] Abriu `comercial/abordagens/AAAA-MM-DD.md` com mensagens e links do WhatsApp.
+- [ ] As empresas do topo são de fato bons clientes para o CRM? Anote 2 que estão fora do lugar.
+- [ ] Me mande o modelo de planilha de importação do CIELLO CRM (só o cabeçalho), para eu ajustar o `crm`.
+
+## 8. Equipe no pixel-agents · ~10 min
+VS Code → extensão **Pixel Agents** → abrir a pasta do projeto → **+ Agent** → digitar `/comercial`.
+- [ ] O sdr e o closer apareceram como personagens trabalhando.
+
+## 9. Voz e montagem final (opcional hoje)
 ```powershell
 py -3.11 -m venv .venv; .venv\Scripts\activate; pip install -r central/requirements.txt
 python central/voz.py roteiros/2026-10-21-teste-ideia.json --saida audio/teste --nome TESTE
