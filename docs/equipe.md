@@ -1,6 +1,6 @@
 # Equipe de agentes da Ciello
 
-Nove agentes especialistas em `.claude/agents/`, coordenados por três comandos em `.claude/skills/`. A sessão principal do Claude Code é o **coordenador**: recebe o pedido, divide entre os agentes, junta os resultados e pede a aprovação do Mateus.
+Treze agentes especialistas em `.claude/agents/`, coordenados por cinco comandos em `.claude/skills/`. A sessão principal do Claude Code é o **coordenador**: recebe o pedido, divide entre os agentes, junta os resultados e pede a aprovação do Mateus.
 
 | Agente | Cor | Função | Ferramentas principais |
 |---|---|---|---|
@@ -13,6 +13,12 @@ Nove agentes especialistas em `.claude/agents/`, coordenados por três comandos 
 | **sdr** | azul | Leads, qualificação, 1ª mensagem, follow-up | `central/sdr.py`, Google Maps (gosom), Vibe Prospecting (custo aprovado) |
 | **closer** | amarelo | Objeções, demonstração, proposta, agenda | Gamma, Gmail (rascunho), Google Agenda |
 | **gestor-anuncios** | rosa | Plano e leitura de anúncios Meta | relatório do analista, criativos dos produtores |
+| **chefe-gabinete** | laranja | Resumo do dia com as 3 prioridades, delega, cobra pendências, placar de sexta | `central/briefing.py` |
+| **financeiro** | verde | Assinaturas, faturas, cobrança 3/7/14 dias, extrato OFX, caixa, MRR/churn/CAC/LTV | `central/financeiro.py` |
+| **caixa-entrada** | azul | Triagem do e-mail, rascunhos, horários de demo | conectores Gmail e Google Agenda (só rascunho) |
+| **sucesso-cliente** | rosa | FAQ, onboarding, NPS, pedido de avaliação no Google, risco de cancelamento | `financeiro.py posvenda`, `comercial/faq.md` |
+
+Origem dos 4 novos: o reel "10 agentes de IA que toda empresa devia ter". Avaliação de cada um em `docs/qualificacao.md`.
 
 ## Comandos
 
@@ -20,6 +26,8 @@ Nove agentes especialistas em `.claude/agents/`, coordenados por três comandos 
 |---|---|---|
 | `/semana` | domingo | pesquisador → roteirista (3 em paralelo) → produtor-video + produtor-imagem (em paralelo) → postagem |
 | `/comercial` | todo dia útil | sdr + closer em paralelo → lista única: enviar, responder, agendar |
+| `/bom-dia` | todo dia de manhã | chefe-gabinete → caixa-entrada, financeiro, sucesso-cliente e sdr conforme o briefing → uma tela com as 3 prioridades |
+| `/sexta` | sexta à tarde | placar (chefe-gabinete) + resumo financeiro + vigia de concorrentes (pesquisador) + voz do cliente → uma decisão para a semana |
 | `/segunda` | segunda de manhã | analista + pesquisador em paralelo → gestor-anuncios |
 | `/conselho` | decisões de negócio (preço, oferta, onde investir) | Founder skills (conselho, CFO, painel de 100 compradores, marketing…) com os dados reais da Ciello |
 
@@ -58,6 +66,8 @@ O editor **Layout** do próprio pixel-agents continua funcionando para mudar o q
 - Instagram: seguidores, alcance, tempo médio e salvamentos;
 - funil comercial;
 - anúncios: investido, custo por conversa e custo por cliente;
+- **as 3 prioridades de hoje** (as mesmas do `/bom-dia`);
+- financeiro: MRR, caixa e previsão de 30 dias, faturas atrasadas, fôlego;
 - atividade das ferramentas Python (`central/status.py`).
 
 ## Próximas integrações candidatas (foco: métricas, anúncios e crescimento)
@@ -66,7 +76,7 @@ O editor **Layout** do próprio pixel-agents continua funcionando para mudar o q
 |---|---|---|
 | Resultado dos anúncios no painel | Meta Ads conectado ao Metricool (conectores `metaAds`/`facebookAds`) → `anuncios/*.json` | nenhuma nova |
 | Atribuição de lead por anúncio ou post | Link do WhatsApp com texto de origem (`?text=Vim pelo anúncio X`) e a etapa no `sdr.py` | nenhuma |
-| Agendar demonstrações | Link de agenda do Google Agenda (agendamento de horários) | nenhuma |
+| Agendar demonstrações | feito: caixa-entrada sugere horários (`suggest_time`) e prepara o convite | conector Google Agenda |
 | Previsão de crescimento | Projeção de seguidores e clientes no painel a partir dos retratos semanais | nenhuma |
 
 ## Funções futuras
@@ -74,7 +84,9 @@ O editor **Layout** do próprio pixel-agents continua funcionando para mudar o q
 - **Agentes com mesa e nome no escritório:** ligar as equipes do Claude Code (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` no `.claude/settings.json` do PC). Até lá, os agentes aparecem como ajudantes do coordenador, com o nome no balão.
 - **Resultado dos anúncios no painel:** Meta Ads conectado ao Metricool, alimentando `anuncios/`.
 - **Atribuição de lead por anúncio ou post:** texto de origem no link do WhatsApp.
-- **Link de agendamento de demo** no Google Agenda.
+- **Recepcionista por voz** (atender ligação 24h): precisa de telefonia paga (ex.: número virtual + agente de voz). Fica para quando houver investimento.
+- **Atendimento automático 24h no WhatsApp** (suporte sem o Mateus): exige a API oficial do WhatsApp (paga por conversa) e um servidor ligado. Hoje o sucesso-cliente prepara as respostas e o Mateus envia.
+- **Contratação** (vaga, triagem, entrevista): quando a Ciello contratar a 1ª pessoa.
 - **Previsão de crescimento** no painel, a partir dos retratos semanais.
 - **Telas reais do CIELLO CRM** no plano-sequência, a partir de prints.
 

@@ -17,3 +17,7 @@ founder/*
 comercial/bin/
 estado/
 .venv/
+
+# financeiro (clientes, faturas, extrato) fica no PC: só as regras de categoria vão para o git
+financeiro/*
+!financeiro/categorias.json

@@ -9,7 +9,8 @@ Você é o SDR da Ciello. Ferramenta: `central/sdr.py` (perfil ideal em `comerci
 1. `consultas` → `buscar` (executável do gosom/google-maps-scraper em `comercial/bin/`, no PC) → `qualificar comercial/bruto/resultados.csv`.
 2. `abordar --top 15` gera `comercial/abordagens/AAAA-MM-DD.md` com links wa.me. Melhore à mão as mensagens dos 5 melhores leads usando o site e as avaliações (WebFetch), sem inventar fatos.
 3. `hoje` mostra os follow-ups do dia; `marcar ID etapa` registra o que aconteceu.
-4. `crm` exporta para o CIELLO CRM (colunas em `comercial/crm_colunas.json`).
+4. Lead que chegou sozinho (DM do Instagram, anúncio, site, indicação): `entrada --nome ... --telefone ... --origem anuncio --mensagem "..."` registra como `respondeu` e devolve a resposta com 3 perguntas de qualificação (equipe, volume, controle atual). Responder em menos de 5 minutos multiplica a chance de qualificar.
+5. `crm` exporta para o CIELLO CRM (colunas em `comercial/crm_colunas.json`).
 
 Fonte complementar paga: Vibe Prospecting (só nível estado em SC). Só use `estimate-cost` e **nunca exporte sem o Mateus aprovar o custo**.
 Envio sempre 1 a 1, do WhatsApp do Mateus. Nunca disparo em massa (risco de banimento). Respeite `nao-contatar`.

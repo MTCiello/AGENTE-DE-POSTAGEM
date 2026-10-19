@@ -1,0 +1,17 @@
+{
+ "_sobre": "Regras do financeiro.py: o 1º termo que aparecer na descrição do extrato define a categoria (sem acento, minúsculas). tipo: receita, despesa ou ambos. Acrescente termos do seu banco aqui e rode: python central/financeiro.py reclassificar",
+ "regras": [
+  {"categoria": "Transferência entre contas", "tipo": "ambos", "termos": ["transf mesma titularidade", "entre contas", "mesma titularidade"]},
+  {"categoria": "Aplicação/resgate", "tipo": "ambos", "termos": ["aplicacao", "resgate", "cdb", "poupanca", "rdb", "invest"]},
+  {"categoria": "Anúncios", "tipo": "despesa", "termos": ["facebk", "facebook", "meta ads", "meta platforms", "instagram", "google ads", "googleads", "tiktok ads"]},
+  {"categoria": "Ferramentas e software", "tipo": "despesa", "termos": ["anthropic", "claude", "openai", "chatgpt", "github", "metricool", "canva", "google workspace", "google *gsuite", "notion", "hostinger", "hostgator", "vercel", "aws", "amazon web", "digitalocean", "cloudflare", "registro.br", "zapier", "gamma"]},
+  {"categoria": "Impostos", "tipo": "despesa", "termos": ["das simples", "das mei", "pgdas", "simples nacional", "darf", "gps ", "inss", "iss ", "receita federal", "pgmei"]},
+  {"categoria": "Contabilidade", "tipo": "despesa", "termos": ["contab", "contador"]},
+  {"categoria": "Tarifas e juros", "tipo": "despesa", "termos": ["tarifa", "iof", "juros", "anuidade", "pacote de servicos", "taxa "]},
+  {"categoria": "Telefone e internet", "tipo": "despesa", "termos": ["vivo", "claro", "tim ", "oi fibra", "unifique", "net servicos"]},
+  {"categoria": "Pró-labore e retiradas", "tipo": "despesa", "termos": ["pro-labore", "pro labore", "prolabore", "retirada"]},
+  {"categoria": "Equipamentos", "tipo": "despesa", "termos": ["kabum", "pichau", "terabyte", "mercadolivre", "mercado livre", "amazon"]},
+  {"categoria": "Receita de assinaturas", "tipo": "receita", "termos": ["mensalidade", "ciello crm", "assinatura"]},
+  {"categoria": "Outras receitas", "tipo": "receita", "termos": ["rendimento", "estorno", "cashback"]}
+ ]
+}

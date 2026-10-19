@@ -9,6 +9,7 @@ Fontes (todas locais):
   metricas/*.json          retratos semanais do Instagram (Analista)
   comercial/leads.csv      funil comercial (SDR e closer)
   anuncios/*.json          campanhas pagas (gestor de anúncios)
+  financeiro/              MRR, caixa e faturas (central/financeiro.py) e as 3 prioridades do dia (central/briefing.py)
 """
 import argparse
 import csv
@@ -24,12 +25,14 @@ AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parent.parent
 sys.path.insert(0, str(AQUI.parent))
 import status  # noqa: E402
+import briefing  # noqa: E402
+import financeiro  # noqa: E402
 
 ETAPAS_FUNIL = ["novo", "contatado", "respondeu", "demo", "proposta", "cliente"]
 
 
 def kpis():
-    out = {"instagram": None, "funil": None, "anuncios": None}
+    out = {"instagram": None, "funil": None, "anuncios": None, "financeiro": None, "prioridades": []}
     retratos = sorted((RAIZ / "metricas").glob("20??-??-??.json"))
     if retratos:
         atual = json.loads(retratos[-1].read_text(encoding="utf-8"))
@@ -69,6 +72,13 @@ def kpis():
         out["anuncios"] = {"gasto": gasto, "conversas": conversas, "clientes": clientes,
                            "custo_conversa": round(gasto / conversas, 2) if conversas else None,
                            "custo_cliente": round(gasto / clientes, 2) if clientes else None, "campanhas": len(campanhas)}
+    try:  # um arquivo do financeiro com problema não derruba o painel
+        fin = financeiro.situacao()
+        out["financeiro"] = fin if fin["tem_dados"] else None
+        itens, _, _ = briefing.coletar(financeiro.hoje())
+        out["prioridades"] = [{"texto": i["texto"], "dono": i["dono"]} for i in itens[:3]]
+    except Exception as e:  # noqa: BLE001
+        out["financeiro"], out["prioridades"] = None, [{"texto": f"erro ao ler o financeiro: {e}", "dono": "financeiro"}]
     return out
 
 

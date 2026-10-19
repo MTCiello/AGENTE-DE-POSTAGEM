@@ -21,7 +21,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 EVENTOS = RAIZ / "estado" / "eventos.jsonl"
 AGENTES = ["pesquisador-mercado", "roteirista", "produtor-video", "produtor-imagem", "postagem",
-           "analista", "sdr", "closer", "gestor-anuncios"]
+           "analista", "sdr", "closer", "gestor-anuncios", "chefe-gabinete", "financeiro", "caixa-entrada", "sucesso-cliente"]
 ESTADOS = ["trabalhando", "pensando", "esperando", "pronto", "erro", "parado"]
 
 

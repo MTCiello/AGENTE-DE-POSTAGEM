@@ -81,6 +81,24 @@ python central\voz.py roteiros\2026-10-27-crm-plano.json --saida audio\crm --nom
 ```
 - [ ] Kokoro gerou a narração em português. Naturalidade 0–10: ____
 
+## 9. Novos agentes (chefe de gabinete, financeiro, vigia, pós-venda) · ~15 min
+
+Detalhes e resultado da bateria da nuvem em `docs/qualificacao.md`.
+```powershell
+.venv\Scripts\activate
+python central\briefing.py                     # as 3 prioridades de hoje
+python central\vigia.py checar                 # preço e oferta dos concorrentes
+python central\financeiro.py cliente --empresa "Cliente Teste" --valor 149 --dia 10
+python central\financeiro.py faturar
+python central\financeiro.py importar C:\caminho\extrato.ofx   # baixe o extrato do banco em OFX
+python central\financeiro.py resumo
+```
+- [ ] O briefing faz sentido para o seu dia? O que faltou: ____
+- [ ] A vigia abriu as 5 páginas? (URL que falhar: troque em `comercial\concorrentes.json`)
+- [ ] As despesas do extrato caíram na categoria certa? Quantas ficaram "a classificar": ____
+- [ ] No Claude Code: `/bom-dia` e, na sexta, `/sexta`.
+- [ ] Opcional: `agendar.cmd` para o briefing sair sozinho às 7h.
+
 ## O que eu preciso de volta
 1. O `estado\verificacao.txt`.
 2. Sua nota para o vídeo do CRM e o que mudaria.

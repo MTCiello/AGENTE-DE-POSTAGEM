@@ -7,6 +7,7 @@ Fluxo:
   4. abordar     monta a 1ª mensagem personalizada de cada lead com link wa.me (você envia do seu WhatsApp, 1 a 1)
   5. marcar      registra o que aconteceu (contatado, respondeu, demo, cliente, perdido, nao_contatar)
   6. hoje        lista os follow-ups do dia (cadência D+2, D+5, D+10) com o link pronto
+  +  entrada     lead que chegou sozinho (DM, anúncio, site, indicação): registra e devolve a resposta em segundos
   7. crm         exporta a planilha para importar no CIELLO CRM
 
 Uso:
@@ -271,6 +272,49 @@ def cmd_hoje(a):
         print(f"#{l['id']} {l['empresa']} (tentativa {n + 1})\n  {msg}\n  {link_wa(l['telefone'], msg) if l['whatsapp'] else 'ligar ' + l['telefone']}\n")
 
 
+# ---------------------------------------------------------------- lead que chegou sozinho (DM, site, anúncio, indicação)
+
+PERGUNTAS = ["Hoje quantas pessoas atendem o WhatsApp de vocês?", "Mais ou menos quantos contatos novos chegam por semana?",
+             "Como vocês controlam hoje quem já respondeu e quem precisa de retorno?"]
+
+
+def resposta_entrada(nome, origem, assinatura):
+    canal = {"instagram": "pelo Instagram", "anuncio": "pelo anúncio", "site": "pelo site", "indicacao": "por indicação"}.get(origem, "")
+    return (f"Oi{', ' + nome if nome else ''}! Aqui é {assinatura}, da Ciello. Obrigado por chamar {canal}".rstrip() + " 🙂\n\n"
+            "Pra eu te mostrar o CIELLO CRM do jeito certo, me conta rapidinho:\n"
+            + "\n".join(f"{i}. {q}" for i, q in enumerate(PERGUNTAS, 1))
+            + "\n\nSe preferir, já marco 15 minutos com você hoje ou amanhã pra te mostrar funcionando.")
+
+
+def cmd_entrada(a):
+    """Velocidade de resposta: lead que chega sozinho é registrado e respondido na hora (meta: menos de 5 minutos)."""
+    cfg = icp()
+    leads = ler_leads()
+    fone, celular = normalizar_fone(a.telefone)
+    if fone and fone in bloqueados():
+        sys.exit("Esse número está na lista nao-contatar.")
+    existente = next((l for l in leads if fone and l["telefone"] == fone), None)
+    hoje = dt.date.today().isoformat()
+    if existente:
+        l = existente
+        l["etapa"], l["proximo_contato"] = "respondeu", ""
+    else:
+        l = {"id": max([int(x["id"]) for x in leads] or [0]) + 1, "empresa": a.empresa or a.nome or fone, "segmento": a.segmento or "outro",
+             "cidade": a.cidade, "telefone": fone, "whatsapp": "sim" if celular else "", "etapa": "respondeu", "tentativas": 0,
+             "avaliacoes": 0, "origem": f"entrada: {a.origem}"}
+        prioridade = cfg["segmentos"].get(l["segmento"], {}).get("prioridade", 2)
+        l["pontos"] = 6 * prioridade + 25 + (20 if celular else 10)  # chegou sozinho = intenção alta
+        leads.append(l)
+    l["ultimo_contato"] = hoje
+    if a.mensagem:
+        l["obs"] = (l.get("obs", "") + f" | {dt.date.today():%d/%m} entrada ({a.origem}): {a.mensagem}").strip(" |")
+    gravar_leads(leads)
+    msg = resposta_entrada(a.nome.split(" ")[0] if a.nome else "", a.origem, a.assinatura)
+    print(f"#{l['id']} {l['empresa']} registrado como 'respondeu' ({l['origem']}). Responda agora:\n\n{msg}\n")
+    print(link_wa(fone, msg) if fone else "(sem telefone: responda pela DM)")
+    print(f"\nDepois da resposta: python central/sdr.py marcar {l['id']} demo --obs \"equipe X, Y contatos/semana\"")
+
+
 # ---------------------------------------------------------------- 5. marcar
 
 def cmd_marcar(a):
@@ -330,6 +374,11 @@ def main():
     s = sub.add_parser("abordar"); s.add_argument("--top", type=int, default=15); s.add_argument("--assinatura", default="Mateus"); s.set_defaults(f=cmd_abordar)
     s = sub.add_parser("marcar"); s.add_argument("id", type=int); s.add_argument("etapa", choices=ETAPAS); s.add_argument("--obs", default=""); s.set_defaults(f=cmd_marcar)
     s = sub.add_parser("hoje"); s.set_defaults(f=cmd_hoje)
+    s = sub.add_parser("entrada", help="lead que chegou sozinho: registra e devolve a resposta pronta")
+    s.add_argument("--nome", default=""); s.add_argument("--empresa", default=""); s.add_argument("--telefone", default="")
+    s.add_argument("--origem", default="instagram", choices=["instagram", "anuncio", "site", "indicacao", "outro"])
+    s.add_argument("--segmento", default=""); s.add_argument("--cidade", default=""); s.add_argument("--mensagem", default="")
+    s.add_argument("--assinatura", default="Mateus"); s.set_defaults(f=cmd_entrada)
     s = sub.add_parser("crm"); s.add_argument("--todos", action="store_true", help="inclui leads ainda não contatados"); s.add_argument("--separador", default=";"); s.set_defaults(f=cmd_crm)
     a = ap.parse_args()
     from status import trabalhando

@@ -100,8 +100,14 @@ def montagem():
 
 
 def oraculo():
-    cod, out = rodar([PY, "central/analisar_video.py", "midia/final/2026-10-27-crm-plano.mp4"])
-    return (OK if "aprovado" in out else AVISO), "plano-sequência do CRM: " + ("aprovado" if "aprovado" in out else ultima(out))
+    notas = []
+    for video in sorted((RAIZ / "midia" / "final").glob("*-plano.mp4")):
+        cod, out = rodar([PY, "central/analisar_video.py", str(video)])
+        notas.append((video.stem[11:], "aprovado" in out, ultima(out, 1)))
+    if not notas:
+        return AVISO, "nenhum plano-sequência em midia/final"
+    reprovados = [n for n, ok, _ in notas if not ok]
+    return (AVISO if reprovados else OK), ", ".join(f"{n}: {'aprovado' if ok else 'reprovado'}" for n, ok, _ in notas)
 
 
 def relatorio():
@@ -134,6 +140,109 @@ def radar():
         return FALHA, ultima(out)
     linha = next((l.split(" -> ")[0] for l in out.splitlines() if "assuntos ->" in l), "")
     return (AVISO if falhas else OK), linha + (f" · fontes fora do ar: {', '.join(falhas)}" if falhas else "")
+
+
+OFX_TESTE = """<OFX><BANKTRANLIST>
+<STMTTRN><TRNTYPE>CREDIT<DTPOSTED>{d1}<TRNAMT>149.00<FITID>V1<MEMO>PIX RECEBIDO CLIENTE TESTE</STMTTRN>
+<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>{d1}<TRNAMT>-50.00<FITID>V2<MEMO>FACEBK ADS</STMTTRN>
+</BANKTRANLIST><LEDGERBAL><BALAMT>1000.00<DTASOF>{d1}</LEDGERBAL></OFX>"""
+
+
+def financeiro():
+    """Um mês simulado pela linha de comando, numa pasta temporária (não toca nos seus dados)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        env = {**os.environ, "CIELLO_FINANCEIRO": tmp}
+        hoje = time.strftime("%Y-%m-%d")
+        ofx = Path(tmp) / "extrato.ofx"
+        ofx.write_text(OFX_TESTE.format(d1=hoje.replace("-", "")), encoding="utf-8")
+        passos = [["cliente", "--empresa", "Cliente Teste", "--valor", "149", "--dia", "1", "--whatsapp", "49999990000", "--inicio", "2020-01-01"],
+                  ["cliente", "--empresa", "Cliente Atrasado", "--valor", "99", "--dia", "1", "--inicio", "2020-01-01"],
+                  ["faturar", "--mes", hoje[:7]], ["faturar", "--mes", "2020-01"], ["importar", str(ofx)],
+                  ["cobrar"], ["posvenda"], ["resumo"]]
+        saidas = []
+        for p in passos:
+            r = subprocess.run([PY, "central/financeiro.py", *p], cwd=RAIZ, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, timeout=60)
+            if r.returncode:
+                return FALHA, f"financeiro.py {p[0]}: {ultima(r.stdout + r.stderr)}"
+            saidas.append(r.stdout)
+        if "1 faturas baixadas" not in saidas[4]:
+            return FALHA, "o extrato não deu baixa na fatura: " + saidas[4].strip()
+        if "cobranças para enviar" not in saidas[5]:
+            return FALHA, "a fatura atrasada não gerou cobrança: " + saidas[5].strip()
+        mrr = re.search(r"\*\*MRR (R\$ [\d.,]+)", saidas[7])
+        return OK, f"mês simulado: 2 clientes, extrato OFX conciliado, cobrança e resumo (MRR {mrr.group(1) if mrr else '?'})"
+
+
+def briefing():
+    cod, out = rodar([PY, "central/briefing.py"])
+    if cod:
+        return FALHA, ultima(out)
+    prioridades = re.findall(r"^\d\. (.+?) _\(com", out, re.M)
+    return OK, f"{len(prioridades)} prioridades hoje" + (f" · 1ª: {prioridades[0][:80]}" if prioridades else "")
+
+
+def painel():
+    """Sobe o painel numa porta livre, lê a API e desliga."""
+    import socket
+    import urllib.request
+    with socket.socket() as s_:
+        s_.bind(("127.0.0.1", 0))
+        porta = s_.getsockname()[1]
+    proc = subprocess.Popen([PY, "central/escritorio/servidor.py", "--porta", str(porta), "--sem-navegador"], cwd=RAIZ,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    try:
+        abridor = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # localhost não passa por proxy
+        for _ in range(40):
+            try:
+                k = __import__("json").loads(abridor.open(f"http://127.0.0.1:{porta}/api/kpis", timeout=2).read())
+                html = abridor.open(f"http://127.0.0.1:{porta}/", timeout=2).read().decode("utf-8")
+                break
+            except OSError:
+                time.sleep(0.25)
+        else:
+            return FALHA, "o painel não respondeu: " + (proc.stderr.read(400).decode(errors="replace") if proc.poll() is not None else "sem resposta")
+        faltam = [c for c in ("instagram", "funil", "anuncios", "financeiro", "prioridades") if c not in k]
+        if faltam or "PAINEL CIELLO" not in html:
+            return FALHA, f"API incompleta: faltam {faltam}"
+        return OK, f"porta 3200 ok (testado na {porta}): {len(k['prioridades'])} prioridades, Instagram {'com' if k['instagram'] else 'sem'} dados"
+    finally:
+        proc.terminate()
+
+
+def equipe():
+    """Cada agente tem nome e descrição; cada comando só chama agentes que existem; o quadro de status conhece todos."""
+    sys.path.insert(0, str(RAIZ / "central"))
+    import status as st
+    agentes = {}
+    for p in sorted((RAIZ / ".claude" / "agents").glob("*.md")):
+        cab = p.read_text(encoding="utf-8").split("---")[1]
+        nome = re.search(r"^name:\s*(\S+)", cab, re.M)
+        if not nome or not re.search(r"^description:\s*\S", cab, re.M):
+            return FALHA, f"{p.name} sem name/description no cabeçalho"
+        agentes[nome.group(1)] = p
+    problemas = []
+    comandos = sorted((RAIZ / ".claude" / "skills").glob("*/SKILL.md"))
+    for sk in comandos:
+        if sk.parent.name.startswith("founder") or sk.parent.name == "conselho":
+            continue
+        citados = set(re.findall(r"\*\*([a-z-]+)\*\*", sk.read_text(encoding="utf-8")))
+        problemas += [f"/{sk.parent.name} cita '{c}'" for c in citados if c not in agentes and "-" in c]
+    fora = sorted(set(agentes) - set(st.AGENTES))
+    if fora:
+        problemas.append(f"status.py não conhece: {', '.join(fora)}")
+    if problemas:
+        return FALHA, "; ".join(problemas)
+    return OK, f"{len(agentes)} agentes e {len(comandos)} comandos/skills consistentes"
+
+
+def vigia():
+    with tempfile.TemporaryDirectory() as tmp:  # não mexe nas fotos reais nem em radar/
+        cod, out = rodar([PY, "central/vigia.py", "checar", "--saida", tmp, "--fotos", tmp], timeout=300)
+    if cod:
+        return FALHA, ultima(out)
+    linha = next((l for l in out.splitlines() if "fora do ar" in l and "->" in l), "")
+    fora = int(re.search(r"(\d+) fora do ar", linha).group(1)) if linha else 0
+    return (AVISO if fora else OK), linha.split(" -> ")[0] + (" (troque as URLs que falharam em comercial/concorrentes.json)" if fora else "")
 
 
 def capa():
@@ -174,9 +283,10 @@ def main():
     lista = [("Python", python_versao), ("ffmpeg", ffmpeg), ("Node", node), ("Bibliotecas Python", libs_python),
              ("Testes automáticos", testes), ("Montagem final (mixar)", montagem), ("Oráculo de ritmo", oraculo),
              ("Relatório semanal", relatorio), ("Biblioteca de ganchos", ganchos), ("SDR", sdr),
-             ("Escritório (pixel-agents)", escritorio), ("Voz (opcional)", voz)]
+             ("Financeiro (mês simulado)", financeiro), ("Briefing do dia", briefing), ("Painel (porta 3200)", painel),
+             ("Equipe de agentes e comandos", equipe), ("Escritório (pixel-agents)", escritorio), ("Voz (opcional)", voz)]
     if not a.rapido:
-        lista += [("Radar (internet)", radar), ("Capa (Remotion)", capa)]
+        lista += [("Radar (internet)", radar), ("Vigia de concorrentes (internet)", vigia), ("Capa (Remotion)", capa)]
     for nome, f in lista:
         checar(nome, f)
     n = {e: sum(1 for _, s, _, _ in resultados if s == e) for e in (OK, AVISO, FALHA)}

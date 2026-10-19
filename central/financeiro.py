@@ -1,0 +1,649 @@
+"""Financeiro da Ciello: assinaturas do CIELLO CRM, cobrança, extrato do banco, caixa e números de crescimento.
+
+Faz o papel do "Agente Financeiro" (classifica despesa, cobra fatura atrasada, marca o que não bate, prevê o caixa)
+e do pós-venda (boas-vindas, NPS, pedido de avaliação no Google, indicação). Só biblioteca padrão.
+
+Fluxo do mês:
+  python central/financeiro.py cliente --empresa "Imobiliária X" --valor 149 --dia 10 --whatsapp 49999998888
+  python central/financeiro.py cliente --lead 12 --valor 149 --dia 10      # puxa empresa e WhatsApp do comercial/leads.csv
+  python central/financeiro.py faturar                  # faturas do mês para todos os clientes ativos
+  python central/financeiro.py importar extrato.ofx     # extrato do banco (OFX ou CSV): classifica e dá baixa nas faturas
+  python central/financeiro.py cobrar                   # faturas atrasadas 3, 7 e 14 dias: mensagens com link wa.me
+  python central/financeiro.py enviado cobranca 7       # registra que a cobrança da fatura 7 foi enviada
+  python central/financeiro.py posvenda                 # boas-vindas D+1, uso D+7, NPS D+30, avaliação, indicação D+90
+  python central/financeiro.py nps 3 10                 # nota do cliente 3 (9–10 recebe o pedido de avaliação no Google)
+  python central/financeiro.py resumo                   # MRR, churn, CAC, LTV, caixa, previsão 30/60/90 dias, o que não bate
+
+Outros: pago, cancelar, lancar (Pix/dinheiro fora do extrato), config (saldo inicial, alerta de saldo, link de avaliação).
+
+Os dados ficam em financeiro/ (fora do git: o repositório é público). Só financeiro/categorias.json vai para o git.
+Mensagens nunca são enviadas daqui: você revisa e envia do seu WhatsApp.
+"""
+import argparse
+import calendar
+import csv
+import datetime as dt
+import json
+import os
+import re
+import sys
+import urllib.parse
+from pathlib import Path
+
+RAIZ = Path(__file__).resolve().parent.parent
+PASTA = Path(os.environ.get("CIELLO_FINANCEIRO") or RAIZ / "financeiro")  # outra pasta só para testes e simulações
+CLIENTES, FATURAS, LANCAMENTOS = PASTA / "clientes.csv", PASTA / "faturas.csv", PASTA / "lancamentos.csv"
+CONFIG = PASTA / "config.json"
+REGRAS = RAIZ / "financeiro" / "categorias.json"  # regras versionadas no git, valem para qualquer pasta de dados
+LEADS = RAIZ / "comercial" / "leads.csv"
+C_CLIENTE = ["id", "empresa", "contato", "whatsapp", "plano", "valor_mensal", "dia_vencimento", "inicio", "status",
+             "cancelado_em", "motivo", "lead_id", "nps", "posvenda", "obs"]
+C_FATURA = ["id", "cliente_id", "competencia", "vencimento", "valor", "pago_em", "lancamento", "cobrancas"]
+C_LANC = ["id", "data", "descricao", "valor", "categoria", "fitid", "fatura_id", "origem"]
+COBRANCA = [3, 7, 14]                    # dias de atraso
+POSVENDA = [1, 7, 30, 90]                # dias desde o início
+SEM_CATEGORIA = "a classificar"
+RECEITA = "Receita de assinaturas"
+FORA_DO_RESULTADO = {"Transferência entre contas", "Aplicação/resgate"}
+
+
+# ---------------------------------------------------------------- arquivos
+
+def ler(caminho, campos):
+    if not caminho.exists():
+        return []
+    with caminho.open(encoding="utf-8", newline="") as f:
+        return [{k: (r.get(k) or "") for k in campos} for r in csv.DictReader(f)]
+
+
+def gravar(caminho, campos, linhas):
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    with caminho.open("w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=campos)
+        w.writeheader()
+        for l in linhas:
+            w.writerow({k: l.get(k, "") for k in campos})
+
+
+def config():
+    base = {"saldo_inicial": 0.0, "data_saldo": "", "alerta_saldo": 1000.0, "link_avaliacao": "", "assinatura": "Mateus"}
+    if CONFIG.exists():
+        base.update(json.loads(CONFIG.read_text(encoding="utf-8")))
+    return base
+
+
+def salvar_config(cfg):
+    PASTA.mkdir(parents=True, exist_ok=True)
+    CONFIG.write_text(json.dumps(cfg, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def proximo_id(linhas):
+    return max([int(l["id"]) for l in linhas if str(l["id"]).isdigit()] or [0]) + 1
+
+
+# ---------------------------------------------------------------- números, datas e texto
+
+def num(t, br=True):
+    """'1.234,56' → 1234.56 · '-50.00' → -50.0 · 'R$ 149' → 149.0. br=False: ponto é sempre decimal (OFX)."""
+    s = re.sub(r"[^\d,.\-]", "", str(t or "").replace("−", "-"))
+    if not s or s in "-.,":
+        return 0.0
+    if "," in s and "." in s:
+        s = s.replace(".", "").replace(",", ".") if s.rfind(",") > s.rfind(".") else s.replace(",", "")
+    elif "," in s:
+        s = s.replace(",", ".")
+    elif br and re.fullmatch(r"-?\d{1,3}(\.\d{3})+", s):
+        s = s.replace(".", "")  # 1.234 no padrão brasileiro é mil duzentos e trinta e quatro
+    return float(s)
+
+
+def data(t):
+    t = str(t or "").strip()
+    for fmt, n in (("%Y%m%d", 8), ("%Y-%m-%d", 10), ("%d/%m/%Y", 10), ("%d/%m/%y", 8)):
+        try:
+            return dt.datetime.strptime(t[:n], fmt).date()
+        except ValueError:
+            continue
+    raise ValueError(f"data que não entendi: {t!r}")
+
+
+def hoje():
+    return dt.date.today()
+
+
+def reais(v):
+    return ("-" if v < 0 else "") + "R$ " + f"{abs(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def sem_acento(t):
+    tabela = str.maketrans("áàâãéêíóôõúüçÁÀÂÃÉÊÍÓÔÕÚÜÇ", "aaaaeeiooouucAAAAEEIOOOUUC")
+    return (t or "").translate(tabela).lower()
+
+
+def vencimento(competencia, dia):
+    ano, mes = map(int, competencia.split("-"))
+    return dt.date(ano, mes, min(int(dia), calendar.monthrange(ano, mes)[1]))
+
+
+def meses_atras(mes, n):
+    ano, m = map(int, mes.split("-"))
+    m -= n
+    while m <= 0:
+        m += 12
+        ano -= 1
+    return f"{ano:04d}-{m:02d}"
+
+
+def link_wa(fone, texto):
+    d = re.sub(r"\D", "", fone or "")
+    if len(d) in (10, 11):
+        d = "55" + d
+    return f"https://wa.me/{d}?text={urllib.parse.quote(texto)}" if d else ""
+
+
+# ---------------------------------------------------------------- clientes e faturas
+
+def cmd_cliente(a):
+    clientes = ler(CLIENTES, C_CLIENTE)
+    empresa, whatsapp = a.empresa, a.whatsapp
+    if a.lead:
+        lead = next((l for l in ler(LEADS, ["id", "empresa", "telefone"]) if l["id"] == str(a.lead)), None)
+        if not lead:
+            sys.exit(f"lead {a.lead} não está em {LEADS}")
+        empresa, whatsapp = empresa or lead["empresa"], whatsapp or lead["telefone"]
+    if not empresa:
+        sys.exit("informe --empresa ou --lead")
+    c = {"id": proximo_id(clientes), "empresa": empresa, "contato": a.contato, "whatsapp": whatsapp, "plano": a.plano,
+         "valor_mensal": f"{a.valor:.2f}", "dia_vencimento": a.dia, "inicio": a.inicio or hoje().isoformat(),
+         "status": "ativo", "lead_id": a.lead or ""}
+    clientes.append(c)
+    gravar(CLIENTES, C_CLIENTE, clientes)
+    print(f"cliente #{c['id']} {empresa}: {reais(a.valor)}/mês, vence dia {a.dia}"
+          + (f" · lembre: python central/sdr.py marcar {a.lead} cliente" if a.lead else ""))
+
+
+def cmd_cancelar(a):
+    clientes = ler(CLIENTES, C_CLIENTE)
+    c = achar(clientes, a.id, "cliente")
+    c.update(status="cancelado", cancelado_em=a.data or hoje().isoformat(), motivo=a.motivo)
+    gravar(CLIENTES, C_CLIENTE, clientes)
+    print(f"cliente #{c['id']} {c['empresa']} cancelado ({c['motivo'] or 'sem motivo anotado'})")
+
+
+def achar(linhas, id_, nome):
+    item = next((l for l in linhas if l["id"] == str(id_)), None)
+    if not item:
+        sys.exit(f"{nome} {id_} não encontrado")
+    return item
+
+
+def cmd_faturar(a):
+    comp = a.mes or hoje().strftime("%Y-%m")
+    faturas = ler(FATURAS, C_FATURA)
+    existentes = {(f["cliente_id"], f["competencia"]) for f in faturas}
+    novas = 0
+    for c in ler(CLIENTES, C_CLIENTE):
+        # 1ª fatura no 1º vencimento depois do início (antes disso é o período de teste)
+        if c["status"] != "ativo" or (c["id"], comp) in existentes or vencimento(comp, c["dia_vencimento"]) < data(c["inicio"]):
+            continue
+        faturas.append({"id": proximo_id(faturas), "cliente_id": c["id"], "competencia": comp,
+                        "vencimento": vencimento(comp, c["dia_vencimento"]).isoformat(), "valor": c["valor_mensal"]})
+        novas += 1
+    gravar(FATURAS, C_FATURA, faturas)
+    print(f"{novas} faturas de {comp} criadas ({sum(f['competencia'] == comp for f in faturas)} no mês)")
+
+
+def cmd_pago(a):
+    faturas = ler(FATURAS, C_FATURA)
+    f = achar(faturas, a.id, "fatura")
+    f["pago_em"] = a.data or hoje().isoformat()
+    gravar(FATURAS, C_FATURA, faturas)
+    print(f"fatura #{f['id']} paga em {f['pago_em']}")
+
+
+# ---------------------------------------------------------------- extrato do banco
+
+def ler_ofx(caminho):
+    """OFX 1.x (SGML) dos bancos brasileiros: tags folha sem fechamento, texto em latin-1 ou utf-8."""
+    bruto = caminho.read_bytes()
+    try:
+        txt = bruto.decode("utf-8")
+    except UnicodeDecodeError:
+        txt = bruto.decode("cp1252", errors="replace")
+    campo = lambda bloco, tag: (re.search(rf"<{tag}>([^<\r\n]*)", bloco, re.I) or [None, ""])[1].strip()
+    itens = []
+    for bloco in re.findall(r"<STMTTRN>(.*?)</STMTTRN>", txt, re.S | re.I):
+        desc = " ".join(x for x in (campo(bloco, "NAME"), campo(bloco, "MEMO")) if x)
+        itens.append({"data": data(campo(bloco, "DTPOSTED")).isoformat(), "valor": num(campo(bloco, "TRNAMT"), br=False),
+                      "descricao": desc, "fitid": campo(bloco, "FITID")})
+    saldo = None
+    m = re.search(r"<LEDGERBAL>(.*?)(</LEDGERBAL>|$)", txt, re.S | re.I)
+    if m and campo(m.group(1), "BALAMT"):
+        saldo = (num(campo(m.group(1), "BALAMT"), br=False), data(campo(m.group(1), "DTASOF")).isoformat())
+    return itens, saldo
+
+
+def ler_csv_extrato(caminho):
+    """CSV exportado pelo banco: aceita ; ou , e cabeçalhos como Data, Descrição/Histórico, Valor (ou Crédito/Débito)."""
+    txt = caminho.read_bytes()
+    try:
+        txt = txt.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        txt = txt.decode("cp1252")
+    linhas = txt.splitlines()
+    sep = ";" if linhas and linhas[0].count(";") >= linhas[0].count(",") else ","
+    itens = []
+    for r in csv.DictReader(linhas, delimiter=sep):
+        r = {sem_acento(k).strip(): v for k, v in r.items() if k}
+        quando = r.get("data") or r.get("data lancamento") or r.get("date")
+        if not quando:
+            continue
+        if r.get("valor") not in (None, ""):
+            valor = num(r["valor"])
+        else:
+            valor = num(r.get("credito")) - abs(num(r.get("debito")))
+        desc = r.get("descricao") or r.get("historico") or r.get("lancamento") or r.get("memo") or ""
+        itens.append({"data": data(quando).isoformat(), "valor": valor, "descricao": desc.strip(), "fitid": ""})
+    return itens, None
+
+
+def regras():
+    return json.loads(REGRAS.read_text(encoding="utf-8"))["regras"] if REGRAS.exists() else []
+
+
+def classificar(descricao, valor, lista_regras):
+    d = sem_acento(descricao)
+    for r in lista_regras:
+        if r.get("tipo") == "receita" and valor < 0 or r.get("tipo") == "despesa" and valor > 0:
+            continue
+        if any(sem_acento(t) in d for t in r["termos"]):
+            return r["categoria"]
+    return SEM_CATEGORIA
+
+
+def conciliar(lanc, faturas, clientes):
+    """Dá baixa na fatura em aberto com o mesmo valor e vencimento próximo; nome do cliente na descrição desempata."""
+    if float(lanc["valor"]) <= 0 or lanc.get("fatura_id"):
+        return None
+    nomes = {c["id"]: sem_acento(c["empresa"]) for c in clientes}
+    quando = data(lanc["data"])
+    candidatas = [f for f in faturas if not f["pago_em"] and abs(float(f["valor"]) - float(lanc["valor"])) < 0.01
+                  and -10 <= (quando - data(f["vencimento"])).days <= 45]
+    if not candidatas:
+        return None
+    desc = sem_acento(lanc["descricao"])
+    def nome_bate(f):
+        palavras = [p for p in re.findall(r"\w+", nomes.get(f["cliente_id"], "")) if len(p) > 3]
+        return any(p in desc for p in palavras)
+    candidatas.sort(key=lambda f: (not nome_bate(f), abs((quando - data(f["vencimento"])).days)))
+    if len(candidatas) > 1 and not nome_bate(candidatas[0]):
+        return None  # dois clientes com o mesmo valor e nenhum nome no extrato: fica para você conferir
+    f = candidatas[0]
+    f.update(pago_em=lanc["data"], lancamento=lanc["id"])
+    lanc.update(fatura_id=f["id"], categoria=RECEITA)
+    return f
+
+
+def cmd_importar(a):
+    caminho = Path(a.arquivo)
+    itens, saldo = ler_ofx(caminho) if caminho.suffix.lower() == ".ofx" else ler_csv_extrato(caminho)
+    lancs, faturas, clientes = ler(LANCAMENTOS, C_LANC), ler(FATURAS, C_FATURA), ler(CLIENTES, C_CLIENTE)
+    vistos = {l["fitid"] for l in lancs if l["fitid"]} | {(l["data"], f"{float(l['valor']):.2f}", l["descricao"]) for l in lancs}
+    lista_regras = regras()
+    novos = baixas = 0
+    for i in itens:
+        chave = (i["data"], f"{i['valor']:.2f}", i["descricao"])
+        if (i["fitid"] and i["fitid"] in vistos) or chave in vistos:
+            continue
+        l = {"id": proximo_id(lancs), "data": i["data"], "descricao": i["descricao"], "valor": f"{i['valor']:.2f}",
+             "categoria": classificar(i["descricao"], i["valor"], lista_regras), "fitid": i["fitid"],
+             "origem": caminho.suffix.lower().lstrip(".")}
+        if conciliar(l, faturas, clientes):
+            baixas += 1
+        lancs.append(l)
+        vistos |= {i["fitid"], chave}
+        novos += 1
+    gravar(LANCAMENTOS, C_LANC, lancs)
+    gravar(FATURAS, C_FATURA, faturas)
+    if saldo:
+        cfg = config()
+        cfg.update(saldo_inicial=saldo[0], data_saldo=saldo[1])
+        salvar_config(cfg)
+    pendentes = sum(l["categoria"] == SEM_CATEGORIA for l in lancs)
+    print(f"{novos} lançamentos novos · {baixas} faturas baixadas"
+          + (f" · saldo do banco {reais(saldo[0])} em {saldo[1]}" if saldo else "")
+          + (f" · {pendentes} a classificar (ajuste financeiro/categorias.json e rode 'reclassificar')" if pendentes else ""))
+
+
+def cmd_reclassificar(a):
+    lancs, lista_regras = ler(LANCAMENTOS, C_LANC), regras()
+    n = 0
+    for l in lancs:
+        if l["categoria"] == SEM_CATEGORIA or a.todos and not l["fatura_id"]:
+            nova = classificar(l["descricao"], float(l["valor"]), lista_regras)
+            n += nova != l["categoria"]
+            l["categoria"] = nova
+    gravar(LANCAMENTOS, C_LANC, lancs)
+    print(f"{n} lançamentos reclassificados · {sum(l['categoria'] == SEM_CATEGORIA for l in lancs)} ainda a classificar")
+
+
+def cmd_lancar(a):
+    lancs = ler(LANCAMENTOS, C_LANC)
+    l = {"id": proximo_id(lancs), "data": a.data or hoje().isoformat(), "descricao": a.descricao, "valor": f"{a.valor:.2f}",
+         "categoria": a.categoria or classificar(a.descricao, a.valor, regras()), "origem": "manual"}
+    baixa = conciliar(l, f := ler(FATURAS, C_FATURA), ler(CLIENTES, C_CLIENTE))
+    lancs.append(l)
+    gravar(LANCAMENTOS, C_LANC, lancs)
+    gravar(FATURAS, C_FATURA, f)
+    print(f"lançamento #{l['id']} {reais(a.valor)} · {l['categoria']}" + (f" · baixou a fatura #{baixa['id']}" if baixa else ""))
+
+
+# ---------------------------------------------------------------- cobrança e pós-venda
+
+def atrasadas(ref=None):
+    ref = ref or hoje()
+    clientes = {c["id"]: c for c in ler(CLIENTES, C_CLIENTE)}
+    out = []
+    for f in ler(FATURAS, C_FATURA):
+        if f["pago_em"]:
+            continue
+        dias = (ref - data(f["vencimento"])).days
+        if dias > 0:
+            out.append({**f, "dias": dias, "cliente": clientes.get(f["cliente_id"], {})})
+    return sorted(out, key=lambda f: -f["dias"])
+
+
+def msg_cobranca(f, etapa, assinatura):
+    nome = (f["cliente"].get("contato") or "").split(" ")[0] or "tudo bem"
+    venc = data(f["vencimento"]).strftime("%d/%m")
+    valor = reais(float(f["valor"]))
+    if etapa == 3:
+        return (f"Oi, {nome}! Aqui é {assinatura}, da Ciello. Passando só para lembrar da mensalidade do CIELLO CRM "
+                f"de {valor} que venceu em {venc}. Se já pagou, desconsidera. Quer que eu reenvie o Pix?")
+    if etapa == 7:
+        return (f"Oi, {nome}! A mensalidade do CIELLO CRM de {valor} (venc. {venc}) ainda aparece em aberto aqui. "
+                f"Consegue ver pra mim hoje? Se precisar de outra data, me fala que a gente combina.")
+    return (f"Oi, {nome}. A mensalidade de {valor} do CIELLO CRM está com 14 dias de atraso. Para não precisar pausar o acesso "
+            f"da equipe, consegue regularizar até sexta? Se estiver difícil, me liga que a gente acha um jeito.")
+
+
+def etapa_atual(dias, etapas, feitas):
+    """A etapa mais recente alcançada, se ela (ou uma posterior) ainda não foi enviada: atrasou a 7, não manda a 3."""
+    alcancadas = [e for e in etapas if dias >= e]
+    enviadas = [int(x) for x in feitas.split(",") if x.isdigit()]
+    if not alcancadas or any(e >= alcancadas[-1] for e in enviadas):
+        return None
+    return alcancadas[-1]
+
+
+def etapa_devida(dias, feitas):
+    return etapa_atual(dias, COBRANCA, feitas)
+
+
+def cmd_cobrar(a):
+    cfg = config()
+    L = [f"# Cobranças de {hoje().isoformat()}", "", "Revise e envie do seu WhatsApp. Depois: `python central/financeiro.py enviado cobranca ID`.", ""]
+    n = 0
+    for f in atrasadas():
+        etapa = etapa_devida(f["dias"], f["cobrancas"])
+        if not etapa:
+            continue
+        msg = msg_cobranca(f, etapa, cfg["assinatura"])
+        link = link_wa(f["cliente"].get("whatsapp"), msg)
+        L += [f"## Fatura #{f['id']} · {f['cliente'].get('empresa', '?')} · {reais(float(f['valor']))} · {f['dias']} dias (etapa D+{etapa})",
+              "", "```", msg, "```", "", f"[Abrir no WhatsApp]({link})" if link else "Sem WhatsApp cadastrado: ligar.", ""]
+        n += 1
+    destino = PASTA / "cobrancas" / f"{hoje().isoformat()}.md"
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_text("\n".join(L), encoding="utf-8")
+    print(f"{n} cobranças para enviar -> {destino}" if n else "nenhuma cobrança devida hoje")
+
+
+def posvenda_devida(c, ref=None):
+    ref = ref or hoje()
+    if c["status"] != "ativo":
+        return None
+    return etapa_atual((ref - data(c["inicio"])).days, POSVENDA, c["posvenda"])
+
+
+def msg_posvenda(c, etapa, cfg):
+    nome = (c.get("contato") or "").split(" ")[0] or "tudo bem"
+    if etapa == 1:
+        return (f"Oi, {nome}! Seja bem-vindo ao CIELLO CRM 🎉 Qualquer dúvida na configuração, me chama aqui. "
+                f"Dica do 1º dia: conecte o WhatsApp e crie as etapas do seu funil, leva 10 minutos.")
+    if etapa == 7:
+        return (f"Oi, {nome}! Uma semana de CIELLO CRM. A equipe já está atendendo por ele? "
+                f"Se quiser, faço uma call de 15 minutos para ajustar o funil com vocês.")
+    if etapa == 30:
+        return (f"Oi, {nome}! Um mês de CIELLO CRM. Pergunta rápida: de 0 a 10, quanto você recomendaria o CRM "
+                f"para outro empresário? Sua resposta me ajuda a melhorar.")
+    return (f"Oi, {nome}! 3 meses juntos 🙌 Conhece algum empresário que sofre com o WhatsApp bagunçado? "
+            f"Se indicar e ele fechar, seu próximo mês sai por nossa conta.")
+
+
+def cmd_posvenda(a):
+    cfg = config()
+    L = [f"# Pós-venda de {hoje().isoformat()}", "", "Revise e envie. Depois: `python central/financeiro.py enviado posvenda CLIENTE`.", ""]
+    n = 0
+    for c in ler(CLIENTES, C_CLIENTE):
+        etapa = posvenda_devida(c)
+        if etapa:
+            msg = msg_posvenda(c, etapa, cfg)
+            L += [f"## Cliente #{c['id']} · {c['empresa']} · D+{etapa}", "", "```", msg, "```", "",
+                  f"[Abrir no WhatsApp]({link_wa(c['whatsapp'], msg)})" if c["whatsapp"] else "Sem WhatsApp cadastrado.", ""]
+            n += 1
+        if c["nps"] and int(c["nps"]) >= 9 and "avaliacao" not in c["posvenda"].split(","):
+            link = cfg["link_avaliacao"] or "(configure: python central/financeiro.py config --link-avaliacao URL)"
+            msg = (f"Que bom que você curtiu, obrigado! 🙏 Se puder deixar essa nota no Google, ajuda muito outros empresários "
+                   f"a conhecer a Ciello: {link}")
+            L += [f"## Cliente #{c['id']} · {c['empresa']} · pedido de avaliação (NPS {c['nps']})", "", "```", msg, "```", "",
+                  f"[Abrir no WhatsApp]({link_wa(c['whatsapp'], msg)})" if c["whatsapp"] else "", "",
+                  f"Depois: `python central/financeiro.py enviado posvenda {c['id']} --etapa avaliacao`", ""]
+            n += 1
+    destino = PASTA / "posvenda" / f"{hoje().isoformat()}.md"
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_text("\n".join(L), encoding="utf-8")
+    print(f"{n} mensagens de pós-venda -> {destino}" if n else "nenhum pós-venda devido hoje")
+
+
+def cmd_enviado(a):
+    if a.tipo == "cobranca":
+        faturas = ler(FATURAS, C_FATURA)
+        f = achar(faturas, a.id, "fatura")
+        etapa = a.etapa or etapa_devida((hoje() - data(f["vencimento"])).days, f["cobrancas"])
+        if not etapa:
+            sys.exit("nenhuma etapa de cobrança devida para essa fatura")
+        f["cobrancas"] = ",".join(x for x in (f["cobrancas"], str(etapa)) if x)
+        gravar(FATURAS, C_FATURA, faturas)
+    else:
+        clientes = ler(CLIENTES, C_CLIENTE)
+        c = achar(clientes, a.id, "cliente")
+        etapa = a.etapa or posvenda_devida(c)
+        if not etapa:
+            sys.exit("nenhuma etapa de pós-venda devida para esse cliente")
+        c["posvenda"] = ",".join(x for x in (c["posvenda"], str(etapa)) if x)
+        gravar(CLIENTES, C_CLIENTE, clientes)
+    print(f"{a.tipo} {a.id}: etapa {etapa} registrada")
+
+
+def cmd_nps(a):
+    clientes = ler(CLIENTES, C_CLIENTE)
+    c = achar(clientes, a.id, "cliente")
+    c["nps"] = str(a.nota)
+    gravar(CLIENTES, C_CLIENTE, clientes)
+    if a.nota >= 9:
+        print(f"{c['empresa']}: NPS {a.nota} (promotor) · o 'posvenda' já prepara o pedido de avaliação no Google")
+    elif a.nota <= 6:
+        print(f"{c['empresa']}: NPS {a.nota} (detrator) · risco de cancelamento: ligue esta semana e anote o motivo em --obs")
+    else:
+        print(f"{c['empresa']}: NPS {a.nota} (neutro)")
+
+
+# ---------------------------------------------------------------- números do negócio
+
+def mrr_em(clientes, dia):
+    return sum(float(c["valor_mensal"]) for c in clientes
+               if c["inicio"] and data(c["inicio"]) <= dia and not (c["cancelado_em"] and data(c["cancelado_em"]) <= dia))
+
+
+def saldo_atual(cfg, lancs):
+    corte = cfg["data_saldo"]
+    return float(cfg["saldo_inicial"]) + sum(float(l["valor"]) for l in lancs if not corte or l["data"] > corte)
+
+
+def situacao(ref=None):
+    """Retrato para o briefing do dia e o painel: MRR, caixa, atrasos, previsão e alertas."""
+    ref = ref or hoje()
+    cfg, clientes, lancs = config(), ler(CLIENTES, C_CLIENTE), ler(LANCAMENTOS, C_LANC)
+    mes = ref.strftime("%Y-%m")
+    ativos = [c for c in clientes if c["status"] == "ativo"]
+    mrr = sum(float(c["valor_mensal"]) for c in ativos)
+    # despesa média dos últimos 3 meses fechados (sem transferências entre contas)
+    meses = [meses_atras(mes, i) for i in (1, 2, 3)]
+    desp = [-sum(float(l["valor"]) for l in lancs if l["data"][:7] == m and float(l["valor"]) < 0
+                 and l["categoria"] not in FORA_DO_RESULTADO) for m in meses]
+    meses_com_dado = [d for m, d in zip(meses, desp) if any(l["data"][:7] == m for l in lancs)]
+    if meses_com_dado:
+        despesa_media = sum(meses_com_dado) / len(meses_com_dado)
+    else:  # 1º mês de uso: o que já saiu neste mês serve de estimativa (por baixo)
+        despesa_media = -sum(float(l["valor"]) for l in lancs if l["data"][:7] == mes and float(l["valor"]) < 0
+                             and l["categoria"] not in FORA_DO_RESULTADO)
+    caixa = saldo_atual(cfg, lancs)
+    atras = atrasadas(ref)
+    previsao = {d: round(caixa + (mrr - despesa_media) * d / 30, 2) for d in (30, 60, 90)}
+    queima = despesa_media - mrr
+    alertas = []
+    if atras:
+        alertas.append(f"{len(atras)} fatura(s) atrasada(s): {reais(sum(float(f['valor']) for f in atras))}")
+    menor = min(previsao.values())
+    if lancs and menor < float(cfg["alerta_saldo"]):
+        alertas.append(f"caixa previsto abaixo de {reais(float(cfg['alerta_saldo']))} em até 90 dias ({reais(menor)})")
+    sem_cat = sum(l["categoria"] == SEM_CATEGORIA for l in lancs)
+    if sem_cat:
+        alertas.append(f"{sem_cat} lançamento(s) a classificar")
+    detratores = [c["empresa"] for c in ativos if c["nps"] and int(c["nps"]) <= 6]
+    if detratores:
+        alertas.append(f"cliente(s) insatisfeito(s) (NPS ≤ 6): {', '.join(detratores)}")
+    return {"mes": mes, "clientes_ativos": len(ativos), "mrr": round(mrr, 2), "caixa": round(caixa, 2),
+            "despesa_media": round(despesa_media, 2), "previsao": previsao,
+            "runway_meses": round(caixa / queima, 1) if queima > 0 else None,
+            "atrasadas": [{"id": f["id"], "empresa": f["cliente"].get("empresa", ""), "valor": float(f["valor"]), "dias": f["dias"]} for f in atras],
+            "cobrancas_devidas": sum(1 for f in atras if etapa_devida(f["dias"], f["cobrancas"])),
+            "posvenda_devidos": sum(1 for c in clientes if posvenda_devida(c, ref)),
+            "alertas": alertas, "tem_dados": bool(clientes or lancs)}
+
+
+def metricas_mes(mes, clientes, lancs):
+    ano, m = map(int, mes.split("-"))
+    ini, fim = dt.date(ano, m, 1), dt.date(ano, m, calendar.monthrange(ano, m)[1])
+    novos = [c for c in clientes if c["inicio"][:7] == mes]
+    cancel = [c for c in clientes if c["cancelado_em"][:7] == mes]
+    ativos_ini = [c for c in clientes if data(c["inicio"]) < ini and not (c["cancelado_em"] and data(c["cancelado_em"]) < ini)]
+    do_mes = [l for l in lancs if l["data"][:7] == mes and l["categoria"] not in FORA_DO_RESULTADO]
+    receitas = sum(float(l["valor"]) for l in do_mes if float(l["valor"]) > 0)
+    despesas = -sum(float(l["valor"]) for l in do_mes if float(l["valor"]) < 0)
+    anuncios = -sum(float(l["valor"]) for l in do_mes if float(l["valor"]) < 0 and l["categoria"] == "Anúncios")
+    mrr_fim = mrr_em(clientes, fim)
+    ativos_fim = sum(1 for c in clientes if data(c["inicio"]) <= fim and not (c["cancelado_em"] and data(c["cancelado_em"]) <= fim))
+    churn = len(cancel) / len(ativos_ini) if ativos_ini else 0.0
+    arpa = mrr_fim / ativos_fim if ativos_fim else 0.0
+    cac = anuncios / len(novos) if novos and anuncios else None
+    por_cat = {}
+    for l in do_mes:
+        if float(l["valor"]) < 0:
+            por_cat[l["categoria"]] = por_cat.get(l["categoria"], 0) - float(l["valor"])
+    return {"mes": mes, "mrr": mrr_fim, "mrr_novo": sum(float(c["valor_mensal"]) for c in novos),
+            "mrr_perdido": sum(float(c["valor_mensal"]) for c in cancel), "novos": len(novos), "cancelados": len(cancel),
+            "ativos": ativos_fim, "churn": churn, "arpa": arpa, "ltv": arpa / churn if churn else None, "cac": cac,
+            "payback": cac / arpa if cac and arpa else None, "receitas": receitas, "despesas": despesas,
+            "resultado": receitas - despesas, "por_categoria": dict(sorted(por_cat.items(), key=lambda x: -x[1]))}
+
+
+def cmd_resumo(a):
+    ref = hoje()
+    mes = a.mes or ref.strftime("%Y-%m")
+    clientes, lancs, faturas = ler(CLIENTES, C_CLIENTE), ler(LANCAMENTOS, C_LANC), ler(FATURAS, C_FATURA)
+    s = situacao(ref)
+    serie = [metricas_mes(meses_atras(mes, i), clientes, lancs) for i in range(a.meses - 1, -1, -1)]
+    atual = serie[-1]
+    fmt = lambda v, f: "—" if v is None else f(v)
+    L = [f"# Financeiro · {mes}", "",
+         f"**MRR {reais(atual['mrr'])}** · {atual['ativos']} clientes · ARPA {reais(atual['arpa'])} · "
+         f"churn {atual['churn']:.1%} · LTV {fmt(atual['ltv'], reais)} · CAC {fmt(atual['cac'], reais)} · "
+         f"payback {fmt(atual['payback'], lambda v: f'{v:.1f} meses')}", "",
+         f"**Caixa {reais(s['caixa'])}** · despesa média {reais(s['despesa_media'])}/mês · previsão: "
+         + " · ".join(f"{d} dias {reais(v)}" for d, v in s["previsao"].items())
+         + (f" · fôlego {s['runway_meses']} meses" if s["runway_meses"] else " · operação se paga" if s["despesa_media"] else ""), ""]
+    if not s["tem_dados"]:
+        L += ["Sem dados ainda: `financeiro.py cliente ...`, `faturar` e `importar extrato.ofx` (o banco exporta em OFX ou CSV).", ""]
+    if s["alertas"]:
+        L += ["## Alertas", ""] + [f"- {x}" for x in s["alertas"]] + [""]
+    L += ["## Mês a mês", "", "| Mês | MRR | + novo | − perdido | Clientes | Receitas | Despesas | Resultado |", "|---|---|---|---|---|---|---|---|"]
+    L += [f"| {m['mes']} | {reais(m['mrr'])} | {reais(m['mrr_novo'])} | {reais(m['mrr_perdido'])} | {m['ativos']} | "
+          f"{reais(m['receitas'])} | {reais(m['despesas'])} | {reais(m['resultado'])} |" for m in serie]
+    if atual["por_categoria"]:
+        L += ["", f"## Despesas de {mes} por categoria", ""] + [f"- {k}: {reais(v)}" for k, v in atual["por_categoria"].items()]
+    # o que não bate: crédito sem fatura e fatura paga sem crédito no extrato
+    sem_fatura = [l for l in lancs if float(l["valor"]) > 0 and not l["fatura_id"] and l["categoria"] in (SEM_CATEGORIA, RECEITA)]
+    pagas_sem_extrato = [f for f in faturas if f["pago_em"] and not f["lancamento"]] if lancs else []
+    if sem_fatura or pagas_sem_extrato:
+        L += ["", "## O que não bate", ""]
+        L += [f"- Crédito sem fatura: {l['data']} {reais(float(l['valor']))} \"{l['descricao'][:50]}\" (cliente novo? valor diferente?)" for l in sem_fatura[:15]]
+        L += [f"- Fatura #{f['id']} marcada como paga em {f['pago_em']}, sem crédito no extrato" for f in pagas_sem_extrato[:15]]
+    a_classificar = [l for l in lancs if l["categoria"] == SEM_CATEGORIA and float(l["valor"]) < 0]
+    if a_classificar:
+        L += ["", "## A classificar (adicione o termo em financeiro/categorias.json)", ""]
+        L += [f"- {l['data']} {reais(float(l['valor']))} \"{l['descricao'][:60]}\"" for l in a_classificar[:20]]
+    texto = "\n".join(L) + "\n"
+    destino = PASTA / "relatorios" / f"{mes}.md"
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_text(texto, encoding="utf-8")
+    print(texto)
+    print(f"-> {destino}")
+
+
+def cmd_config(a):
+    cfg = config()
+    if a.saldo is not None:
+        cfg.update(saldo_inicial=a.saldo, data_saldo=a.data or hoje().isoformat())
+    if a.alerta is not None:
+        cfg["alerta_saldo"] = a.alerta
+    if a.link_avaliacao:
+        cfg["link_avaliacao"] = a.link_avaliacao
+    if a.assinatura:
+        cfg["assinatura"] = a.assinatura
+    salvar_config(cfg)
+    print(json.dumps(cfg, ensure_ascii=False, indent=1))
+
+
+def main():
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    s = sub.add_parser("cliente"); s.add_argument("--empresa", default=""); s.add_argument("--lead", type=int); s.add_argument("--contato", default="")
+    s.add_argument("--whatsapp", default=""); s.add_argument("--plano", default=""); s.add_argument("--valor", type=float, required=True)
+    s.add_argument("--dia", type=int, default=10); s.add_argument("--inicio"); s.set_defaults(f=cmd_cliente)
+    s = sub.add_parser("cancelar"); s.add_argument("id"); s.add_argument("--data"); s.add_argument("--motivo", default=""); s.set_defaults(f=cmd_cancelar)
+    s = sub.add_parser("faturar"); s.add_argument("--mes", help="AAAA-MM (padrão: mês atual)"); s.set_defaults(f=cmd_faturar)
+    s = sub.add_parser("pago"); s.add_argument("id"); s.add_argument("--data"); s.set_defaults(f=cmd_pago)
+    s = sub.add_parser("importar"); s.add_argument("arquivo", help="extrato .ofx ou .csv"); s.set_defaults(f=cmd_importar)
+    s = sub.add_parser("reclassificar"); s.add_argument("--todos", action="store_true"); s.set_defaults(f=cmd_reclassificar)
+    s = sub.add_parser("lancar"); s.add_argument("--valor", type=float, required=True, help="negativo = despesa")
+    s.add_argument("--descricao", required=True); s.add_argument("--categoria"); s.add_argument("--data"); s.set_defaults(f=cmd_lancar)
+    s = sub.add_parser("cobrar"); s.set_defaults(f=cmd_cobrar)
+    s = sub.add_parser("posvenda"); s.set_defaults(f=cmd_posvenda)
+    s = sub.add_parser("enviado"); s.add_argument("tipo", choices=["cobranca", "posvenda"]); s.add_argument("id")
+    s.add_argument("--etapa", help="padrão: a etapa devida hoje"); s.set_defaults(f=cmd_enviado)
+    s = sub.add_parser("nps"); s.add_argument("id"); s.add_argument("nota", type=int, choices=range(11)); s.set_defaults(f=cmd_nps)
+    s = sub.add_parser("resumo"); s.add_argument("--mes"); s.add_argument("--meses", type=int, default=6); s.set_defaults(f=cmd_resumo)
+    s = sub.add_parser("config"); s.add_argument("--saldo", type=float); s.add_argument("--data"); s.add_argument("--alerta", type=float)
+    s.add_argument("--link-avaliacao"); s.add_argument("--assinatura"); s.set_defaults(f=cmd_config)
+    a = ap.parse_args()
+    a.f(a)
+
+
+if __name__ == "__main__":
+    main()

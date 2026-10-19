@@ -82,6 +82,25 @@ class TesteSDR(unittest.TestCase):
         self.assertNotIn("Imobiliária Sol", csv_crm)
         self.assertIn("Pet Feliz", csv_crm)
 
+    def test_entrada_responde_na_hora(self):
+        self.qualificar()
+        sdr.cmd_entrada(NS(nome="Ana Paula", empresa="Clínica Bem", telefone="(49) 98888-1111", origem="anuncio", segmento="odontologia",
+                           cidade="Chapecó", mensagem="quanto custa?", assinatura="Mateus"))
+        nova = next(l for l in sdr.ler_leads() if l["empresa"] == "Clínica Bem")
+        self.assertEqual((nova["etapa"], nova["origem"]), ("respondeu", "entrada: anuncio"))
+        self.assertIn("quanto custa?", nova["obs"])
+        msg = sdr.resposta_entrada("Ana", "anuncio", "Mateus")
+        self.assertIn("pelo anúncio", msg)
+        self.assertIn("quantas pessoas atendem", msg)
+        # quem já estava na base (veio do Maps) e chamou sozinho sobe para "respondeu" sem duplicar
+        sdr.cmd_entrada(NS(nome="", empresa="", telefone="49 99912-3456", origem="instagram", segmento="", cidade="", mensagem="", assinatura="Mateus"))
+        leads = sdr.ler_leads()
+        self.assertEqual(len(leads), 3)
+        self.assertEqual(next(l for l in leads if l["empresa"] == "Imobiliária Sol")["etapa"], "respondeu")
+        sdr.BLOQUEIO.write_text("5549977776666\n", encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            sdr.cmd_entrada(NS(nome="", empresa="X", telefone="49 97777-6666", origem="site", segmento="", cidade="", mensagem="", assinatura="Mateus"))
+
 
 if __name__ == "__main__":
     unittest.main()

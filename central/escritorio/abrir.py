@@ -39,9 +39,12 @@ def instalar_layout(forcar: bool):
     print("layout da Ciello instalado")
 
 
+DIRETO = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # 127.0.0.1 nunca passa por proxy do sistema
+
+
 def no_ar():
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{PORTA}/api/health", timeout=1) as r:
+        with DIRETO.open(f"http://127.0.0.1:{PORTA}/api/health", timeout=1) as r:
             return r.status == 200
     except OSError:
         return False

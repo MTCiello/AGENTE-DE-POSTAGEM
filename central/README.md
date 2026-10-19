@@ -10,6 +10,11 @@ Ferramentas que rodam no PC do Mateus e substituem o que o vidIQ cobrava (narra�
 | `radar.py` | Assuntos em alta nos 5 pilares, com nota 0–100 (só biblioteca padrão) | pesquisa manual / outliers do vidIQ |
 | `ganchos.py` | Biblioteca de ganchos validados (multiplicador sobre a mediana do criador) | `vidiq_ig_profile_reels` |
 | `relatorio.py` | Relatório semanal a partir de `metricas/` | histórico pago do Metricool |
+| `sdr.py` | Leads do Google Maps, qualificação, 1ª mensagem wa.me, cadência, resposta imediata a lead que chegou sozinho (`entrada`) e CSV do CRM | prospecção manual |
+| `briefing.py` | Chefe de gabinete: 3 prioridades do dia, pendências por dono e placar da semana | — |
+| `financeiro.py` | Assinaturas, faturas, cobrança 3/7/14 dias, extrato OFX/CSV com conciliação, caixa e previsão, MRR/churn/CAC/LTV, pós-venda e NPS | planilha / ERP pago |
+| `vigia.py` | Preço, plano e oferta dos concorrentes (diferença desde a última vez) e link dos anúncios ativos | changedetection.io (quando precisar de mais) |
+| `verificar.py` | Bateria de verificação de tudo (grava `estado/verificacao.txt`) | — |
 | `clone/ciello_clone_kaggle.ipynb` | Wan2GP na GPU grátis do Kaggle: clone falando, andando, identidade e voz | HeyGen / Higgsfield |
 
 Testes (sem internet): `python -m unittest discover central/testes`
