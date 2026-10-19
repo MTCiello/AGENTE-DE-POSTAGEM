@@ -123,8 +123,8 @@ class TesteRepasseEscritorio(unittest.TestCase):
         r = c.getresponse()
         html = r.read()
         self.assertEqual(r.status, 200)
-        self.assertIn(b'<head><script src="/web/ponte-escritorio.js"></script>', html)
-        self.assertIn(b"Pixel Agents", html)
+        self.assertIn(b'<script src="/web/pixel-ptbr.js"></script><script src="/web/ponte-escritorio.js"></script>', html)
+        self.assertIn("<title>Escritório</title>".encode(), html)
 
     def test_websocket_passa_nos_dois_sentidos(self):
         porta_os = self.srv.server_address[1]

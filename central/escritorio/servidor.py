@@ -351,7 +351,8 @@ class Painel(BaseHTTPRequestHandler):
         except OSError:
             return self._json({"erro": "escritório desligado"}, 502)
         if "text/html" in tipo:
-            corpo = corpo.replace(b"<head>", b'<head><script src="/web/ponte-escritorio.js"></script>', 1)
+            corpo = corpo.replace(b"<head>", b'<head><script src="/web/pixel-ptbr.js"></script><script src="/web/ponte-escritorio.js"></script>', 1)
+            corpo = corpo.replace(b'<html lang="en">', b'<html lang="pt-BR">', 1).replace(b"<title>Pixel Agents</title>", b"<title>Escrit\xc3\xb3rio</title>", 1)
         self._enviar(corpo, tipo, codigo)
 
     def do_GET(self):

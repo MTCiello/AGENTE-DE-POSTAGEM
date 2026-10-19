@@ -64,13 +64,17 @@ O editor **Layout** do próprio pixel-agents continua funcionando para mudar o q
 
 Clique duas vezes em **`Ciello.cmd`**. Abre numa janela própria do Edge (ou Chrome), sem barra de endereço, como um programa instalado.
 
-- **O fundo da área de trabalho é o Escritório**: o pixel-agents original, ao vivo. O `Ciello.cmd` liga o escritório junto; se estiver desligado, o fundo mostra a logo e o botão **Ligar o escritório**. Os botões do próprio pixel-agents (+ Agent, Layout, Settings, zoom) continuam funcionando.
+- **O fundo da área de trabalho é o Escritório**: o pixel-agents original, ao vivo, **em português** e no azul da Ciello, centralizado ao abrir. O `Ciello.cmd` liga o escritório junto; se estiver desligado, o fundo mostra a logo e o botão **Ligar o escritório**.
+- **Engrenagem na barra de tarefas:** os botões de personalização do pixel-agents (+ Agente, Layout, Configurações, zoom, versão) ficam escondidos; a engrenagem mostra e esconde.
+- **Mover e dar zoom:** segure o **botão do meio (scroll)** e arraste para mover o escritório; **Ctrl + scroll** aproxima e afasta, entre **2x e 6x** (`ZOOM_MIN`/`ZOOM_MAX` em `web/ponte-escritorio.js`). O scroll sozinho também move. Menu Iniciar → **Centralizar escritório** volta para o meio.
 - **Clicar num personagem do escritório abre a janela daquele agente**. Para isso funcionar, o agente precisa ter nome: teammate com o nome do agente (equipes ligadas) ou subagente com a descrição começando pelo nome (`sdr: follow-ups do dia`), como os comandos `/bom-dia`, `/comercial`, `/semana` já pedem. Clicar no coordenador abre a janela de quem está trabalhando com ele; sem ninguém, abre a Equipe.
 - **Apps só no menu Iniciar** (o botão com a nuvem): Bom dia, Financeiro, Comercial, Conteúdo e Instagram, Tendências, Concorrentes, Anúncios, Equipe, Atividade e Verificação, além da equipe de agentes. Não há ícones na área de trabalho.
 - **Barra de tarefas:** Iniciar, **Mostrar escritório** (minimiza as janelas; clicar de novo traz de volta), janelas abertas, agentes trabalhando, notificações e relógio.
 - **Quando um agente começa a trabalhar**, aparece um aviso no canto e a janela dele abre sozinha (desligue no menu Iniciar).
 - **Botões das janelas** (ex.: "Cobranças do dia") rodam a ferramenta e abrem uma janela com a saída ao vivo. Só rodam as ações da lista fixa do `servidor.py`, e só a partir do próprio app.
 - **Janelas:** arrastar pela barra de título, redimensionar pelas bordas e cantos, duplo clique para maximizar, arrastar até a borda esquerda/direita para ocupar metade da tela (até o topo maximiza). A posição de cada janela fica salva.
+
+**Tradução:** `web/pixel-ptbr.js` tem todos os textos do pixel-agents 1.5.0 em português. A ponte troca só o que aparece na tela; as mensagens internas continuam em inglês, porque o pixel-agents depende delas. Ao atualizar a versão do pixel-agents, confira se apareceu texto novo em inglês e acrescente no arquivo.
 
 **Como o clique chega no app sem alterar o pixel-agents:** o Ciello OS serve o escritório no mesmo endereço dele (`/escritorio/`, um repasse local para a porta 3100) e acrescenta à página um script pequeno, a ponte (`web/ponte-escritorio.js`). A ponte só observa a conexão que o pixel-agents já usa: aprende o nome de cada agente e, quando ele avisa que um personagem foi clicado (`focusAgent`), manda o aviso para a área de trabalho. Atualizar o pixel-agents continua sendo trocar a versão em `abrir.py`.
 

@@ -19,6 +19,7 @@ const SVG = {
   verificar: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
   terminal: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/>',
   agente: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>',
+  engrenagem: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   pino: '<path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/>',
   play: '<path d="M7 5v14l11-7z"/>',
   min: '<path d="M2 6h8"/>', max: '<rect x="2" y="2" width="8" height="8"/>', rest: '<rect x="2" y="4" width="6" height="6"/><path d="M4 4V2h6v6H8"/>', fechar: '<path d="M2 2l8 8M10 2l-8 8"/>',
@@ -309,7 +310,8 @@ const tile = (def, cls = 'tile') => `<span class="${cls}" style="background:${de
 
 function barraTarefas() {
   const vazia = ![...janelas.values()].some((j) => !j.min);
-  $('#fixados').innerHTML = `<button class="fixado ${vazia ? 'ativa' : ''}" id="mostrar-escritorio" title="Mostrar o escritório (minimiza as janelas)">${tile({ cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', icone: 'escritorio' })}</button>`;
+  $('#fixados').innerHTML = `<button class="fixado ${vazia ? 'ativa' : ''}" id="mostrar-escritorio" title="Mostrar o escritório (minimiza as janelas)">${tile({ cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', icone: 'escritorio' })}</button>`
+    + `<button class="fixado ${controles ? 'ligada' : ''}" id="engrenagem" title="${controles ? 'Esconder' : 'Mostrar'} os controles do escritório (+ Agente, Layout, Configurações, zoom)"><span class="tile">${icone('engrenagem')}</span></button>`;
   $('#abertas').innerHTML = [...janelas.values()].map((j) =>
     `<button class="aberta ${ativa === j && !j.min ? 'ativa' : ''}" data-chave="${esc(j.chave)}" title="${esc(j.def.titulo)}">${tile(j.def)}<span>${esc(j.def.titulo)}</span></button>`).join('');
 }
@@ -330,7 +332,17 @@ function mostrarEscritorio() {
   if (vis.length) { escondidas = vis.map((j) => j.chave); vis.forEach((j) => { j.min = true; j.el.classList.add('min'); }); focarTopo(); return; }
   escondidas.forEach((k) => { const j = janelas.get(k); if (j) { restaurar(j); focar(j); } }); escondidas = [];
 }
-$('#fixados').addEventListener('click', mostrarEscritorio);
+$('#fixados').addEventListener('click', (e) => {
+  if (e.target.closest('#engrenagem')) { controles = !controles; enviarControles(); barraTarefas(); return; }
+  if (e.target.closest('#mostrar-escritorio')) mostrarEscritorio();
+});
+
+// engrenagem: mostra ou esconde os botões nativos de personalização do pixel-agents (a ponte esconde por padrão)
+let controles = false;
+function enviarControles() { const f = $('#escritorio'); if (f && f.contentWindow) f.contentWindow.postMessage({ ciello: 'controles', ligado: controles }, location.origin); }
+
+// Ctrl + scroll em qualquer lugar do app nunca dá zoom no navegador (no escritório, a ponte transforma em zoom do escritório)
+window.addEventListener('wheel', (e) => { if (e.ctrlKey || e.metaKey) e.preventDefault(); }, { passive: false });
 
 function desenharMenu(filtro = '') {
   const f = filtro.toLowerCase();
@@ -345,6 +357,7 @@ $('#busca').oninput = (e) => desenharMenu(e.target.value);
 $('#menu').addEventListener('click', (e) => { const b = e.target.closest('[data-chave]'); if (b) abrir(b.dataset.chave); });
 $('#auto').checked = SALVO.auto; $('#auto').onchange = (e) => { SALVO.auto = e.target.checked; salvar(); };
 $('#organizar').onclick = () => { fecharMenus(); organizar(); };
+$('#centralizar').onclick = () => { fecharMenus(); const f = $('#escritorio'); if (f) f.contentWindow.postMessage({ ciello: 'centralizar' }, location.origin); };
 $('#ver-escritorio').onclick = () => { fecharMenus(); if ([...janelas.values()].some((j) => !j.min)) mostrarEscritorio(); };
 $('#tela-cheia').onclick = () => { fecharMenus(); document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); };
 $('#sino').onclick = (e) => { e.stopPropagation(); const ab = $('#central').hidden; fecharMenus(); if (ab) { desenharCentral(); $('#central').hidden = false; naoLidas = 0; contarNaoLidas(); } };
@@ -429,7 +442,11 @@ async function fundoEscritorio() {
     return;
   }
   fundo.noAr = d.no_ar; fundo.url = d.url || '';
-  if (d.no_ar) { $('#fundo').innerHTML = `<iframe id="escritorio" src="${esc(d.url)}" title="Escritório de agentes (pixel-agents)" allow="clipboard-write"></iframe>`; return; }
+  if (d.no_ar) {
+    $('#fundo').innerHTML = `<iframe id="escritorio" src="${esc(d.url)}" title="Escritório de agentes (pixel-agents)" allow="clipboard-write"></iframe>`;
+    $('#escritorio').addEventListener('load', enviarControles);
+    return;
+  }
   $('#fundo').innerHTML = `<div class="papel-parede"><img src="/web/logo-marfim.svg" alt=""><b>CIELLO</b><span>assistente comercial</span>
     <button class="bt ouro" id="ligar">Ligar o escritório</button><small>O escritório de agentes (pixel-agents) é o fundo desta área de trabalho.</small></div>`;
   $('#ligar').onclick = async (e) => {

@@ -37,9 +37,8 @@ button { font: inherit; cursor: pointer; }
 .papel-parede b { display: block; margin-top: 18px; font: 600 54px/1 Oswald, sans-serif; letter-spacing: 22px; color: var(--marfim); padding-left: 22px; }
 .papel-parede span { display: block; margin: 10px 0 26px; font: 500 13px Oswald, sans-serif; letter-spacing: 7px; text-transform: uppercase; color: rgba(248, 244, 232, .55); }
 .papel-parede small { display: block; margin-top: 12px; color: rgba(248, 244, 232, .6); font-size: 12px; }
-.marca-dagua { position: absolute; top: 14px; right: 18px; display: flex; align-items: center; gap: 10px; pointer-events: none; opacity: .8; z-index: 1;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .5)); }
-.marca-dagua img { width: 42px; } .marca-dagua b { font: 600 18px Oswald, sans-serif; letter-spacing: 7px; color: var(--marfim); }
+#engrenagem .tile { background: linear-gradient(135deg, #6E7FA3, #3A4C70); transition: transform .25s; }
+#engrenagem.ligada .tile { background: linear-gradient(135deg, #F1C95A, #D99A0B); transform: rotate(60deg); }
 .ic svg, .tile svg, .fixado svg, .aberta svg, .item-app svg { fill: none; stroke: #fff; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ------------------------------------------------------------ janelas */
