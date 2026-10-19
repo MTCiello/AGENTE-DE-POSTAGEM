@@ -1,4 +1,5 @@
-/* Ciello OS: área de trabalho, barra de tarefas e janelas que movem e redimensionam.
+/* Ciello OS: o escritório de agentes (pixel-agents) é o fundo da área de trabalho; barra de tarefas embaixo, apps no
+   menu Iniciar e janelas que movem e redimensionam. Clicar num personagem do escritório abre a janela daquele agente.
    Os dados vêm do servidor local (central/escritorio/servidor.py); os botões só rodam as ações da lista dele. */
 'use strict';
 
@@ -25,7 +26,6 @@ const icone = (n, vb = 24) => `<svg viewBox="0 0 ${vb} ${vb}">${SVG[n] || SVG.ag
 
 // ------------------------------------------------------------------ apps
 const APPS = {
-  escritorio: { titulo: 'Escritório de agentes', icone: 'escritorio', cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', w: 1180, h: 650, render: renderEscritorio, atualizar: atualizarLateral, cada: 2000 },
   briefing: { titulo: 'Bom dia', icone: 'sol', cor: 'linear-gradient(135deg,#F7A35C,#E0722F)', w: 640, h: 660, render: renderBriefing },
   financeiro: { titulo: 'Financeiro', icone: 'financeiro', cor: 'linear-gradient(135deg,#3CC285,#1F8A4C)', w: 900, h: 680, render: renderFinanceiro },
   comercial: { titulo: 'Comercial', icone: 'comercial', cor: 'linear-gradient(135deg,#5E92E6,#2F5BA8)', w: 880, h: 660, render: renderComercial },
@@ -37,8 +37,7 @@ const APPS = {
   atividade: { titulo: 'Atividade', icone: 'atividade', cor: 'linear-gradient(135deg,#7E8AA1,#4B566B)', w: 520, h: 580, render: renderAtividade, cada: 3000 },
   verificar: { titulo: 'Verificação', icone: 'verificar', cor: 'linear-gradient(135deg,#5BC0A0,#2D8C70)', acao: 'verificar' },
 };
-const NA_MESA = ['escritorio', 'briefing', 'financeiro', 'comercial', 'conteudo', 'tendencias', 'concorrentes', 'anuncios', 'equipe', 'atividade', 'verificar'];
-const FIXADOS = ['escritorio', 'briefing', 'financeiro', 'comercial', 'conteudo'];
+const MENU = ['briefing', 'financeiro', 'comercial', 'conteudo', 'tendencias', 'concorrentes', 'anuncios', 'equipe', 'atividade', 'verificar'];
 
 const NOMES = { 'chefe-gabinete': 'Chefe de Gabinete', 'pesquisador-mercado': 'Pesquisador de Mercado', roteirista: 'Roteirista', 'produtor-video': 'Produtor de Vídeo',
   'produtor-imagem': 'Produtor de Imagem', postagem: 'Postagem', analista: 'Analista', 'gestor-anuncios': 'Gestor de Anúncios', sdr: 'SDR', closer: 'Closer',
@@ -293,10 +292,8 @@ function ligarJanela(j) {
   });
 }
 
-// clicar dentro do escritório (iframe) também traz a janela para frente
-window.addEventListener('blur', () => setTimeout(() => {
-  const f = document.activeElement; if (f && f.tagName === 'IFRAME') { const el = f.closest('.janela'); const j = [...janelas.values()].find((x) => x.el === el); if (j) focar(j); }
-}));
+// clicar no escritório (o fundo) fecha os menus, como clicar na área de trabalho do Windows
+window.addEventListener('blur', () => setTimeout(() => { if (document.activeElement && document.activeElement.id === 'escritorio') fecharMenus(); }));
 
 function organizar() {
   let i = 0; const { w: W, h: H } = area();
@@ -310,11 +307,9 @@ function organizar() {
 const tile = (def, cls = 'tile') => `<span class="${cls}" style="background:${def.cor}">${icone(def.icone)}</span>`;
 
 function barraTarefas() {
-  $('#fixados').innerHTML = FIXADOS.map((k) => {
-    const j = janelas.get(k);
-    return `<button class="fixado ${j ? 'aberto' : ''} ${j && ativa === j && !j.min ? 'ativa' : ''}" data-chave="${k}" title="${esc(APPS[k].titulo)}">${tile(APPS[k])}</button>`;
-  }).join('');
-  $('#abertas').innerHTML = [...janelas.values()].filter((j) => !FIXADOS.includes(j.chave)).map((j) =>
+  const vazia = ![...janelas.values()].some((j) => !j.min);
+  $('#fixados').innerHTML = `<button class="fixado ${vazia ? 'ativa' : ''}" id="mostrar-escritorio" title="Mostrar o escritório (minimiza as janelas)">${tile({ cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', icone: 'escritorio' })}</button>`;
+  $('#abertas').innerHTML = [...janelas.values()].map((j) =>
     `<button class="aberta ${ativa === j && !j.min ? 'ativa' : ''}" data-chave="${esc(j.chave)}" title="${esc(j.def.titulo)}">${tile(j.def)}<span>${esc(j.def.titulo)}</span></button>`).join('');
 }
 function cliqueTarefa(e) {
@@ -323,22 +318,22 @@ function cliqueTarefa(e) {
   if (!j) return abrir(b.dataset.chave);
   if (j.min) { restaurar(j); focar(j); } else if (ativa === j) minimizar(j); else focar(j);
 }
-$('#fixados').addEventListener('click', cliqueTarefa);
 $('#abertas').addEventListener('click', cliqueTarefa);
+$('#mesa').addEventListener('pointerdown', (e) => { if (!e.target.closest('.janela')) fecharMenus(); });
 
-function desenharIcones() {
-  $('#icones').innerHTML = NA_MESA.map((k) => `<button class="icone" data-chave="${k}">${k === 'escritorio' ? `<span class="pino" title="Fixado">${icone('pino')}</span>` : ''}${tile(APPS[k])}<span>${esc(APPS[k].titulo)}</span></button>`).join('');
+// "Mostrar o escritório": minimiza tudo; clicar de novo traz as mesmas janelas de volta (como no Windows)
+let escondidas = [];
+function mostrarEscritorio() {
+  fecharMenus();
+  const vis = [...janelas.values()].filter((j) => !j.min);
+  if (vis.length) { escondidas = vis.map((j) => j.chave); vis.forEach((j) => { j.min = true; j.el.classList.add('min'); }); focarTopo(); return; }
+  escondidas.forEach((k) => { const j = janelas.get(k); if (j) { restaurar(j); focar(j); } }); escondidas = [];
 }
-$('#icones').addEventListener('click', (e) => {
-  const b = e.target.closest('.icone'); if (!b) return;
-  document.querySelectorAll('.icone.sel').forEach((x) => x.classList.remove('sel')); b.classList.add('sel');
-  abrir(b.dataset.chave);
-});
-$('#mesa').addEventListener('pointerdown', (e) => { if (e.target.id === 'mesa' || e.target.closest('.papel-parede')) { document.querySelectorAll('.icone.sel').forEach((x) => x.classList.remove('sel')); fecharMenus(); } });
+$('#fixados').addEventListener('click', mostrarEscritorio);
 
 function desenharMenu(filtro = '') {
   const f = filtro.toLowerCase();
-  $('#menu-apps').innerHTML = NA_MESA.filter((k) => APPS[k].titulo.toLowerCase().includes(f)).map((k) =>
+  $('#menu-apps').innerHTML = MENU.filter((k) => APPS[k].titulo.toLowerCase().includes(f)).map((k) =>
     `<button class="item-app" data-chave="${k}">${tile(APPS[k])}<span>${esc(APPS[k].titulo)}</span></button>`).join('');
   $('#menu-equipe').innerHTML = equipeCache.filter((a) => nome(a.nome).toLowerCase().includes(f)).map((a) =>
     `<button class="item-agente" data-chave="agente:${esc(a.nome)}">${sprite(a.nome, 22)}<div><b>${esc(nome(a.nome))}</b><small>${esc(ROTULO_ESTADO[estadoAgente(a.nome).estado] || 'livre')}</small></div></button>`).join('');
@@ -349,6 +344,7 @@ $('#busca').oninput = (e) => desenharMenu(e.target.value);
 $('#menu').addEventListener('click', (e) => { const b = e.target.closest('[data-chave]'); if (b) abrir(b.dataset.chave); });
 $('#auto').checked = SALVO.auto; $('#auto').onchange = (e) => { SALVO.auto = e.target.checked; salvar(); };
 $('#organizar').onclick = () => { fecharMenus(); organizar(); };
+$('#ver-escritorio').onclick = () => { fecharMenus(); if ([...janelas.values()].some((j) => !j.min)) mostrarEscritorio(); };
 $('#tela-cheia').onclick = () => { fecharMenus(); document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); };
 $('#sino').onclick = (e) => { e.stopPropagation(); const ab = $('#central').hidden; fecharMenus(); if (ab) { desenharCentral(); $('#central').hidden = false; naoLidas = 0; contarNaoLidas(); } };
 $('#trabalhando').onclick = () => abrir('equipe');
@@ -419,25 +415,45 @@ async function rodarAcao(acao) {
   } catch { /* o aviso de servidor desligado já apareceu */ }
 }
 
-// ------------------------------------------------------------------ apps: escritório
-async function renderEscritorio(j) {
-  const d = await api('/api/app/escritorio');
-  j.noAr = d.no_ar;
-  j.corpo.innerHTML = `<div class="escritorio">${d.no_ar ? `<iframe src="${esc(d.url)}" title="Escritório pixel-agents" allow="clipboard-write"></iframe>`
-    : `<div class="desligado"><div>${sprite('chefe-gabinete', 56)}<h1>O escritório está desligado</h1><p>O escritório é o pixel-agents original. Ele mostra cada agente do Claude Code trabalhando na mesa dele.</p>
-       <button class="bt ouro" data-ligar>Ligar escritório</button></div></div>`}
-    <aside class="lateral"><h2>Equipe</h2><div class="lista-eq"></div></aside></div>`;
-  const b = $('[data-ligar]', j.corpo);
-  if (b) b.onclick = async () => { b.disabled = true; b.textContent = 'Ligando… (até 1 minuto na 1ª vez)'; await api('/api/escritorio/ligar', {}); j.esperando = Date.now(); };
-  atualizarLateral(j);
+// ------------------------------------------------------------------ o escritório (pixel-agents) como fundo da área de trabalho
+let fundoNoAr = null;
+async function fundoEscritorio() {
+  let d; try { d = await api('/api/app/escritorio'); } catch { return; }
+  if (d.no_ar === fundoNoAr) return;
+  fundoNoAr = d.no_ar;
+  if (d.no_ar) { $('#fundo').innerHTML = `<iframe id="escritorio" src="${esc(d.url)}" title="Escritório de agentes (pixel-agents)" allow="clipboard-write"></iframe>`; return; }
+  $('#fundo').innerHTML = `<div class="papel-parede"><img src="/web/logo-marfim.svg" alt=""><b>CIELLO</b><span>assistente comercial</span>
+    <button class="bt ouro" id="ligar">Ligar o escritório</button><small>O escritório de agentes (pixel-agents) é o fundo desta área de trabalho.</small></div>`;
+  $('#ligar').onclick = async (e) => {
+    e.target.disabled = true; e.target.textContent = 'Ligando… (até 1 minuto na 1ª vez)';
+    try { await api('/api/escritorio/ligar', {}); } catch { e.target.disabled = false; }
+  };
 }
-async function atualizarLateral(j) {
-  if (!j.noAr && j.esperando && Date.now() - j.esperando < 90000) {
-    const d = await api('/api/app/escritorio'); if (d.no_ar) { j.esperando = null; return renderEscritorio(j); }
-  }
-  const l = $('.lista-eq', j.corpo); if (!l) return;
-  l.innerHTML = equipeCache.map((a) => { const s = estadoAgente(a.nome); return `<button class="agente-mini" data-abrir="agente:${esc(a.nome)}" title="${esc(s.tarefa || '')}">${sprite(a.nome, 22)}<div><b>${esc(nome(a.nome))}</b><small>${esc(s.tarefa && s.estado !== 'parado' ? s.tarefa : ROTULO_ESTADO[s.estado] || 'livre')}</small></div><span class="dot ${esc(s.estado)}"></span></button>`; }).join('');
+
+// a ponte (web/ponte-escritorio.js, dentro do escritório) avisa quando um personagem é clicado
+function agenteDoRotulo(rotulo) {
+  const t = String(rotulo || '').split(':')[0].trim().toLowerCase();
+  if (!t) return null;
+  const a = equipeCache.find((x) => x.nome === t || x.nome.replace(/-/g, ' ') === t || nome(x.nome).toLowerCase() === t);
+  return a ? a.nome : null;
 }
+const noEscritorio = {}; // agente -> o que estava fazendo no escritório quando foi clicado (vale 10 min)
+const tarefaNoEscritorio = (a) => (noEscritorio[a] && Date.now() - noEscritorio[a].quando < 600000 ? noEscritorio[a].tarefa : '');
+function abrirDoEscritorio(agente, tarefa) {
+  noEscritorio[agente] = tarefa ? { tarefa, quando: Date.now() } : null;
+  const j = janelas.get(`agente:${agente}`);
+  if (j) desenhar(j, true);
+  abrir(`agente:${agente}`);
+}
+window.addEventListener('message', (e) => {
+  if (e.origin !== location.origin || !e.data || e.data.ciello !== 'escritorio' || e.data.evento !== 'clique') return;
+  const proprio = agenteDoRotulo(e.data.nome);
+  if (proprio) return void abrirDoEscritorio(proprio, '');
+  // o coordenador e os subagentes dele dividem o mesmo id: abre quem está trabalhando com ele ("sdr: follow-ups" -> SDR)
+  const ajudantes = (e.data.ajudantes || []).map((r) => [agenteDoRotulo(r), r.split(':').slice(1).join(':').trim()]).filter(([a]) => a);
+  if (ajudantes.length) return void ajudantes.slice(0, 3).forEach(([a, t]) => abrirDoEscritorio(a, t));
+  abrir('equipe');
+});
 
 // ------------------------------------------------------------------ apps: bom dia
 async function renderBriefing(j) {
@@ -450,7 +466,7 @@ async function renderBriefing(j) {
   <div class="pagina"><h2>As 3 prioridades de hoje</h2><div class="lista">${top.map((x, i) => `<div class="prioridade"><span class="num">${i + 1}</span><div class="txt md">${md(x.texto).replace(/^<p>|<\/p>$/g, '')}<small>com ${dono(x)}</small></div></div>`).join('') || '<div class="vazio">Nada urgente. Bom dia para gravar conteúdo ou prospectar.</div>'}</div>
   <h2>Números</h2><div class="cartao md">${md(d.numeros.join('\n'))}</div>
   ${resto.length ? `<h2>Pendências</h2><div class="lista">${resto.map((x) => `<div class="linha-item"><div class="cresce md">${md(x.texto).replace(/^<p>|<\/p>$/g, '')}</div><small>${dono(x)}</small></div>`).join('')}</div>` : ''}
-  <div class="acoes"><button class="bt pri" data-acao="briefing">${icone('play')} Atualizar briefing</button><button class="bt" data-acao="placar">Placar da semana</button><button class="bt" data-abrir="escritorio">Abrir escritório</button></div></div>`;
+  <div class="acoes"><button class="bt pri" data-acao="briefing">${icone('play')} Atualizar briefing</button><button class="bt" data-acao="placar">Placar da semana</button><button class="bt" data-abrir="equipe">Equipe</button></div></div>`;
 }
 
 // ------------------------------------------------------------------ apps: financeiro
@@ -547,7 +563,7 @@ async function renderAgente(j) {
   const s = estadoAgente(a.nome);
   const eventos = estadoCache.eventos.filter((e) => e.agente === a.nome).slice(0, 10);
   const resto = a.descricao.split(': ').slice(1);
-  j.corpo.innerHTML = `<div class="cab-agente"><div class="avatar">${sprite(a.nome, 44)}</div><div><h1>${esc(nome(a.nome))}</h1><p>${esc(papel(a.descricao))}</p><div style="margin-top:8px">${chipEstado(s.estado)} ${s.tarefa && s.estado !== 'parado' ? `<small class="neutro">${esc(s.tarefa)}</small>` : ''}</div></div></div>
+  j.corpo.innerHTML = `<div class="cab-agente"><div class="avatar">${sprite(a.nome, 44)}</div><div><h1>${esc(nome(a.nome))}</h1><p>${esc(papel(a.descricao))}</p><div style="margin-top:8px">${tarefaNoEscritorio(a.nome) ? `${chipEstado('trabalhando')} <small class="neutro">no escritório: ${esc(tarefaNoEscritorio(a.nome))}</small>` : `${chipEstado(s.estado)} ${s.tarefa && s.estado !== 'parado' ? `<small class="neutro">${esc(s.tarefa)}</small>` : ''}`}</div></div></div>
   <div class="pagina"><h2 style="margin-top:0">O que faz</h2><p>${esc(resto.join(': ').replace(/ Use proactively.*$/, '') || a.descricao)}</p>
   ${a.acoes.length ? `<h2>Rodar agora</h2><div class="acoes" style="margin-top:0">${a.acoes.map((x, i) => `<button class="bt ${i ? '' : 'pri'}" data-acao="${esc(x.id)}">${icone('play')} ${esc(x.rotulo)}</button>`).join('')}</div>` : ''}
   ${COMANDOS[a.nome] ? `<h2>No Claude Code</h2><p class="comandos">${COMANDOS[a.nome].map((c) => `<code>${c}</code>`).join('')} ou "use o ${esc(a.nome)} para…"</p>` : ''}
@@ -574,17 +590,18 @@ async function renderExecucao(j) {
     let ex; try { ex = await api(`/api/execucao/${encodeURIComponent(id)}`); } catch { return; }
     if (ex.erro) { clearInterval(j.timerExec); return; }
     pintar(ex);
-    if (ex.terminou) { clearInterval(j.timerExec); janelas.forEach((x) => { if (x !== j && !x.chave.startsWith('exec:') && x.chave !== 'escritorio') desenhar(x, true); }); }
+    if (ex.terminou) { clearInterval(j.timerExec); janelas.forEach((x) => { if (x !== j && !x.chave.startsWith('exec:')) desenhar(x, true); }); }
   }, 700);
 }
 
 // ------------------------------------------------------------------ início
 async function iniciar() {
-  desenharIcones(); barraTarefas(); relogio(); setInterval(relogio, 1000);
+  barraTarefas(); relogio(); setInterval(relogio, 1000);
+  fundoEscritorio(); setInterval(fundoEscritorio, 4000);
   await Promise.all([puxarEquipe(), puxarEstado()]);
   setInterval(puxarEstado, 1500); setInterval(puxarEquipe, 15000);
   const pedido = new URLSearchParams(location.hash.slice(1)).get('abrir');
-  const lista = pedido ? pedido.split(',') : (SALVO.abertas.length ? SALVO.abertas : ['escritorio', 'briefing']);
+  const lista = pedido ? pedido.split(',') : (SALVO.abertas.length ? SALVO.abertas : ['briefing']);
   lista.forEach((k) => abrir(k));
 }
 iniciar();

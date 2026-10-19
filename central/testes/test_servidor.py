@@ -1,10 +1,11 @@
 """python -m unittest discover central/testes"""
 import http.client
 import json
+import socket
 import sys
 import threading
 import unittest
-from http.server import ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
 
@@ -71,6 +72,68 @@ class TesteCielloOS(unittest.TestCase):
                 threading.Event().wait(0.1)
         self.assertEqual(st["codigo"], 0)
         self.assertIn("ola do teste", st["saida"])
+
+
+class PixelFalso(BaseHTTPRequestHandler):
+    """Faz o papel do pixel-agents: uma página HTML e um WebSocket que devolve o Host/Origin recebidos e ecoa."""
+    def log_message(self, *_):
+        pass
+
+    def do_GET(self):
+        if self.headers.get("Upgrade") == "websocket":
+            self.wfile.write(b"HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n")
+            self.wfile.write(f"{self.path}|{self.headers['Host']}|{self.headers['Origin']}\n".encode())
+            self.wfile.flush()
+            dado = self.connection.recv(100)
+            self.connection.sendall(b"eco:" + dado)
+            return
+        corpo = b"<!doctype html><html><head><title>Pixel Agents</title></head><body></body></html>"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html")
+        self.end_headers()
+        self.wfile.write(corpo)
+
+
+class TesteRepasseEscritorio(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.pixel = ThreadingHTTPServer(("127.0.0.1", 0), PixelFalso)
+        threading.Thread(target=cls.pixel.serve_forever, daemon=True).start()
+        cls.trava = mock.patch.object(servidor, "PIXEL", cls.pixel.server_address[1])
+        cls.trava.start()
+        cls.srv = ThreadingHTTPServer(("127.0.0.1", 0), servidor.Painel)
+        threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.trava.stop()
+        for s_ in (cls.srv, cls.pixel):
+            s_.shutdown()
+            s_.server_close()
+
+    def test_pagina_do_escritorio_ganha_a_ponte(self):
+        c = http.client.HTTPConnection("127.0.0.1", self.srv.server_address[1], timeout=10)
+        c.request("GET", "/escritorio/?token=abc")
+        r = c.getresponse()
+        html = r.read()
+        self.assertEqual(r.status, 200)
+        self.assertIn(b'<head><script src="/web/ponte-escritorio.js"></script>', html)
+        self.assertIn(b"Pixel Agents", html)
+
+    def test_websocket_passa_nos_dois_sentidos(self):
+        s_ = socket.create_connection(("127.0.0.1", self.srv.server_address[1]), timeout=10)
+        s_.sendall(b"GET /ws?token=abc HTTP/1.1\r\nHost: 127.0.0.1:3200\r\nOrigin: http://127.0.0.1:3200\r\n"
+                   b"Upgrade: websocket\r\nConnection: Upgrade\r\n\r\n")
+        recebido = b""
+        while b"\n" not in recebido.split(b"\r\n\r\n", 1)[-1] or b"\r\n\r\n" not in recebido:
+            recebido += s_.recv(1000)
+        self.assertTrue(recebido.startswith(b"HTTP/1.1 101"))
+        caminho, host, origem = recebido.split(b"\r\n\r\n", 1)[1].decode().strip().split("|")
+        porta = self.pixel.server_address[1]
+        self.assertEqual((caminho, host, origem), ("/ws?token=abc", f"127.0.0.1:{porta}", f"http://127.0.0.1:{porta}"))
+        s_.sendall(b"ola")
+        self.assertEqual(s_.recv(100), b"eco:ola")
+        s_.close()
 
 
 if __name__ == "__main__":

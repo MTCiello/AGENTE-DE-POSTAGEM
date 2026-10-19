@@ -1,5 +1,8 @@
-"""Ciello OS: o assistente inteiro numa área de trabalho (fundo azul com a logo, barra de tarefas embaixo e janelas
-que movem e redimensionam). O ícone fixado é o Escritório: o pixel-agents original (porta 3100) dentro de uma janela.
+"""Ciello OS: o assistente inteiro numa área de trabalho. O fundo é o Escritório (o pixel-agents original, porta 3100),
+com a barra de tarefas embaixo e janelas que movem e redimensionam. Os apps ficam no menu Iniciar.
+
+O escritório é servido pelo mesmo endereço do Ciello OS (/escritorio/, repasse local sem alterar o pixel-agents) para
+a ponte (web/ponte-escritorio.js) ouvir o clique num personagem e abrir a janela daquele agente.
 
   python central/escritorio/servidor.py              # ou clique duas vezes em Ciello.cmd
   python central/escritorio/servidor.py --sem-escritorio --sem-navegador
@@ -24,10 +27,12 @@ import os
 import re
 import secrets
 import shutil
+import socket
 import subprocess
 import sys
 import threading
 import time
+import urllib.error
 import urllib.request
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -165,7 +170,7 @@ def app_escritorio():
         return {"no_ar": False}
     token_arq = Path.home() / ".pixel-agents" / "standalone-token"
     token = token_arq.read_text(encoding="utf-8").strip() if token_arq.exists() else ""
-    return {"no_ar": True, "url": f"http://127.0.0.1:{PIXEL}/" + (f"?token={token}" if token else "")}
+    return {"no_ar": True, "url": "/escritorio/" + (f"?token={token}" if token else "")}
 
 
 def app_briefing():
@@ -299,10 +304,65 @@ class Painel(BaseHTTPRequestHandler):
             return self._json({"erro": "não encontrado"}, 404)
         self._enviar(alvo.read_bytes(), TIPOS[alvo.suffix.lower()])
 
+    def _repassar(self, destino):
+        """Escritório no mesmo endereço do Ciello OS: HTTP e WebSocket vão para o pixel-agents como estão.
+        Só a página inicial ganha a ponte (um script que ouve o clique nos personagens)."""
+        if (self.headers.get("Upgrade") or "").lower() == "websocket":
+            try:
+                alvo = socket.create_connection(("127.0.0.1", PIXEL), timeout=5)
+            except OSError:
+                return self._json({"erro": "escritório desligado"}, 502)
+            # o pixel-agents confere Host e Origin: o pedido chega como se viesse do próprio endereço dele
+            cab = [f"GET {destino} HTTP/1.1", f"Host: 127.0.0.1:{PIXEL}", f"Origin: http://127.0.0.1:{PIXEL}"]
+            cab += [f"{k}: {v}" for k, v in self.headers.items() if k.lower() not in ("host", "origin")]
+            alvo.sendall(("\r\n".join(cab) + "\r\n\r\n").encode("latin-1"))
+            alvo.settimeout(None)
+            self.connection.settimeout(None)
+
+            def tubo(de, para):
+                try:
+                    while dado := de.recv(65536):
+                        para.sendall(dado)
+                except OSError:
+                    pass
+                finally:
+                    for s_ in (de, para):
+                        try:
+                            s_.shutdown(socket.SHUT_RDWR)
+                        except OSError:
+                            pass
+
+            volta = threading.Thread(target=tubo, args=(alvo, self.connection), daemon=True)
+            volta.start()
+            tubo(self.connection, alvo)
+            volta.join(timeout=2)
+            alvo.close()
+            self.close_connection = True
+            return
+        cabecalhos = {k: v for k, v in self.headers.items() if k.lower() in ("accept", "accept-language", "authorization")}
+        try:
+            r = DIRETO.open(urllib.request.Request(f"http://127.0.0.1:{PIXEL}{destino}", headers=cabecalhos), timeout=15)
+            corpo, codigo, tipo = r.read(), r.status, r.headers.get("Content-Type", "application/octet-stream")
+        except urllib.error.HTTPError as e:
+            corpo, codigo, tipo = e.read(), e.code, e.headers.get("Content-Type", "text/plain")
+        except OSError:
+            return self._json({"erro": "escritório desligado"}, 502)
+        if "text/html" in tipo:
+            corpo = corpo.replace(b"<head>", b'<head><script src="/web/ponte-escritorio.js"></script>', 1)
+        self._enviar(corpo, tipo, codigo)
+
     def do_GET(self):
         if not self._local():
             return
         caminho = self.path.split("?")[0]
+        if caminho == "/escritorio":
+            self.send_response(301)
+            self.send_header("Location", "/escritorio/" + self.path[len("/escritorio"):])
+            return self.end_headers()
+        if caminho.startswith("/escritorio/"):
+            return self._repassar(self.path[len("/escritorio"):])
+        if caminho == "/ws" or caminho.startswith("/terminal/"):  # o pixel-agents abre o WebSocket na raiz
+            return self._repassar(self.path)
         if caminho in ("/", "/index.html"):
             html = (WEB / "index.html").read_text(encoding="utf-8").replace("__CIELLO_TOKEN__", TOKEN)
             return self._enviar(html.encode("utf-8"), TIPOS[".html"])
