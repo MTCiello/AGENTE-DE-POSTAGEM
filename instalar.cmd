@@ -28,6 +28,9 @@ call .venv\Scripts\activate.bat
 python -m pip install --upgrade pip >nul
 python -m pip install -r central\requirements.txt
 echo.
+echo Baixando o buscador do Google Maps do SDR (gosom/google-maps-scraper, MIT)...
+python central\sdr.py instalar-scraper || echo Nao deu para baixar agora: o SDR funciona com CSV, e o instalar.cmd tenta de novo na proxima vez.
+echo.
 echo Instalando o gerador de video (Remotion)...
 pushd reels
 call npm install --no-audit --no-fund

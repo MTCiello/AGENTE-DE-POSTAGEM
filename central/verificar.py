@@ -137,8 +137,8 @@ def sdr():
         return FALHA, ultima(out)
     binario = list((RAIZ / "comercial" / "bin").glob("google*maps*scraper*")) if (RAIZ / "comercial" / "bin").exists() else []
     if not binario and not shutil.which("docker"):
-        return AVISO, ("consultas ok; falta o executável do Google Maps: baixe em "
-                       "github.com/gosom/google-maps-scraper/releases e salve em comercial/bin/")
+        return AVISO, ("consultas ok; falta o executável do Google Maps: rode o instalar.cmd de novo "
+                       "(ou python central/sdr.py instalar-scraper)")
     return OK, f"consultas ok e scraper encontrado ({binario[0].name if binario else 'docker'})"
 
 

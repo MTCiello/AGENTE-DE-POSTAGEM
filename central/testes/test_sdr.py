@@ -104,3 +104,28 @@ class TesteSDR(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TesteInstalarScraper(unittest.TestCase):
+    ASSETS = [{"name": n, "size": 3, "browser_download_url": f"https://exemplo/{n}"} for n in (
+        "google-maps-scraper-1.9.2-darwin-amd64", "google-maps-scraper-1.9.2-linux-amd64",
+        "google-maps-scraper-1.9.2-windows-amd64.exe", "checksums.txt")]
+
+    def test_escolhe_o_executavel_do_sistema(self):
+        self.assertEqual(sdr.escolher_executavel(self.ASSETS, "Windows", "AMD64")["name"], "google-maps-scraper-1.9.2-windows-amd64.exe")
+        self.assertEqual(sdr.escolher_executavel(self.ASSETS, "Linux", "x86_64")["name"], "google-maps-scraper-1.9.2-linux-amd64")
+        self.assertIsNone(sdr.escolher_executavel(self.ASSETS, "Windows", "ARM64"))
+
+    def test_baixa_para_comercial_bin_e_troca_a_versao_antiga(self):
+        import io
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "bin").mkdir()
+            (Path(d) / "bin" / "google-maps-scraper-1.8.0-windows-amd64.exe").write_bytes(b"velho")
+            respostas = [io.BytesIO(json.dumps({"tag_name": "v1.9.2", "assets": self.ASSETS}).encode()), io.BytesIO(b"exe")]
+            with mock.patch.object(sdr, "PASTA", Path(d)), mock.patch.object(sdr, "RAIZ", Path(d).parent), \
+                    mock.patch.object(sdr.urllib.request, "urlopen", side_effect=lambda *a, **k: respostas.pop(0)), \
+                    mock.patch.object(sdr, "escolher_executavel", side_effect=lambda assets: assets[2]):
+                sdr.cmd_instalar_scraper(NS(forcar=True))
+            self.assertEqual([p.name for p in (Path(d) / "bin").iterdir()], ["google-maps-scraper-1.9.2-windows-amd64.exe"])
+            self.assertEqual((Path(d) / "bin" / "google-maps-scraper-1.9.2-windows-amd64.exe").read_bytes(), b"exe")

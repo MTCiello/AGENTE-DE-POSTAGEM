@@ -9,6 +9,7 @@ Fluxo:
   6. hoje        lista os follow-ups do dia (cadência D+2, D+5, D+10) com o link pronto
   +  entrada     lead que chegou sozinho (DM, anúncio, site, indicação): registra e devolve a resposta em segundos
   7. crm         exporta a planilha para importar no CIELLO CRM
+  +  instalar-scraper  baixa o executável do gosom para o seu sistema em comercial/bin/ (o instalar.cmd já faz)
 
 Uso:
   python central/sdr.py consultas --segmentos imobiliaria odontologia --cidades "Chapecó SC"
@@ -33,6 +34,7 @@ import shutil
 import subprocess
 import sys
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -90,7 +92,7 @@ def cmd_buscar(a):
     if not (bruto / "consultas.txt").exists():
         sys.exit("Rode antes: python central/sdr.py consultas")
     opcoes = ["-depth", str(a.profundidade), "-lang", "pt", "-exit-on-inactivity", "3m"]
-    # 1º o executável do gosom (sem Docker): baixe em github.com/gosom/google-maps-scraper/releases e salve em comercial/bin/
+    # 1º o executável do gosom (sem Docker), em comercial/bin/: o instalar.cmd baixa (sdr.py instalar-scraper)
     binario = a.binario or next((str(p) for p in sorted((PASTA / "bin").glob("google*maps*scraper*")) if p.is_file()), None)
     if binario:
         cmd = [binario, "-input", str(bruto / "consultas.txt"), "-results", str(bruto / "resultados.csv"), *opcoes]
@@ -98,9 +100,9 @@ def cmd_buscar(a):
         cmd = ["docker", "run", "--rm", "-v", "gmaps-playwright-cache:/opt", "-v", f"{bruto.resolve()}:/work",
                "gosom/google-maps-scraper", "-input", "/work/consultas.txt", "-results", "/work/resultados.csv", *opcoes]
     else:
-        sys.exit("Baixe o executável do gosom/google-maps-scraper (Windows) em\n"
-                 "  https://github.com/gosom/google-maps-scraper/releases\n"
-                 "e salve em comercial/bin/ (ou passe --binario CAMINHO). Docker não é necessário.\n"
+        sys.exit("Falta o buscador do Google Maps. Baixe com:\n"
+                 "  python central/sdr.py instalar-scraper\n"
+                 "(ou passe --binario CAMINHO). Docker não é necessário.\n"
                  "Sem scraper: qualquer CSV com colunas title, phone, website, review_count, review_rating serve para o 'qualificar'.")
     if a.email:
         cmd.append("-email")
@@ -168,6 +170,59 @@ def ler_bruto(caminho: Path):
         return json.loads(txt) if txt.startswith("[") else [json.loads(l) for l in txt.splitlines() if l.strip()]
     with caminho.open(encoding="utf-8") as f:
         return list(csv.DictReader(f))
+
+
+RELEASES = "https://api.github.com/repos/gosom/google-maps-scraper/releases/latest"
+
+
+def escolher_executavel(assets, sistema=None, arquitetura=None):
+    """Na lista de arquivos da versão, o executável deste PC (ex.: google-maps-scraper-1.9.2-windows-amd64.exe)."""
+    import platform
+    sistema = (sistema or platform.system()).lower()
+    arquitetura = (arquitetura or platform.machine()).lower()
+    arq = "arm64" if arquitetura in ("arm64", "aarch64") else "amd64"
+    nome_so = {"windows": "windows", "darwin": "darwin", "linux": "linux"}.get(sistema, sistema)
+    candidatos = [x for x in assets if nome_so in x["name"].lower() and arq in x["name"].lower()
+                  and not x["name"].lower().endswith((".sha256", ".txt", ".sig"))]
+    if nome_so == "windows":
+        candidatos = [x for x in candidatos if x["name"].lower().endswith(".exe")] or candidatos
+    return candidatos[0] if candidatos else None
+
+
+def cmd_instalar_scraper(a):
+    """Baixa a versão mais nova do gosom/google-maps-scraper (MIT) para comercial/bin/. Não instala nada no sistema."""
+    destino_dir = PASTA / "bin"
+    existentes = [p for p in destino_dir.glob("google*maps*scraper*") if p.is_file()] if destino_dir.exists() else []
+    if existentes and not a.forcar:
+        print(f"já está em comercial/bin/: {existentes[0].name} (use --forcar para baixar de novo)")
+        return
+    pedido = urllib.request.Request(RELEASES, headers={"Accept": "application/vnd.github+json", "User-Agent": "ciello-sdr"})
+    try:
+        with urllib.request.urlopen(pedido, timeout=30) as r:
+            versao = json.load(r)
+    except OSError as e:
+        sys.exit(f"Não deu para consultar o GitHub ({e}). Baixe à mão em github.com/gosom/google-maps-scraper/releases "
+                 "e salve em comercial/bin/.")
+    asset = escolher_executavel(versao.get("assets", []))
+    if not asset:
+        sys.exit(f"A versão {versao.get('tag_name', '?')} não tem executável para este sistema. "
+                 "Baixe à mão em github.com/gosom/google-maps-scraper/releases ou use o Docker.")
+    destino_dir.mkdir(parents=True, exist_ok=True)
+    destino = destino_dir / asset["name"]
+    temporario = destino.with_name(destino.name + ".baixando")
+    print(f"baixando {asset['name']} ({asset.get('size', 0) / 1e6:.0f} MB, versão {versao.get('tag_name', '?')})...")
+    with urllib.request.urlopen(urllib.request.Request(asset["browser_download_url"], headers={"User-Agent": "ciello-sdr"}), timeout=300) as r, \
+            open(temporario, "wb") as f:
+        shutil.copyfileobj(r, f)
+    if asset.get("size") and temporario.stat().st_size != asset["size"]:
+        temporario.unlink()
+        sys.exit("O download veio incompleto. Rode de novo: python central/sdr.py instalar-scraper")
+    for antigo in existentes:
+        antigo.unlink()
+    temporario.replace(destino)
+    if not sys.platform.startswith("win"):
+        destino.chmod(0o755)
+    print(f"pronto: {destino.relative_to(RAIZ)}. Na 1ª busca ele baixa o navegador que usa (uns minutos).")
 
 
 def cmd_qualificar(a):
@@ -380,6 +435,8 @@ def main():
     s.add_argument("--segmento", default=""); s.add_argument("--cidade", default=""); s.add_argument("--mensagem", default="")
     s.add_argument("--assinatura", default="Mateus"); s.set_defaults(f=cmd_entrada)
     s = sub.add_parser("crm"); s.add_argument("--todos", action="store_true", help="inclui leads ainda não contatados"); s.add_argument("--separador", default=";"); s.set_defaults(f=cmd_crm)
+    s = sub.add_parser("instalar-scraper", help="baixa o executável do Google Maps para comercial/bin/")
+    s.add_argument("--forcar", action="store_true", help="baixa de novo mesmo se já existir"); s.set_defaults(f=cmd_instalar_scraper)
     a = ap.parse_args()
     from status import trabalhando
     with trabalhando("sdr", a.cmd):

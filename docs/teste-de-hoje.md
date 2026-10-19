@@ -42,7 +42,7 @@ Ele roda cada função de ponta a ponta e mostra `[ok]`, `[aviso]` ou `[FALHA]`:
 | Ciello OS | A área de trabalho sobe e responde |
 | Escritório de agentes | A tela do escritório está compilada e os 6 personagens e 38 móveis carregam (sem Node) |
 | Montagem final, oráculo de ritmo | Vídeo + trilha no volume do Instagram e o plano-sequência no padrão |
-| SDR | Mostra **aviso** até você baixar o executável do Google Maps (passo 7) |
+| SDR | Gera as buscas e acha o buscador do Google Maps (o `instalar.cmd` baixa sozinho) |
 | Radar (internet) | Mostra **aviso** se alguma fonte estiver fora do ar |
 | Capa (Remotion) | Na 1ª vez demora: o Remotion baixa o navegador dele |
 | Voz | **Aviso** é normal se você não instalou a voz |
@@ -97,8 +97,9 @@ Se algo do escritório falhar, me mande um print e o que aparece na janela preta
 
 ## 7. SDR de verdade (opcional, ~15 min)
 
-1. Baixe o executável para Windows em https://github.com/gosom/google-maps-scraper/releases e salve em `comercial\bin\`.
-2. Num terminal na pasta do assistente:
+O `instalar.cmd` já baixa o buscador do Google Maps para `comercial\bin\`. Se o `testar.cmd` ainda avisar que falta, rode `python central\sdr.py instalar-scraper`. Na 1ª busca ele baixa o navegador que usa (uns minutos).
+
+Num terminal na pasta do assistente:
 ```powershell
 .venv\Scripts\activate
 python central\sdr.py consultas --segmentos imobiliaria odontologia --cidades "Chapecó SC"
