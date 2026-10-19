@@ -1,93 +1,87 @@
 # Teste de hoje à noite (19/10)
 
-Tudo aqui funciona sem o seu rosto e sem a sua voz. Marque o que deu certo e me conte o que falhou (de preferência com a mensagem de erro).
+Tudo aqui funciona sem o seu rosto e sem a sua voz. Marque o que deu certo. Se algo falhar, me mande o `estado\verificacao.txt` ou a mensagem de erro.
 
-## 0. Preparar o PC (uma vez, ~15 min)
+## 1. Baixar (5 min)
 
+**Sem Git:** baixe o ZIP, extraia em `C:\Ciello\` e renomeie a pasta para `agente-de-postagem`:
+https://github.com/MTCiello/AGENTE-DE-POSTAGEM/archive/refs/heads/ccr-75504115-gpanzf.zip
+
+**Com Git:**
 ```powershell
-winget install Git.Git Python.Python.3.11 OpenJS.NodeJS.LTS Gyan.FFmpeg
-git clone https://github.com/MTCiello/agente-de-postagem.git
-cd agente-de-postagem
-git checkout ccr-75504115-gpanzf
-cd reels; npm install; cd ..
+git clone -b ccr-75504115-gpanzf https://github.com/MTCiello/AGENTE-DE-POSTAGEM.git C:\Ciello\agente-de-postagem
 ```
 
-## 1. Capas · ~2 min · só Node
-```powershell
-cd reels
-node capa.mjs ../roteiros/2026-10-21-teste-ideia.json ../midia/capas/teste.jpg
-node capa.mjs ../roteiros/2026-10-23-texto-cara-de-ia.json ../midia/capas/teste-creme.jpg --tema=creme --selo="3 sinais"
-```
-- [ ] A capa abriu com título, I.V.A. e logo, sem nada cortado.
-- [ ] Recortada em 3:4 (como na grade do perfil), o título continua inteiro.
+## 2. Instalar (10–20 min) · clique duas vezes em `instalar.cmd`
 
-## 2. Radar · ~2 min · só Python
-```powershell
-python central/radar.py
-```
-- [ ] Gerou `radar/AAAA-MM-DD.md`. Abra e veja se os assuntos do topo fazem sentido para o seu nicho.
-- [ ] Anote as fontes que falharam (aparecem no topo do relatório).
-- Opcional: `git clone https://github.com/mvanhorn/last30days-skill` e `python central/radar.py --last30days last30days-skill/skills/last30days/scripts/last30days.py`.
+- Se faltar Git, Node, ffmpeg ou Python, ele instala pelo winget e pede para **rodar de novo**.
+- Depois cria o ambiente Python (`.venv`) e instala o Remotion (`reels`).
+- No fim pergunta se instala a voz: **ok responder "N" hoje** (são ~3 GB).
 
-## 3. Biblioteca de ganchos · ~5 min
-```powershell
-python central/ganchos.py ranking
-python central/ganchos.py modelos --pilar comandos
-```
-- [ ] Mostrou os 10 vídeos da biblioteca (4 virais + 6 nossos).
-- Opcional, com **conta secundária** do Instagram: `pip install instaloader`, `instaloader --login SUA_CONTA_SECUNDARIA` e depois `python central/ganchos.py importar @gabrieltomaz.ia @iacomjota --sessao SUA_CONTA_SECUNDARIA`.
-- [ ] Os reels dos perfis de referência entraram com o multiplicador.
+## 3. Verificar tudo (5–10 min) · clique duas vezes em `testar.cmd`
 
-## 4. Relatório semanal · ~1 min
-```powershell
-python central/relatorio.py
-```
-- [ ] Abriu `metricas/relatorio-2026-10-19.md` com perfil, reels, o que mudar e horário.
+Ele roda cada função de ponta a ponta e mostra `[ok]`, `[aviso]` ou `[FALHA]`:
 
-## 5. Clone no Kaggle · ~1 h (a maior parte esperando download)
-1. kaggle.com → criar conta → verificar telefone (exigido para GPU e internet).
-2. *Create → New Notebook → File → Import Notebook* → enviar `central/clone/ciello_clone_kaggle.ipynb`.
-3. Painel da direita: **Accelerator: GPU T4 x2**, **Internet: On**.
-4. *Run All* e abrir o link `https://….gradio.live` que aparece no fim.
-5. Seguir o "Teste desta noite" no fim do notebook: personagem → narração de teste → fala (InfiniteTalk) → andando (Wan 2.2 5B).
-- [ ] A tela do Wan2GP abriu.
-- [ ] Tempo para gerar a foto: ____ · a fala (≈10 s): ____ · o andando (≈5 s): ____
-- [ ] A boca acompanha a fala em português? Nota de 0 a 10: ____
-- [ ] Parece real? Nota de 0 a 10: ____
-- **Desligue a sessão (Stop session) quando acabar.** A cota grátis é de ~30 h por semana.
+| Verificação | O que significa se passar |
+|---|---|
+| Python, ffmpeg, Node, bibliotecas | O PC está pronto |
+| Testes automáticos | Radar, ganchos e SDR funcionam |
+| Montagem final | Vídeo + trilha saem no volume do Instagram |
+| Oráculo de ritmo | O plano-sequência do CRM está no padrão do reel de referência |
+| Relatório semanal, biblioteca de ganchos | Analista e pesquisador funcionando |
+| SDR | Gera as buscas. Mostra **aviso** até você baixar o executável do Google Maps (passo 6) |
+| Radar (internet) | Busca nas fontes. Mostra **aviso** se alguma estiver fora do ar |
+| Capa (Remotion) | Na 1ª vez demora: o Remotion baixa o navegador dele |
+| Voz | **Aviso** é normal se você não instalou a voz |
 
-## 6. Reel com o clone · ~5 min
-Baixe os vídeos da aba *Output* do Kaggle e coloque em `reels/public/clone/` com os nomes `cena1-fala.mp4` e `cena2-andando.mp4`.
-```powershell
-cd reels
-node render.mjs CloneReel ../midia/teste-clone.mp4
-```
-- [ ] O reel saiu com as suas 2 cenas, as cenas 3 e 4 como rascunho, legenda e cartão final.
+- [ ] Terminou com **0 falhas**.
 
-## 7. SDR · ~10 min
-Baixe o executável para Windows em [gosom/google-maps-scraper/releases](https://github.com/gosom/google-maps-scraper/releases) e salve em `comercial/bin/`. Não precisa de Docker.
-```powershell
-python central/sdr.py consultas --segmentos imobiliaria odontologia --cidades "Chapecó SC"
-python central/sdr.py buscar
-python central/sdr.py qualificar comercial/bruto/resultados.csv
-python central/sdr.py abordar --top 10
-```
-- [ ] Abriu `comercial/abordagens/AAAA-MM-DD.md` com mensagens e links do WhatsApp.
-- [ ] As empresas do topo são de fato bons clientes para o CRM? Anote 2 que estão fora do lugar.
-- [ ] Me mande o modelo de planilha de importação do CIELLO CRM (só o cabeçalho), para eu ajustar o `crm`.
+## 4. Escritório (pixel-agents) · clique duas vezes em `Escritorio-Ciello.cmd`
 
-## 8. Escritório (pixel-agents original) · ~5 min
-Clique duas vezes em `Escritorio-Ciello.cmd`.
 - [ ] Abriu no navegador o pixel-agents com as 3 salas da Ciello (Pesquisa/Estúdio, Comercial, Análise/Postagem).
 - [ ] Na apresentação, aceite a instalação dos hooks.
-- [ ] Abra o Claude Code nesta pasta (pelo **+ Agent** do escritório ou num terminal) e rode `/comercial`: o coordenador senta numa mesa e os agentes aparecem trabalhando.
-- [ ] Opcional: ligue as equipes (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`) para cada agente ter mesa com o nome.
+- [ ] Abra o Claude Code nesta pasta (botão **+ Agent** do escritório ou um terminal) e rode `/comercial`: o coordenador senta numa mesa e os agentes aparecem ao lado dele trabalhando.
 
-## 9. Voz e montagem final (opcional hoje)
+## 5. Ver o que já foi produzido
+
+- [ ] `midia\final\2026-10-27-crm-plano.mp4`: o plano-sequência do CRM. Nota de 0 a 10 comparando com o reel de referência: ____
+- [ ] `midia\capas\`: as capas da semana.
+- [ ] `radar\2026-10-19.md`: a pauta sugerida para a semana de 26/10.
+- [ ] `metricas\relatorio-2026-10-19.md`: o primeiro relatório do perfil.
+- [ ] Painel de crescimento: `.venv\Scripts\python central\escritorio\servidor.py` (abre a porta 3200).
+
+## 6. SDR de verdade (opcional hoje, ~15 min)
+
+1. Baixe o executável para Windows em https://github.com/gosom/google-maps-scraper/releases e salve em `comercial\bin\`.
+2. Num terminal na pasta do assistente:
 ```powershell
-py -3.11 -m venv .venv; .venv\Scripts\activate; pip install -r central/requirements.txt
-python central/voz.py roteiros/2026-10-21-teste-ideia.json --saida audio/teste --nome TESTE
-python central/mixar.py midia/2026-10-21-teste-ideia.mp4 audio/teste/narracao.wav midia/final/teste.mp4
+.venv\Scripts\activate
+python central\sdr.py consultas --segmentos imobiliaria odontologia --cidades "Chapecó SC"
+python central\sdr.py buscar
+python central\sdr.py qualificar comercial\bruto\resultados.csv
+python central\sdr.py abordar --top 10
 ```
-- [ ] Kokoro gerou a voz em português. Nota da naturalidade: ____
-- [ ] O vídeo final saiu com voz e trilha, e a trilha abaixa quando a voz fala.
+- [ ] Abriu `comercial\abordagens\AAAA-MM-DD.md` com mensagens e links do WhatsApp.
+- [ ] As empresas do topo são bons clientes para o CRM? Anote 2 que estão fora do lugar.
+
+## 7. Clone no Kaggle (opcional, ~1 h, quase tudo esperando download)
+
+1. kaggle.com → criar conta → verificar o telefone.
+2. *Create → New Notebook → File → Import Notebook* → `central\clone\ciello_clone_kaggle.ipynb`.
+3. Painel da direita: **GPU T4 x2** e **Internet On** → *Run All* → abrir o link `gradio.live`.
+4. Siga o "Teste desta noite" no fim do notebook.
+- [ ] Tempo da foto: ____ · da fala (~10 s): ____ · do andando (~5 s): ____
+- [ ] Boca acompanha o português? 0–10: ____ · Parece real? 0–10: ____
+- **Desligue a sessão (Stop session) no fim.**
+
+## 8. Voz (opcional) · se instalou a voz no passo 2
+```powershell
+.venv\Scripts\activate
+python central\voz.py roteiros\2026-10-27-crm-plano.json --saida audio\crm --nome CRM
+```
+- [ ] Kokoro gerou a narração em português. Naturalidade 0–10: ____
+
+## O que eu preciso de volta
+1. O `estado\verificacao.txt`.
+2. Sua nota para o vídeo do CRM e o que mudaria.
+3. Preço e planos do CRM e o cabeçalho da planilha de importação.
