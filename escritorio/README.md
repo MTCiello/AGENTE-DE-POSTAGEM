@@ -13,6 +13,10 @@ O que mudou em relação ao original:
   original (conferido com o 1.5.0 do npm).
 - **Só a tela foi trazida:** `webview-ui/` (React + canvas) e `core/` (tipos, protocolo e leitura dos
   ativos usada no build). Extensão do VS Code, CLI e terminal embutido ficaram de fora.
+- **Ciello no código:** textos em português (o protocolo segue em inglês; `src/office/statusPtBr.ts` traduz o que
+  aparece), menus nas cores e fontes da Ciello (`src/index.css`; o que está dentro da cena, `.cena`, segue pixel),
+  zoom entre 2x e 6x, controles atrás da engrenagem do Ciello OS, centralizar e clique no personagem abrindo a
+  janela do agente (`src/ciello/`). Saíram o changelog, o aviso de versão e o Discord do projeto original.
 - O build sai direto em `central/escritorio/web/escritorio/`, que vai para o git: o PC do Mateus não precisa
   de Node para abrir o escritório (o Node continua só para o Remotion).
 

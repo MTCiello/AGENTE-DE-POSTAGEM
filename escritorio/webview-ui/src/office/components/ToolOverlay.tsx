@@ -27,6 +27,7 @@ import type { SubagentCharacter } from '../../hooks/useExtensionMessages.js';
 import type { OfficeState } from '../engine/officeState.js';
 import { overlayProjection } from '../projection.js';
 import { getCachedSprite } from '../sprites/spriteCache.js';
+import { traduzirStatus } from '../statusPtBr.js';
 import { BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/spriteData.js';
 import type { ToolActivity } from '../types.js';
 import { CharacterState } from '../types.js';
@@ -35,7 +36,7 @@ import { CharacterState } from '../types.js';
 // shows ONLY the checkmark (the label falls through to its normal idle text);
 // going idle waiting on the user (Notification(idle_prompt)) additionally
 // surfaces this label. Driven by Character.waitingAwaitingInput.
-const WAITING_INPUT_ACTIVITY_TEXT = 'Waiting for input';
+const WAITING_INPUT_ACTIVITY_TEXT = 'Esperando resposta';
 
 interface ToolOverlayProps {
   officeState: OfficeState;
@@ -58,7 +59,7 @@ function getActivityText(
   bubbleType: 'permission' | 'waiting' | null,
   waitingAwaitingInput: boolean,
 ): string {
-  if (bubbleType === 'permission') return 'Needs approval';
+  if (bubbleType === 'permission') return 'Precisa de aprovação';
   // Only the idle case ("Waiting for input") gets a dedicated label. A finished
   // turn (Stop, waitingAwaitingInput=false) falls through so the checkmark alone
   // signals "done", same as the original behavior.
@@ -69,17 +70,17 @@ function getActivityText(
     // Find the latest non-done tool
     const activeTool = [...tools].reverse().find((t) => !t.done);
     if (activeTool) {
-      if (activeTool.permissionWait) return 'Needs approval';
-      return activeTool.status;
+      if (activeTool.permissionWait) return 'Precisa de aprovação';
+      return traduzirStatus(activeTool.status);
     }
     // All tools done but agent still active (mid-turn) — keep showing last tool status
     if (isActive) {
       const lastTool = tools[tools.length - 1];
-      if (lastTool) return lastTool.status;
+      if (lastTool) return traduzirStatus(lastTool.status);
     }
   }
 
-  return 'Idle';
+  return 'Livre';
 }
 
 function getFuelColor(ratio: number): string {
@@ -239,7 +240,7 @@ export function ToolOverlay({
           activityText = WAITING_INPUT_ACTIVITY_TEXT;
         } else if (isSub) {
           if (subHasPermission) {
-            activityText = 'Needs approval';
+            activityText = 'Precisa de aprovação';
           } else {
             // Hover shows the subtask title; SELECTING the sub reveals its live
             // tool activity (watched sub-agents stream it via subagentToolStart).
@@ -247,7 +248,7 @@ export function ToolOverlay({
             const rows = sub ? subagentTools[sub.parentAgentId]?.[sub.parentToolId] : undefined;
             const activeRow =
               isSelected && rows ? [...rows].reverse().find((t) => !t.done) : undefined;
-            activityText = activeRow?.status ?? (sub?.label || 'Subtask');
+            activityText = activeRow ? traduzirStatus(activeRow.status) : sub?.label || 'Subtarefa';
           }
         } else {
           activityText = getActivityText(
@@ -274,7 +275,7 @@ export function ToolOverlay({
         }
 
         // Team info
-        const teamRoleLabel = ch.isTeamLead ? 'LEAD' : ch.agentName || null;
+        const teamRoleLabel = ch.isTeamLead ? 'LÍDER' : ch.agentName || null;
         const hasExtraLines = !!(ch.directoryName || teamRoleLabel);
 
         // Context gauge. Every agent gets one — lead, teammate, adopted,
@@ -341,7 +342,7 @@ export function ToolOverlay({
                       e.stopPropagation();
                       onCloseAgent(id);
                     }}
-                    title="Close agent"
+                    title="Fechar agente"
                     className="ml-2 shrink-0 leading-none"
                   >
                     ×
@@ -356,7 +357,7 @@ export function ToolOverlay({
                     background: CONTEXT_GAUGE_BG,
                     marginTop: 2,
                   }}
-                  title={`${Math.round(contextRatio * 100)}% context used (${(ch.contextTokens / 1000).toFixed(0)}k of ${(ch.maxContextTokens / 1000).toFixed(0)}k tokens)`}
+                  title={`${Math.round(contextRatio * 100)}% do contexto usado (${(ch.contextTokens / 1000).toFixed(0)} mil de ${(ch.maxContextTokens / 1000).toFixed(0)} mil tokens)`}
                   data-testid="context-gauge"
                   data-context-pct={Math.round(contextRatio * 100)}
                 >

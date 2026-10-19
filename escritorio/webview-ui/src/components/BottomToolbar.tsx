@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { noCielloOS } from '../ciello/ciello.js';
 import type { Directory } from '../hooks/useExtensionMessages.js';
 import { isBrowserRuntime } from '../runtime.js';
 import { transport } from '../transport/index.js';
@@ -52,6 +53,11 @@ export function BottomToolbar({
   // from a Directory row. Opening (not toggling) so a click that follows the
   // hover — which already opened the drawer — doesn't close it.
   const handleAgentClick = () => {
+    // Ciello OS: abre o Claude Code numa janela nova, na pasta do assistente (o escritório adota a sessão)
+    if (noCielloOS) {
+      transport.send({ type: 'launchAgent' });
+      return;
+    }
     setIsDrawerOpen(true);
   };
 
@@ -64,8 +70,8 @@ export function BottomToolbar({
   // doesn't, show the button disabled with the reason rather than hiding it —
   // silently missing UI reads as a bug, and the cause (a native module that
   // couldn't install) is not something a user would otherwise ever discover.
-  const canLaunch = !isBrowserRuntime || terminalAvailable;
-  const showUnavailable = isBrowserRuntime && !terminalAvailable;
+  const canLaunch = !isBrowserRuntime || terminalAvailable || noCielloOS;
+  const showUnavailable = isBrowserRuntime && !terminalAvailable && !noCielloOS;
 
   return (
     // Bottom-left. The terminal panel docks on the right edge, so it never
@@ -75,9 +81,9 @@ export function BottomToolbar({
         <Button
           variant="disabled"
           disabled
-          title={terminalUnavailableReason ?? 'Terminal unavailable on this server.'}
+          title={terminalUnavailableReason ?? 'Terminal indisponível neste servidor.'}
         >
-          + Agent
+          + Agente
         </Button>
       )}
       {canLaunch && (
@@ -86,15 +92,16 @@ export function BottomToolbar({
           className="relative"
           // Hover is the desktop secondary gesture (long-press is the mobile
           // one): it opens the drawer without committing to a launch.
-          onMouseEnter={() => setIsDrawerOpen(true)}
+          onMouseEnter={() => !noCielloOS && setIsDrawerOpen(true)}
           onMouseLeave={() => setIsDrawerOpen(false)}
         >
           <Button
             variant="accent"
             onClick={handleAgentClick}
             className={isDrawerOpen ? 'bg-accent-bright' : 'bg-accent hover:bg-accent-bright'}
+            title={noCielloOS ? 'Abrir o Claude Code numa janela nova, na pasta do assistente' : undefined}
           >
-            + Agent
+            + Agente
           </Button>
           <LaunchDrawer
             isOpen={isDrawerOpen}
@@ -114,16 +121,16 @@ export function BottomToolbar({
       <Button
         variant={isEditMode ? 'active' : 'default'}
         onClick={onToggleEditMode}
-        title="Edit office layout"
+        title="Editar o layout do escritório"
       >
         Layout
       </Button>
       <Button
         variant={isSettingsOpen ? 'active' : 'default'}
         onClick={onToggleSettings}
-        title="Settings"
+        title="Configurações"
       >
-        Settings
+        Configurações
       </Button>
     </div>
   );

@@ -147,10 +147,10 @@ class TesteEscritorio(unittest.TestCase):
         r = c.getresponse()
         return r.status, r.read()
 
-    def test_pagina_do_escritorio_ganha_a_ponte_e_os_arquivos_saem_do_build(self):
+    def test_pagina_do_escritorio_e_os_arquivos_saem_do_build(self):
         cod, html = self.pedir("GET", "/escritorio/?token=abc")
         self.assertEqual(cod, 200)
-        self.assertIn(b'<script src="/web/pixel-ptbr.js"></script><script src="/web/ponte-escritorio.js"></script>', html)
+        self.assertIn(b'<html lang="pt-BR">', html)
         self.assertIn("<title>Escritório</title>".encode(), html)
         self.assertEqual(self.pedir("GET", "/escritorio/assets/furniture-catalog.json")[0], 200)
         self.assertEqual(self.pedir("GET", "/escritorio/../servidor.py")[0], 404)

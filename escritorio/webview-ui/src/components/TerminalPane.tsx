@@ -117,7 +117,7 @@ export function TerminalPane({
         scheduleFit();
       },
       onExit: (exitCode) => {
-        term.write(`\r\n\x1b[90m[process exited with code ${String(exitCode)}]\x1b[0m\r\n`);
+        term.write(`\r\n\x1b[90m[o processo terminou com o código ${String(exitCode)}]\x1b[0m\r\n`);
       },
       onStatusChange: (status) => statusRef.current?.(agentId, status),
     });

@@ -61,8 +61,9 @@ O editor **Layout** do escritório (engrenagem → Layout) continua funcionando 
 Clique duas vezes em **`Ciello.cmd`**. Abre numa janela própria do Edge (ou Chrome), sem barra de endereço, como um programa instalado.
 
 - **O fundo da área de trabalho é o Escritório**, ao vivo, **em português** e no azul da Ciello, centralizado ao abrir. Ele roda dentro do próprio Ciello OS (`--sem-escritorio` desliga; aí o fundo mostra a logo).
-- **Engrenagem na barra de tarefas:** os botões de personalização do pixel-agents (+ Agente, Layout, Configurações, zoom, versão) ficam escondidos; a engrenagem mostra e esconde.
-- **Mover e dar zoom:** segure o **botão do meio (scroll)** e arraste para mover o escritório; **Ctrl + scroll** aproxima e afasta, entre **2x e 6x** (`ZOOM_MIN`/`ZOOM_MAX` em `web/ponte-escritorio.js`). O scroll sozinho também move. Menu Iniciar → **Centralizar escritório** volta para o meio.
+- **Engrenagem na barra de tarefas:** os controles do escritório (**+ Agente**, **Layout**, **Configurações**, botões de zoom e os cartões dos agentes) ficam escondidos; a engrenagem mostra e esconde. Os menus usam as cores e as fontes da Ciello; os balões em cima dos personagens continuam em pixel.
+- **+ Agente** abre o Claude Code numa janela nova, já na pasta do assistente; a sessão aparece no escritório sozinha.
+- **Mover e dar zoom:** segure o **botão do meio (scroll)** e arraste para mover o escritório; **Ctrl + scroll** aproxima e afasta, entre **2x e 6x** (`ZOOM_MIN`/`ZOOM_MAX` em `escritorio/webview-ui/src/constants.ts`). O scroll sozinho também move. Menu Iniciar → **Centralizar escritório** volta para o meio.
 - **Clicar num personagem do escritório abre a janela daquele agente**. Para isso funcionar, o agente precisa ter nome: teammate com o nome do agente (equipes ligadas) ou subagente com a descrição começando pelo nome (`sdr: follow-ups do dia`), como os comandos `/bom-dia`, `/comercial`, `/semana` já pedem. Clicar no coordenador abre a janela de quem está trabalhando com ele; sem ninguém, abre a Equipe.
 - **Apps só no menu Iniciar** (o botão com a nuvem): Bom dia, Financeiro, Comercial, Conteúdo e Instagram, Tendências, Concorrentes, Anúncios, Equipe, Atividade e Verificação, além da equipe de agentes. Não há ícones na área de trabalho.
 - **Barra de tarefas:** Iniciar, **Mostrar escritório** (minimiza as janelas; clicar de novo traz de volta), janelas abertas, agentes trabalhando, notificações e relógio.
@@ -70,9 +71,9 @@ Clique duas vezes em **`Ciello.cmd`**. Abre numa janela própria do Edge (ou Chr
 - **Botões das janelas** (ex.: "Cobranças do dia") rodam a ferramenta e abrem uma janela com a saída ao vivo. Só rodam as ações da lista fixa do `servidor.py`, e só a partir do próprio app.
 - **Janelas:** arrastar pela barra de título, redimensionar pelas bordas e cantos, duplo clique para maximizar, arrastar até a borda esquerda/direita para ocupar metade da tela (até o topo maximiza). A posição de cada janela fica salva.
 
-**Tradução:** `web/pixel-ptbr.js` tem todos os textos do pixel-agents 1.5.0 em português. A ponte troca só o que aparece na tela; as mensagens internas continuam em inglês, porque o pixel-agents depende delas. Ao atualizar a versão do pixel-agents, confira se apareceu texto novo em inglês e acrescente no arquivo.
+**Português:** os textos da tela estão em português no próprio código (`escritorio/webview-ui/src`). Só as mensagens entre a tela e o servidor continuam em inglês ("Reading", "Subtask:"...), porque o código depende delas; na tela elas aparecem traduzidas (`src/office/statusPtBr.ts`).
 
-**Como o clique chega no app:** o Ciello OS serve a tela do escritório no mesmo endereço (`/escritorio/`) e acrescenta à página a ponte (`web/ponte-escritorio.js`), que aprende o nome de cada agente e, quando um personagem é clicado (`focusAgent`), avisa a área de trabalho.
+**Como o clique chega no app:** a tela do escritório roda dentro do Ciello OS, no mesmo endereço (`/escritorio/`). O código da Ciello na tela (`escritorio/webview-ui/src/ciello/`) aprende o nome de cada agente e, quando um personagem é clicado, avisa a área de trabalho, que abre a janela daquele agente. A engrenagem e o "Centralizar escritório" chegam pelo mesmo caminho.
 
 ![Ciello OS](img/ciello-os-escritorio-fundo-e-apps.png)
 

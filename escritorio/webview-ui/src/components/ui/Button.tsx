@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes } from 'react';
 
-const base = 'border-2 rounded-none cursor-pointer';
+// Ciello: cantos e borda vêm do tema (8px e 1px nos menus; quadrados e 2px dentro de .cena)
+const base = 'botao-ciello cursor-pointer';
 
 const sizes = {
   sm: 'py-1 px-8 text-sm',

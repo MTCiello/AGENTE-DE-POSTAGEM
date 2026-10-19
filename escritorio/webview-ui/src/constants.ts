@@ -81,8 +81,9 @@ export const CAMERA_FOLLOW_LERP = 0.1;
 export const CAMERA_FOLLOW_SNAP_THRESHOLD = 0.5;
 
 // ── Zoom ─────────────────────────────────────────────────────
-export const ZOOM_MIN = 1;
-export const ZOOM_MAX = 10;
+// Ciello: o escritório fica legível entre 2x e 6x (o original ia de 1x a 10x)
+export const ZOOM_MIN = 2;
+export const ZOOM_MAX = 6;
 export const ZOOM_DEFAULT_DPR_FACTOR = 2;
 export const ZOOM_LEVEL_FADE_DELAY_MS = 1500;
 export const ZOOM_LEVEL_HIDE_DELAY_MS = 2000;
@@ -241,7 +242,8 @@ export const INTRO_BUBBLE_MAX_WIDTH_PX = 560;
 export const INTRO_BUBBLE_EDGE_MARGIN_PX = 4;
 /** Where the Intro's Claude Code step sends people who don't have it yet. */
 export const CLAUDE_CODE_URL = 'https://claude.com/claude-code';
-export const CLAUDE_CODE_INSTALL_COMMAND = 'npm install -g @anthropic-ai/claude-code';
+// Windows (PowerShell), o PC da Ciello
+export const CLAUDE_CODE_INSTALL_COMMAND = 'irm https://claude.ai/install.ps1 | iex';
 /** Speech-tail squares: placed at fraction `t` along the segment from the
  *  bubble's nearest edge point to the greeter's head, shrinking toward the
  *  speaker. Recomputed every frame so the tail stays connected no matter where
@@ -552,7 +554,7 @@ export const MOBILE_KEY_BAR_KEYS: ReadonlyArray<{
 export const MOBILE_TRACKPAD_STEP_PX = 16;
 /** The paste key's prompt where script can't read the clipboard (plain-http
  *  origins): the user pastes into the native field instead. */
-export const MOBILE_PASTE_PROMPT = 'Paste into the terminal:';
+export const MOBILE_PASTE_PROMPT = 'Cole aqui para mandar ao terminal:';
 /** visualViewport.height within this many px of innerHeight = nothing to
  *  clamp (the two disagree by sub-pixel rounding on some devices). */
 export const VISUAL_VIEWPORT_FULL_EPSILON_PX = 1;

@@ -44,7 +44,7 @@ Ele roda cada função de ponta a ponta e mostra `[ok]`, `[aviso]` ou `[FALHA]`:
 - [ ] Arrastar, redimensionar, maximizar (duplo clique na barra) e encaixar na metade da tela (arrastar até a borda) funcionam?
 - [ ] Botão **Atualizar briefing** na janela Bom dia: abriu a janela com a saída ao vivo?
 - [ ] Na apresentação, aceite a instalação dos hooks.
-- [ ] Abra o Claude Code nesta pasta (botão **+ Agent** do escritório ou um terminal) e rode `/comercial`: o coordenador senta numa mesa e os agentes aparecem ao lado dele trabalhando.
+- [ ] Abra o Claude Code nesta pasta (engrenagem → **+ Agente**, que abre o Claude Code numa janela nova, ou um terminal) e rode `/comercial`: o coordenador senta numa mesa e os agentes aparecem ao lado dele trabalhando.
 
 ## 5. Ver o que já foi produzido
 

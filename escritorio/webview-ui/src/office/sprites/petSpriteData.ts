@@ -104,5 +104,5 @@ export function getPetCount(): number {
 
 /** Display name for a petType. Falls back to "Pet N" when manifest missing. */
 export function getPetName(petIndex: number): string {
-  return loadedPetNames[petIndex] ?? `Pet ${petIndex + 1}`;
+  return loadedPetNames[petIndex] ?? `Bichinho ${petIndex + 1}`;
 }

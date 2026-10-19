@@ -8,7 +8,8 @@ from __future__ import annotations
 import json
 import os
 import secrets
-import threading
+import shutil
+import subprocess
 from pathlib import Path
 
 from . import ganchos as G
@@ -138,7 +139,20 @@ class Sala:
             P.gravar_config(c)
         elif tipo in ("addExternalAssetDirectory", "removeExternalAssetDirectory"):
             enviar({"type": "externalAssetDirectoriesUpdated", "dirs": P.config()["pastasDeAtivos"]})
-        # launchAgent, focusAgent e pastas: a tela do Ciello OS cuida (abrir agente é com a janela do app)
+        elif tipo == "launchAgent":
+            self.abrir_claude()
+        # focusAgent: quem abre a janela do agente é a área de trabalho do Ciello OS
+
+    def abrir_claude(self):
+        """+ Agente: abre o Claude Code numa janela de console nova, na pasta do assistente. A sessão nova aparece
+        no escritório sozinha (o vigia adota). Com "pular permissões" ligado, abre com --dangerously-skip-permissions."""
+        args = ["claude"] + (["--dangerously-skip-permissions"] if P.preferencia("bypassPermissions") else [])
+        if os.name != "nt":
+            print(f"[escritório] + Agente: abra um terminal em {self.projeto} e rode: {' '.join(args)}")
+            return
+        if not shutil.which("claude"):
+            args = ["echo", "Claude Code não encontrado neste PC. Para instalar, veja claude.com/claude-code"]
+        subprocess.Popen(["cmd.exe", "/k", *args], cwd=self.projeto, creationflags=subprocess.CREATE_NEW_CONSOLE)
 
     def _hooks(self, ligar, enviar):
         try:

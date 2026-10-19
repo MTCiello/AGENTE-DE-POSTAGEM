@@ -12,9 +12,11 @@ import { Button } from './ui/Button.js';
 interface ZoomControlsProps {
   zoom: number;
   onZoomChange: (zoom: number) => void;
+  /** Botões + e − à vista (no Ciello OS, só com a engrenagem ligada). O indicador "3x" aparece sempre. */
+  mostrarBotoes?: boolean;
 }
 
-export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
+export function ZoomControls({ zoom, onZoomChange, mostrarBotoes = true }: ZoomControlsProps) {
   const [showLevel, setShowLevel] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -69,13 +71,14 @@ export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
       )}
 
       {/* Vertically stacked round buttons — top-left */}
+      {mostrarBotoes && (
       <div className="absolute top-8 left-8 z-10 flex flex-col gap-4">
         <Button
           size="icon_lg"
           onClick={() => onZoomChange(zoom + 1)}
           disabled={maxDisabled}
           className="border-border! shadow-pixel disabled:hover:bg-btn-bg disabled:cursor-default disabled:opacity-(--btn-disabled-opacity)"
-          title="Zoom in (Ctrl+Scroll)"
+          title="Aproximar (Ctrl + scroll)"
         >
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <line
@@ -103,7 +106,7 @@ export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
           onClick={() => onZoomChange(zoom - 1)}
           disabled={minDisabled}
           className="border-border! shadow-pixel disabled:hover:bg-btn-bg disabled:cursor-default disabled:opacity-(--btn-disabled-opacity)"
-          title="Zoom out (Ctrl+Scroll)"
+          title="Afastar (Ctrl + scroll)"
         >
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <line
@@ -118,6 +121,7 @@ export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
           </svg>
         </Button>
       </div>
+      )}
     </>
   );
 }

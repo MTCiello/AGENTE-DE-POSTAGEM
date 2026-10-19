@@ -2,9 +2,9 @@
 fork MIT do pixel-agents em escritorio/, servida pelo núcleo em Python de nucleo/, sem Node), com a barra de tarefas
 embaixo e janelas que movem e redimensionam. Os apps ficam no menu Iniciar.
 
-O escritório é servido pelo mesmo endereço do Ciello OS (/escritorio/) para a ponte (web/ponte-escritorio.js) ouvir o
-clique num personagem e abrir a janela daquele agente. Cada sessão do Claude Code aberta na pasta do assistente vira
-um personagem; com os hooks (o escritório pergunta na primeira vez), os movimentos são instantâneos.
+O escritório é servido pelo mesmo endereço do Ciello OS (/escritorio/): clicar num personagem abre a janela daquele
+agente. Cada sessão do Claude Code aberta na pasta do assistente vira um personagem; com os hooks (o escritório
+pergunta na primeira vez), os movimentos são instantâneos.
 
   python central/escritorio/servidor.py              # ou clique duas vezes em Ciello.cmd
   python central/escritorio/servidor.py --sem-escritorio --sem-navegador
@@ -293,13 +293,9 @@ class Painel(BaseHTTPRequestHandler):
         self._enviar(alvo.read_bytes(), TIPOS[alvo.suffix.lower()])
 
     def _tela(self, rel):
-        """A tela do escritório. Só a página inicial ganha a ponte (o script que ouve o clique nos personagens)."""
-        if rel in ("", "index.html"):
-            html = (TELA / "index.html").read_bytes()
-            html = html.replace(b"<head>", b'<head><script src="/web/pixel-ptbr.js"></script><script src="/web/ponte-escritorio.js"></script>', 1)
-            html = html.replace(b'<html lang="en">', b'<html lang="pt-BR">', 1).replace(b"<title>Pixel Agents</title>", "<title>Escritório</title>".encode(), 1)
-            return self._enviar(html, TIPOS[".html"])
-        return self._arquivo(TELA, urllib.request.unquote(rel))
+        """A tela do escritório (build de escritorio/webview-ui). Ela mesma avisa a área de trabalho do clique num
+        personagem e obedece à engrenagem e ao "centralizar" (src/ciello/ na tela)."""
+        return self._arquivo(TELA, urllib.request.unquote(rel or "index.html"))
 
     def _websocket(self):
         """O escritório conversa por aqui. Com o token do Ciello OS a tela pode mudar coisas; sem ele, só olha."""

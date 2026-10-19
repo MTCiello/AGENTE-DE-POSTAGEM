@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { DISCORD_INVITE_URL } from '../changelogData.js';
 import {
   CLAUDE_CODE_INSTALL_COMMAND,
   CLAUDE_CODE_URL,
@@ -10,7 +9,6 @@ import {
 } from '../constants.js';
 import type { ConsentChoice } from '../hooks/introTourState.js';
 import type { OfficeState } from '../office/engine/officeState.js';
-import { DiscordIcon } from './ChangelogModal.js';
 import { computeIntroBubbleGeometry } from './introBubbleGeometry.js';
 import { Button } from './ui/Button.js';
 
@@ -217,10 +215,10 @@ export function IntroBubble({
   };
 
   const titles = [
-    'Welcome to Pixel Agents!',
-    'Powered by Claude Code',
+    'Bem-vindo ao escritório!',
+    'Movido a Claude Code',
     headline,
-    installFailed ? "Hooks couldn't be installed" : "You're all set!",
+    installFailed ? 'Não deu para instalar os hooks' : 'Tudo pronto!',
   ];
 
   return (
@@ -261,7 +259,7 @@ export function IntroBubble({
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Close"
+          aria-label="Fechar"
           className="absolute top-4 right-4"
           onClick={onClose}
         >
@@ -269,7 +267,7 @@ export function IntroBubble({
         </Button>
 
         {/* Step dots: the tour's "1 of 4", drawn as pixels rather than prose. */}
-        <div className="flex gap-4 mb-8" aria-label={`Step ${step + 1} of ${STEP_COUNT}`}>
+        <div className="flex gap-4 mb-8" aria-label={`Passo ${step + 1} de ${STEP_COUNT}`}>
           {Array.from({ length: STEP_COUNT }, (_, i) => (
             <div
               key={i}
@@ -283,22 +281,22 @@ export function IntroBubble({
 
         {step === WELCOME_STEP && (
           <p className="text-sm m-0 mb-8">
-            In this office, your AI agents become tiny pixel characters: they type at their desks
-            while they work, wander off when they're done, and speak up when they need you.
+            Neste escritório, seus agentes de IA viram personagens em pixel: digitam na mesa enquanto
+            trabalham, passeiam quando terminam e avisam quando precisam de você.
           </p>
         )}
 
         {step === CLAUDE_CODE_STEP && (
           <>
             <p className="text-sm m-0 mb-8">
-              The office watches your Claude Code sessions and brings them to life in here. New to
-              Claude Code? Download it first:
+              O escritório acompanha as sessões do Claude Code abertas na pasta do assistente e dá vida
+              a elas aqui. Ainda não tem o Claude Code? Instale primeiro:
             </p>
             <div className="text-sm bg-btn-bg border-2 border-border py-4 px-8 mb-8 select-all">
               {CLAUDE_CODE_INSTALL_COMMAND}
             </div>
             <p className="text-sm m-0 mb-8">
-              For more info, visit{' '}
+              Para saber mais, acesse{' '}
               <a
                 href={CLAUDE_CODE_URL}
                 target="_blank"
@@ -322,25 +320,14 @@ export function IntroBubble({
           <>
             {installFailed ? (
               <p className="text-sm m-0 mb-8">
-                Something went wrong writing to your Claude Code settings, so the office will watch
-                your sessions the slower way instead. No worries, everything still works and you can
-                retry activating them any time from Settings.
+                Não deu para gravar nas configurações do Claude Code, então o escritório vai acompanhar
+                as sessões pelo jeito mais lento. Tudo continua funcionando, e você pode tentar de novo
+                em Configurações.
               </p>
             ) : null}
             <p className="text-sm m-0 mb-8">
-              Enjoy your new office! Questions, ideas, or pixel art to show off? Come hang out in
-              our Discord.
-            </p>
-            <p className="text-base text-center m-0 mt-12 mb-12">
-              <a
-                href={DISCORD_INVITE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-8 text-accent-bright hover:text-accent no-underline"
-              >
-                <DiscordIcon />
-                Join our Discord!
-              </a>
+              Bom trabalho! Clique num personagem para abrir a janela daquele agente, e use a engrenagem
+              da barra de tarefas para mudar o layout, as configurações ou abrir um agente novo.
             </p>
           </>
         )}
@@ -358,7 +345,7 @@ export function IntroBubble({
               className={installPending ? 'opacity-[var(--btn-disabled-opacity)]' : ''}
               onClick={back}
             >
-              Back
+              Voltar
             </Button>
           )}
 
@@ -371,7 +358,7 @@ export function IntroBubble({
                 className={installPending ? 'opacity-[var(--btn-disabled-opacity)]' : ''}
                 onClick={() => choose('never')}
               >
-                Don't Ask Again
+                Não perguntar de novo
               </Button>
               <Button
                 variant={installPending ? 'disabled' : 'default'}
@@ -379,7 +366,7 @@ export function IntroBubble({
                 disabled={installPending}
                 onClick={() => choose('notNow')}
               >
-                Not Now
+                Agora não
               </Button>
               <Button
                 variant={installPending ? 'disabled' : 'accent'}
@@ -387,16 +374,16 @@ export function IntroBubble({
                 disabled={installPending}
                 onClick={() => choose('install')}
               >
-                {installPending ? 'Installing...' : 'Install Hooks'}
+                {installPending ? 'Instalando…' : 'Instalar hooks'}
               </Button>
             </div>
           ) : step === CLOSING_STEP ? (
             <Button variant="accent" size="sm" onClick={onClose}>
-              Let's Go
+              Vamos lá
             </Button>
           ) : (
             <Button variant="default" size="sm" onClick={forward}>
-              Continue
+              Continuar
             </Button>
           )}
         </div>

@@ -1,21 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
-import { toMajorMinor } from './changelogData.js';
+import { aoCentralizar, assinarControles, avisarClique, controlesVisiveis } from './ciello/ciello.js';
+import { panCentralizado } from './ciello/centralizar.js';
 import { AgentCardBar } from './components/AgentCardBar.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
-import { ChangelogModal } from './components/ChangelogModal.js';
 import { ConnectionIndicator } from './components/ConnectionIndicator.js';
 import { DebugView } from './components/DebugView.js';
 import { DirectoryModal } from './components/DirectoryModal.js';
 import { EditActionBar } from './components/EditActionBar.js';
 import { IntroBubble } from './components/IntroBubble.js';
-import { MigrationNotice } from './components/MigrationNotice.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import { TerminalDrawer } from './components/TerminalDrawer.js';
 import { Tooltip } from './components/Tooltip.js';
 import { Button } from './components/ui/Button.js';
 import { Modal } from './components/ui/Modal.js';
-import { VersionIndicator } from './components/VersionIndicator.js';
 import { ZoomControls } from './components/ZoomControls.js';
 import { OFFICE_CANVAS_TEST_ID } from './constants.js';
 import { useDirectoryEditor } from './hooks/useDirectoryEditor.js';
@@ -89,7 +87,6 @@ function App() {
     subagentTools,
     subagentCharacters,
     layoutReady,
-    layoutWasReset,
     loadedAssets,
     directories,
     directoryRejection,
@@ -97,8 +94,6 @@ function App() {
     directorySuggestions,
     agentDirectoryNames,
     externalAssetDirectories,
-    lastSeenVersion,
-    extensionVersion,
     watchAllSessions,
     setWatchAllSessions,
     alwaysShowLabels,
@@ -124,11 +119,6 @@ function App() {
     terminalAgentIds,
   } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty);
 
-  // Show migration notice once layout reset is detected
-  const [migrationNoticeDismissed, setMigrationNoticeDismissed] = useState(false);
-  const showMigrationNotice = layoutWasReset && !migrationNoticeDismissed;
-
-  const [isChangelogOpen, setIsChangelogOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHooksInfoOpen, setIsHooksInfoOpen] = useState(false);
   const [hooksTooltipDismissed, setHooksTooltipDismissed] = useState(false);
@@ -174,16 +164,17 @@ function App() {
     launchAgent: launchIntoDirectory,
   });
 
-  const currentMajorMinor = toMajorMinor(extensionVersion);
+  // Ciello OS: a engrenagem da barra de tarefas mostra e esconde os controles
+  const controles = useSyncExternalStore(assinarControles, controlesVisiveis);
 
-  const handleWhatsNewDismiss = useCallback(() => {
-    transport.send({ type: 'setLastSeenVersion', version: currentMajorMinor });
-  }, [currentMajorMinor]);
-
-  const handleOpenChangelog = useCallback(() => {
-    setIsChangelogOpen(true);
-    transport.send({ type: 'setLastSeenVersion', version: currentMajorMinor });
-  }, [currentMajorMinor]);
+  // "Centralizar escritório" (menu Iniciar) e a primeira vez que o escritório aparece
+  const { panRef, zoom: zoomAtual } = editor;
+  const centralizar = useCallback(() => {
+    const os = getOfficeState();
+    os.breakCameraFollow();
+    panRef.current = panCentralizado(os.getLayout(), zoomAtual);
+  }, [panRef, zoomAtual]);
+  useEffect(() => aoCentralizar(centralizar), [centralizar]);
 
   // Sync alwaysShowOverlay from persisted settings
   useEffect(() => {
@@ -230,6 +221,14 @@ function App() {
     onChoice: handleConsentChoice,
     onClose: handleIntroClose,
   } = useIntroTour({ consentRequest, hooksInstalled, hooksStatusSeq, dismissConsentRequest });
+
+  // Centraliza quando o escritório aparece e quando a apresentação termina (a fala da apresentação move a câmera)
+  const emApresentacao = intro !== null && intro !== undefined;
+  useEffect(() => {
+    if (layoutReady && !emApresentacao) centralizar();
+    // só nessas viradas; zoom e arrasto depois disso são do Mateus
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutReady, emApresentacao]);
 
   // The Settings surface renders one provider today; its checkbox binds to
   // the Claude row of the per-provider install-state map.
@@ -340,6 +339,7 @@ function App() {
       const os = getOfficeState();
       const focusId = os.terminalOwnerOf(agentId);
       transport.send({ type: 'focusAgent', id: focusId });
+      avisarClique(focusId);
       // Standalone: focusAgent is a no-op server-side (there's no editor to
       // raise a panel in), so focus is resolved here — reveal the agent's tab
       // (desktop drawer) and slide to the terminal page (mobile). A Teammate
@@ -362,6 +362,7 @@ function App() {
   // show — and select its character so the office follows the click.
   const handleCardSelect = useCallback((agentId: number) => {
     transport.send({ type: 'focusAgent', id: agentId });
+    avisarClique(agentId);
     getOfficeState().selectAndFollow(agentId);
   }, []);
 
@@ -402,7 +403,7 @@ function App() {
       // bypassing the layoutLoaded message whose dirty guard would skip it.
       if (
         isEditDirty() &&
-        !window.confirm('Replace the current layout? Unsaved edits will be lost.')
+        !window.confirm('Trocar o layout atual? As mudanças não salvas serão perdidas.')
       ) {
         return;
       }
@@ -417,7 +418,7 @@ function App() {
             !Array.isArray(imported.tiles) ||
             !Array.isArray(imported.furniture)
           ) {
-            window.alert('Invalid layout file.');
+            window.alert('Arquivo de layout inválido.');
             return;
           }
           const migrated = migrateLayoutColors(imported as unknown as OfficeLayout);
@@ -429,7 +430,7 @@ function App() {
           });
           editor.markClean();
         } catch {
-          window.alert('Failed to read or parse layout file.');
+          window.alert('Não deu para ler o arquivo de layout.');
         }
       };
       reader.readAsText(file);
@@ -460,7 +461,7 @@ function App() {
     })();
 
   if (!layoutReady) {
-    return <div className="w-full h-full flex items-center justify-center ">Loading...</div>;
+    return <div className="w-full h-full flex items-center justify-center ">Carregando…</div>;
   }
 
   // The office region is shared by both shells: desktop mounts it as the
@@ -496,7 +497,9 @@ function App() {
         <>
           {/* Mobile: pinch replaces the zoom buttons, and the toolbar's
                 jobs move to the card bar (+) and the floating Settings button. */}
-          {!isMobile && <ZoomControls zoom={editor.zoom} onZoomChange={editor.handleZoomChange} />}
+          {!isMobile && (
+            <ZoomControls zoom={editor.zoom} onZoomChange={editor.handleZoomChange} mostrarBotoes={controles} />
+          )}
 
           {/* Vignette overlay */}
           <div
@@ -513,7 +516,7 @@ function App() {
               className="absolute left-1/2 -translate-x-1/2 z-11 bg-accent-bright text-white text-sm py-3 px-8 rounded-none border-2 border-accent shadow-pixel pointer-events-none whitespace-nowrap"
               style={{ top: editor.isDirty ? 64 : 8 }}
             >
-              Rotate (R)
+              Girar (R)
             </div>
           )}
 
@@ -568,6 +571,8 @@ function App() {
               );
             })()}
 
+          {/* .cena: balões sobre os personagens ficam no visual pixel do escritório */}
+          <div className="cena contents">
           <ToolOverlay
             officeState={officeState}
             agents={agents}
@@ -580,6 +585,7 @@ function App() {
             onCloseAgent={handleCloseAgent}
             alwaysShowOverlay={alwaysShowOverlay}
           />
+          </div>
         </>
       ) : (
         <DebugView
@@ -599,7 +605,7 @@ function App() {
           Detection Active" before anything is installed would be a lie. */}
       {hooksEnabled && claudeHooksInstalled && !hooksInfoShown && !hooksTooltipDismissed && (
         <Tooltip
-          title="Instant Detection Active"
+          title="Detecção instantânea ativa"
           position="top-right"
           onDismiss={() => {
             setHooksTooltipDismissed(true);
@@ -607,7 +613,7 @@ function App() {
           }}
         >
           <span className="text-sm text-text leading-none">
-            Your agents now respond in real-time.{' '}
+            Seus agentes agora respondem na hora.{' '}
             <span
               className="text-accent cursor-pointer underline"
               onClick={() => {
@@ -616,7 +622,7 @@ function App() {
                 transport.send({ type: 'setHooksInfoShown' });
               }}
             >
-              View more
+              Ver mais
             </span>
           </span>
         </Tooltip>
@@ -624,13 +630,13 @@ function App() {
 
       {officeReadOnly && (
         <div className="absolute mobile-safe-top left-1/2 -translate-x-1/2 z-10 text-sm text-text-muted pointer-events-none select-none whitespace-nowrap">
-          View only
+          Só visualizar
         </div>
       )}
 
       {/* A read-only office gets no toolbar: launching, layout editing and every
           setting would be refused by the server anyway. */}
-      {!isMobile && !officeReadOnly && (
+      {!isMobile && !officeReadOnly && controles && (
         <BottomToolbar
           isEditMode={editor.isEditMode}
           onToggleEditMode={editor.handleToggleEditMode}
@@ -654,20 +660,13 @@ function App() {
             className="border-border! shadow-pixel"
             onClick={() => setIsSettingsOpen((v) => !v)}
           >
-            Settings
+            Configurações
           </Button>
         </div>
       )}
 
-      <VersionIndicator
-        currentVersion={extensionVersion}
-        lastSeenVersion={lastSeenVersion}
-        hideUpdateNotice={officeReadOnly}
-        onDismiss={handleWhatsNewDismiss}
-        onOpenChangelog={handleOpenChangelog}
-      />
-
       {intro && (
+        <div className="cena contents">
         <IntroBubble
           officeState={officeState}
           headline={intro.headline}
@@ -679,14 +678,9 @@ function App() {
           installPending={installPending}
           onChoice={handleConsentChoice}
           onClose={handleIntroClose}
-          escapeSuppressed={
-            isSettingsOpen ||
-            isChangelogOpen ||
-            isHooksInfoOpen ||
-            showMigrationNotice ||
-            editor.isEditMode
-          }
+          escapeSuppressed={isSettingsOpen || isHooksInfoOpen || editor.isEditMode}
         />
+        </div>
       )}
 
       <ConnectionIndicator />
@@ -747,7 +741,8 @@ function App() {
               onStatusChange={terminalDrawer.onStatusChange}
             />
           ) : (
-            !isDebugMode && (
+            !isDebugMode &&
+            controles && (
               <AgentCardBar
                 agentIds={agents}
                 focusedAgentId={focusedAgentId}
@@ -768,30 +763,30 @@ function App() {
       <Modal
         isOpen={isHooksInfoOpen}
         onClose={() => setIsHooksInfoOpen(false)}
-        title="Instant Detection is ON"
+        title="Detecção instantânea LIGADA"
         zIndex={52}
       >
         <div className="text-base text-text px-10" style={{ lineHeight: 1.4 }}>
-          <p className="mb-8">Your Pixel Agents office now reacts in real-time:</p>
+          <p className="mb-8">Seu escritório agora reage em tempo real:</p>
           <ul className="mb-8 pl-18 list-disc m-0">
-            <li className="text-sm mb-2">Permission prompts appear instantly</li>
-            <li className="text-sm mb-2">Turn completions detected the moment they happen</li>
-            <li className="text-sm mb-2">Sound notifications play immediately</li>
+            <li className="text-sm mb-2">Pedidos de permissão aparecem na hora</li>
+            <li className="text-sm mb-2">O fim de cada resposta aparece na hora</li>
+            <li className="text-sm mb-2">O som de aviso toca na hora</li>
           </ul>
           <p className="mb-12 text-text-muted">
-            This works through Claude Code Hooks, small event listeners that notify Pixel Agents
-            whenever something happens in your Claude sessions.
+            Isso funciona com os hooks do Claude Code: pequenos avisos que contam ao escritório tudo o
+            que acontece nas suas sessões do Claude.
           </p>
           <div className="text-center">
             <button
               onClick={() => setIsHooksInfoOpen(false)}
               className="py-4 px-20 text-lg bg-accent text-white border-2 border-accent rounded-none cursor-pointer shadow-pixel"
             >
-              Got it
+              Entendi
             </button>
           </div>
           <p className="mt-8 text-xs text-text-muted text-center">
-            To disable, go to Settings {'>'} Instant Detection
+            Para desligar, vá em Configurações {'>'} Detecção instantânea
           </p>
         </div>
       </Modal>
@@ -808,12 +803,6 @@ function App() {
         onSubmit={directoryEditor.submit}
         onDelete={directoryEditor.remove}
         onClose={directoryEditor.close}
-      />
-
-      <ChangelogModal
-        isOpen={isChangelogOpen}
-        onClose={() => setIsChangelogOpen(false)}
-        currentVersion={extensionVersion}
       />
 
       <SettingsModal
@@ -868,9 +857,6 @@ function App() {
         onImportLayout={handleImportLayout}
       />
 
-      {showMigrationNotice && (
-        <MigrationNotice onDismiss={() => setMigrationNoticeDismissed(true)} />
-      )}
     </div>
   );
 }

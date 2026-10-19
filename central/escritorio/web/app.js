@@ -445,7 +445,7 @@ async function fundoEscritorio() {
     <small>O escritório de agentes está desligado (o Ciello OS foi aberto com --sem-escritorio).</small></div>`;
 }
 
-// a ponte (web/ponte-escritorio.js, dentro do escritório) avisa quando um personagem é clicado
+// a tela do escritório (escritorio/webview-ui/src/ciello) avisa quando um personagem é clicado
 function agenteDoRotulo(rotulo) {
   const t = String(rotulo || '').split(':')[0].trim().toLowerCase();
   if (!t) return null;
