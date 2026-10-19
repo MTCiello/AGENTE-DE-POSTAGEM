@@ -13,6 +13,8 @@ Toda semana ele pesquisa os vídeos de IA que estão viralizando, adapta 3 temas
 - `docs/app-comercial.md` — arquitetura do app de agentes (conteúdo + comercial)
 - `docs/clone-digital.md` — clone digital hiper-realista com modelos abertos e o modelo `CloneReel`
 - `docs/teste-de-hoje.md` — roteiro de teste de todas as ferramentas
+- `docs/plano-sequencia.md` + `reels/src/plano/` — vídeos em plano-sequência (padrão do reel de referência) e `central/analisar_video.py` (oráculo de ritmo)
+- `central/escritorio/` — Escritório Ciello: quem está trabalhando + métricas, funil e anúncios
 - `radar/` — assuntos em alta por pilar · `conhecimento/ganchos.csv` — biblioteca de ganchos · `metricas/` — retratos semanais e relatórios
 - `reels/capa.mjs` — capa do reel a partir do roteiro
 - `central/sdr.py` + `comercial/icp.json` — prospecção: leads, abordagem por wa.me, cadência e CSV do CRM

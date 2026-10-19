@@ -1,0 +1,13 @@
+{
+ "_composicao": "CrmPlano (reels/src/plano/CrmPlano.tsx) — plano-sequência; depois de gerar a voz, ajuste os tempos das viradas (SAI0, CARD, VOA, MOVE, SAIJ, OBJ, RISCA, HUB, JUNTA, CTA) pelos tempos.json",
+ "capa": {"tag": "CIELLO CRM", "linhas": [["Seu WhatsApp", "marfim"], ["tá perdendo", "cinza"], ["venda.", "ouro"]], "apoio": "Comenta CRM: 30 dias grátis", "iva": "think"},
+ "scenes": [
+  {"type": "hook", "say": "Seu WhatsApp tá perdendo venda. Orçamento esquecido, cliente sem resposta."},
+  {"type": "ponte", "say": "Deixa eu te mostrar como resolver."},
+  {"type": "produto", "say": "No CIELLO CRM, toda conversa vira um card no funil. E você vê quanto tem pra fechar no mês."},
+  {"type": "objecao", "say": "Você deve estar pensando que a equipe não vai usar. Funciona no celular de cada um."},
+  {"type": "equipe", "say": "A equipe toda no mesmo número, cada um no seu celular."},
+  {"type": "cta", "say": "Quer testar trinta dias grátis? Comenta CRM que eu te mando o acesso no direct."}
+ ],
+ "fontes": ["Recursos do CIELLO CRM conforme o post de 14/10/2026 do @ciellotec (multiatendimento, funil com valor, campanhas, fluxos, IA)"]
+}
