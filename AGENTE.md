@@ -6,7 +6,7 @@ Procedimento semanal que o agente segue toda vez que roda. Este arquivo é a fon
 - Marca: **Ciello** — tecnologia, sites, automação e IA para micro e pequenas empresas (Chapecó/SC e região).
 - Instagram: **@ciellotec** · Metricool brand id **6611209** · fuso **America/Sao_Paulo**.
 - Identidade atual (posts do @ciellotec — **não usar os posts antigos do Drive**): fundo carvão texturizado com luz quente, títulos em Anton caixa alta (marfim / cinza / ouro #E0A81C), texto em serifa, rótulos espaçados em ouro, pílulas. Logo oficial em `marca/`. Mascote **I.V.A.** (`gerador/iva.py`): a nuvem do logo com rosto; o ponto dourado é o ponteiro dela. Tagline: "Tecnologia que eleva".
-- Gerador v5: cada cena **mostra o exemplo na tela** (tipos: hook, search, cards, chat, prompt, compare, checklist, cta — ver o cabeçalho de `gerador/render_reel.py`). Regras de edição: gancho com palavras batendo + zoom punch, uma quebra de padrão por cena (~4–6 s), legenda dinâmica, SFX em cada evento.
+- **Motor de vídeo: Remotion (`reels/`)**, no padrão do reel "fim da escala 6x1" (o favorito do Mateus): fundo creme em degradê radial, **um mundo isomérico que continua de cena em cena** com a câmera andando (zoom/pan), pessoinhas, lojas, pinos, cards e celular entrando com molas suaves, legenda karaokê centralizada (palavras escurecem quando faladas, grifo dourado nas palavras-chave), I.V.A. em SVG com o Pontinho apontando, cartão final escuro "Comente PALAVRA". Exemplo de referência: `reels/src/VendedorIA.tsx`. Renderizar: `cd reels && npm install && node render.mjs <Composicao> ../midia/X.mp4`. O gerador Python (`gerador/`) fica só como reserva.
 - Ângulo editorial: pegar o que está viral no nicho de IA e traduzir para **"IA aplicada ao seu negócio"**, para que as views virem clientes.
 
 ## Perfis de referência
@@ -24,7 +24,7 @@ Procedimento semanal que o agente segue toda vez que roda. Este arquivo é a fon
    - Gancho: até 9 palavras, com uma palavra em destaque.
    - CTA sempre com "Salva pra testar depois" (saves e shares são o que mais distribui).
 5. **Narração**: escrever a fala completa de cada reel em português do Brasil coloquial ("pra", "tá", "você"), dividida por cena no campo `say` do roteiro. Gerar com `vidiq_voiceover_generate` (voz atual: Liam `TX3LPaxmHKxFdv7VOQHJ`; trocar pela voz clonada do Mateus quando existir) e anotar `durationSeconds`.
-6. **Renderizar o visual** sincronizado com a fala: `python3 gerador/render_reel.py roteiros/X.json midia/X.mp4 --total <duração da voz + 0.8> --sfx-only`. Conferir 3–4 frames.
+6. **Renderizar o visual** sincronizado com a fala: criar a composição em `reels/src/` (tempos de cada cena = proporção da fala, total = duração da voz + 0.8 s) e rodar `node render.mjs`. Conferir stills com `--frames=...` antes do vídeo inteiro.
 7. **Publicar a mídia**: commit + push em `main`. URL pública do vídeo:
    `https://raw.githubusercontent.com/MTCiello/agente-de-postagem/main/midia/X.mp4`
 8. **Montar o final no vidIQ**: `vidiq_video_upload` (URL acima) → `vidiq_compose` vertical com o vídeo (`keepNativeAudio: true`, para manter os efeitos sonoros), a narração (startAtSeconds 0.1) e a trilha (volume 0.4, duckTo 0.18). Trilha atual: https://ai-music-tracks.s3.us-east-1.amazonaws.com/90b27dc2-6bce-4d67-931e-15a70ae728f3/d40be94a-c72e-4ac9-90c9-651f74badfd2.wav (variar `trimStartSeconds` entre os reels).
