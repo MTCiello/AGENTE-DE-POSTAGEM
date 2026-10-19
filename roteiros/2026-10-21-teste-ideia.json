@@ -1,70 +1,21 @@
-{
- "scenes": [
-  {
-   "type": "hook",
-   "kicker": "Antes de abrir",
-   "text": "Teste sua ideia antes de gastar um real",
-   "highlight": [
-    "real"
-   ],
-   "sub": "3 testes rápidos com IA",
-   "say": "Antes de gastar um real no seu negócio, faz esse teste com IA.",
-   "pre": "Teste sua ideia",
-   "big": "Antes de gastar",
-   "accent": "um real sequer.",
-   "post": "3 testes rápidos com IA"
-  },
-  {
-   "type": "item",
-   "num": "1",
-   "title": "O cliente desconfiado",
-   "highlight": [
-    "desconfiado"
-   ],
-   "body": "Ela lista por que alguém não compraria.",
-   "prompt": "Aja como um cliente cético: por que você não compraria isso?",
-   "say": "Primeiro, pede pra ela agir como um cliente desconfiado e listar por que não compraria.",
-   "tag": "Teste 1 de 3"
-  },
-  {
-   "type": "item",
-   "num": "2",
-   "title": "Compare com a concorrência",
-   "highlight": [
-    "concorrência"
-   ],
-   "body": "Quem já vende isso na sua cidade, e como.",
-   "prompt": "Quem já vende isso em Chapecó e qual o diferencial de cada um?",
-   "say": "Depois, pede pra ela comparar com os concorrentes da sua cidade.",
-   "tag": "Teste 2 de 3"
-  },
-  {
-   "type": "item",
-   "num": "3",
-   "title": "Faça a conta",
-   "highlight": [
-    "conta"
-   ],
-   "body": "Quanto precisa vender por mês pra pagar tudo.",
-   "prompt": "Quantas vendas por mês preciso pra cobrir R$ 3.000 de custos?",
-   "say": "E por último, faz a conta: quanto você precisa vender por mês pra pagar tudo.",
-   "tag": "Teste 3 de 3"
-  },
-  {
-   "type": "cta",
-   "text": "Testa antes de abrir",
-   "highlight": [
-    "antes"
-   ],
-   "sub": "Precisa de site ou automação? Chama a Ciello.",
-   "save_label": "Salva pra testar depois",
-   "say": "Salva esse vídeo e testa antes de abrir. E se precisar de site ou automação, chama a Ciello.",
-   "kicker": "Próximo passo",
-   "pre": "Salva e",
-   "big": "Testa antes",
-   "accent": "de abrir as portas.",
-   "button": "Fale com a Ciello",
-   "save": "Salva pra testar depois"
-  }
- ]
-}
+{"scenes": [
+ {"type": "hook", "tag": "Antes de abrir", "kicker": "Salva esse vídeo", "lines": [["Teste sua ideia", "marfim"], ["antes de gastar", "cinza"], ["um real.", "ouro"]], "iva": "wave",
+  "say": "Antes de gastar um real no seu negócio, faz esse teste com IA."},
+ {"type": "prompt", "kicker": "Teste 1", "title": [["O cliente", "marfim"], ["desconfiado", "ouro"]],
+  "prompt": "Aja como um cliente cético: por que você não compraria isso?",
+  "answer": ["Preço acima do que já pago no bairro", "Nunca ouvi falar da marca", "Não achei avaliações de outros clientes"],
+  "say": "Primeiro, pede pra ela agir como um cliente desconfiado e listar por que não compraria."},
+ {"type": "cards", "kicker": "Teste 2", "title": [["Compare com a", "marfim"], ["concorrência", "ouro"]], "iva": "think",
+  "cards": [
+    {"name": "Café Aroma", "line": "Combo café + pão de queijo", "tags": ["R$ 18 o combo", "Delivery próprio"]},
+    {"name": "Bistrô Central", "line": "Almoço executivo no centro", "tags": ["Bem avaliado", "Sem delivery"]},
+    {"name": "Padaria Pão Dourado", "line": "Aberta até 21h", "tags": ["Preço baixo", "Sem site"]}],
+  "say": "Depois, pede pra ela comparar com os concorrentes da sua cidade."},
+ {"type": "prompt", "kicker": "Teste 3", "title": [["Faça a", "marfim"], ["conta", "ouro"]],
+  "prompt": "Quantas vendas por mês preciso pra cobrir R$ 3.000 de custos com ticket de R$ 25?",
+  "answer": ["120 vendas por mês", "Umas 5 vendas por dia útil", "Mire em 150 pra ter margem"],
+  "say": "E por último, faz a conta: quanto você precisa vender por mês pra pagar tudo."},
+ {"type": "cta", "kicker": "Próximo passo", "lines": [["Testa", "cinza"], ["antes de", "marfim"], ["abrir.", "ouro"]],
+  "button": "Fale com a Ciello", "save": "Salva pra testar depois", "iva": "happy",
+  "say": "Salva esse vídeo e testa antes de abrir. E se precisar de site ou automação, chama a Ciello."}
+]}

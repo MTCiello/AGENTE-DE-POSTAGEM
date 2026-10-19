@@ -1,70 +1,26 @@
-{
- "scenes": [
-  {
-   "type": "hook",
-   "kicker": "IA pra vender",
-   "text": "Um vendedor que não dorme",
-   "highlight": [
-    "dorme"
-   ],
-   "sub": "E ele trabalha só pra você",
-   "say": "Imagina um vendedor que não dorme.",
-   "pre": "Imagina um",
-   "big": "Vendedor",
-   "accent": "que não dorme.",
-   "post": "e trabalha só pra você"
-  },
-  {
-   "type": "item",
-   "num": "1",
-   "title": "Acha as empresas",
-   "highlight": [
-    "empresas"
-   ],
-   "body": "Você diz o cliente ideal. Ela encontra na sua região.",
-   "prompt": "Encontre barbearias em Chapecó que ainda não têm site",
-   "say": "Você diz o cliente que quer, e a IA encontra as empresas da sua região.",
-   "tag": "Passo 1 de 3"
-  },
-  {
-   "type": "item",
-   "num": "2",
-   "title": "Pesquisa cada uma",
-   "highlight": [
-    "cada"
-   ],
-   "body": "O que vende, o que está faltando.",
-   "prompt": "Resuma o que cada uma vende e o que falta no Instagram delas",
-   "say": "Depois ela pesquisa cada uma: o que vende, o que tá faltando.",
-   "tag": "Passo 2 de 3"
-  },
-  {
-   "type": "item",
-   "num": "3",
-   "title": "Escreve a mensagem",
-   "highlight": [
-    "mensagem"
-   ],
-   "body": "Personalizada pra cada dono. Você só revisa e manda.",
-   "prompt": "Escreva uma mensagem curta e pessoal pra cada dono",
-   "say": "E escreve uma mensagem personalizada pra cada dono. Você só revisa e manda.",
-   "tag": "Passo 3 de 3"
-  },
-  {
-   "type": "cta",
-   "text": "Quer um vendedor de IA no seu negócio?",
-   "highlight": [
-    "IA"
-   ],
-   "sub": "A Ciello monta pra você. Chama no direct.",
-   "save_label": "Salva esse vídeo",
-   "say": "Isso já dá pra montar hoje com o Claude. Quer um desses no seu negócio? Chama a Ciello no direct.",
-   "kicker": "Próximo passo",
-   "pre": "Quer um desses",
-   "big": "No seu negócio?",
-   "accent": "A Ciello monta pra você.",
-   "button": "Chama no direct",
-   "save": "Salva esse vídeo"
-  }
- ]
-}
+{"scenes": [
+ {"type": "hook", "tag": "IA pra vender", "kicker": "Imagina isso", "lines": [["Um vendedor", "marfim"], ["que não", "cinza"], ["dorme.", "ouro"]], "iva": "wave",
+  "say": "Imagina um vendedor que não dorme."},
+ {"type": "search", "kicker": "Passo 1", "title": [["Acha as", "marfim"], ["empresas", "ouro"]],
+  "query": "barbearias em Chapecó", "results": [
+    {"name": "Barbearia do Centro", "stars": 5, "meta": "Centro · 4,8", "badge": "SEM SITE"},
+    {"name": "Studio Navalha", "stars": 4, "meta": "Efapi · 4,6", "badge": "SEM SITE"},
+    {"name": "Corte & Cia", "stars": 4, "meta": "Passo Fundo · 4,5"},
+    {"name": "Dom Barber", "stars": 5, "meta": "Presidente Médici · 4,9", "badge": "SEM SITE"}], "pick": 1, "iva": "point",
+  "say": "Você diz o cliente que quer, e a IA encontra as empresas da sua região."},
+ {"type": "cards", "kicker": "Passo 2", "title": [["Pesquisa", "marfim"], ["cada uma", "ouro"]], "iva": "think",
+  "cards": [
+    {"name": "Barbearia do Centro", "line": "Corte e barba · agenda pelo direct", "tags": ["Sem site", "Insta ativo"]},
+    {"name": "Studio Navalha", "line": "Sem link de agendamento", "tags": ["Sem site", "Parado há 3 meses"]},
+    {"name": "Dom Barber", "line": "Muitas avaliações no Google", "tags": ["Sem site", "Bem avaliado"]}],
+  "say": "Depois ela pesquisa cada uma: o que vende, o que tá faltando."},
+ {"type": "chat", "kicker": "Passo 3", "title": [["Escreve a", "marfim"], ["mensagem", "ouro"]], "contact": "Studio Navalha",
+  "messages": [
+    {"me": true, "text": "Oi! Vi que o Studio Navalha tem ótimas avaliações, mas ainda não tem um site com agendamento."},
+    {"me": true, "text": "Posso te mostrar como ficaria? Leva 2 minutos."},
+    {"me": false, "text": "Opa, pode mandar!"}],
+  "say": "E escreve uma mensagem personalizada pra cada dono. Você só revisa e manda."},
+ {"type": "cta", "kicker": "Próximo passo", "lines": [["Quer um", "cinza"], ["desses no seu", "marfim"], ["negócio?", "ouro"]],
+  "button": "Chama no direct", "save": "Salva esse vídeo", "iva": "happy",
+  "say": "Isso já dá pra montar hoje com o Claude. Quer um desses no seu negócio? Chama a Ciello no direct."}
+]}

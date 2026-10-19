@@ -5,7 +5,8 @@ Procedimento semanal que o agente segue toda vez que roda. Este arquivo é a fon
 ## Contexto da marca
 - Marca: **Ciello** — tecnologia, sites, automação e IA para micro e pequenas empresas (Chapecó/SC e região).
 - Instagram: **@ciellotec** · Metricool brand id **6611209** · fuso **America/Sao_Paulo**.
-- Identidade 2026 (a mesma do Instagram atual e do CIELLO-CRM — **não usar os posts antigos do Drive**): Marfim #F8F4E8 (fundo), Carvão #161616, Ouro #E0A81C (faixa de destaque e ponto da logo), Azul profundo #263A59 (secundária). Fonte única: Oswald, caixa alta. Logo oficial em `marca/` (nuvem + ponto ouro). O gerador já aplica tudo isso — nos roteiros use os campos kicker/pre/big/accent/post (hook), num/tag/title/body/prompt (item) e kicker/pre/big/accent/button/save (cta). Tagline: "Tecnologia que eleva".
+- Identidade atual (posts do @ciellotec — **não usar os posts antigos do Drive**): fundo carvão texturizado com luz quente, títulos em Anton caixa alta (marfim / cinza / ouro #E0A81C), texto em serifa, rótulos espaçados em ouro, pílulas. Logo oficial em `marca/`. Mascote **I.V.A.** (`gerador/iva.py`): a nuvem do logo com rosto; o ponto dourado é o ponteiro dela. Tagline: "Tecnologia que eleva".
+- Gerador v5: cada cena **mostra o exemplo na tela** (tipos: hook, search, cards, chat, prompt, compare, checklist, cta — ver o cabeçalho de `gerador/render_reel.py`). Regras de edição: gancho com palavras batendo + zoom punch, uma quebra de padrão por cena (~4–6 s), legenda dinâmica, SFX em cada evento.
 - Ângulo editorial: pegar o que está viral no nicho de IA e traduzir para **"IA aplicada ao seu negócio"**, para que as views virem clientes.
 
 ## Perfis de referência
@@ -23,10 +24,10 @@ Procedimento semanal que o agente segue toda vez que roda. Este arquivo é a fon
    - Gancho: até 9 palavras, com uma palavra em destaque.
    - CTA sempre com "Salva pra testar depois" (saves e shares são o que mais distribui).
 5. **Narração**: escrever a fala completa de cada reel em português do Brasil coloquial ("pra", "tá", "você"), dividida por cena no campo `say` do roteiro. Gerar com `vidiq_voiceover_generate` (voz atual: Liam `TX3LPaxmHKxFdv7VOQHJ`; trocar pela voz clonada do Mateus quando existir) e anotar `durationSeconds`.
-6. **Renderizar o visual** sincronizado com a fala: `python3 gerador/render_reel.py roteiros/X.json midia/X.mp4 --total <duração da voz + 0.8> --silent`. Conferir 3–4 frames.
+6. **Renderizar o visual** sincronizado com a fala: `python3 gerador/render_reel.py roteiros/X.json midia/X.mp4 --total <duração da voz + 0.8> --sfx-only`. Conferir 3–4 frames.
 7. **Publicar a mídia**: commit + push em `main`. URL pública do vídeo:
    `https://raw.githubusercontent.com/MTCiello/agente-de-postagem/main/midia/X.mp4`
-8. **Montar o final no vidIQ**: `vidiq_video_upload` (URL acima) → `vidiq_compose` vertical com o vídeo, a narração (startAtSeconds 0.1) e a trilha (volume 0.4, duckTo 0.18). Trilha atual: https://ai-music-tracks.s3.us-east-1.amazonaws.com/90b27dc2-6bce-4d67-931e-15a70ae728f3/d40be94a-c72e-4ac9-90c9-651f74badfd2.wav (variar `trimStartSeconds` entre os reels).
+8. **Montar o final no vidIQ**: `vidiq_video_upload` (URL acima) → `vidiq_compose` vertical com o vídeo (`keepNativeAudio: true`, para manter os efeitos sonoros), a narração (startAtSeconds 0.1) e a trilha (volume 0.4, duckTo 0.18). Trilha atual: https://ai-music-tracks.s3.us-east-1.amazonaws.com/90b27dc2-6bce-4d67-931e-15a70ae728f3/d40be94a-c72e-4ac9-90c9-651f74badfd2.wav (variar `trimStartSeconds` entre os reels).
 9. **Agendar no Metricool** com a URL do vídeo final do compose (`createScheduledPost`): Instagram `type: REEL`, `autoPublish: true`, `videoCoverMilliseconds: 1500`.
    - Datas: **segunda, quarta e sexta às 10:00** (America/Sao_Paulo) da semana seguinte.
    - Legenda: 1ª linha = gancho; 3–5 linhas curtas de valor; CTA ("Chama no direct" ou "Comenta IA"); palavras-chave em texto corrido (ex.: "inteligência artificial para pequenas empresas", "automação", "Chapecó"); 3–5 hashtags no fim.
