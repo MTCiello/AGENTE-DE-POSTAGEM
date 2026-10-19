@@ -10,3 +10,7 @@ comercial/abordagens/
 comercial/bruto/
 comercial/crm-*.csv
 comercial/nao-contatar.txt
+
+# plano de negócio, preços e margens (founder skills) ficam fora do repositório público
+founder/*
+!founder/idea.md

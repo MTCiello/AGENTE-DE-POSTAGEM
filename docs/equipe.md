@@ -21,6 +21,7 @@ Nove agentes especialistas em `.claude/agents/`, coordenados por três comandos 
 | `/semana` | domingo | pesquisador → roteirista (3 em paralelo) → produtor-video + produtor-imagem (em paralelo) → postagem |
 | `/comercial` | todo dia útil | sdr + closer em paralelo → lista única: enviar, responder, agendar |
 | `/segunda` | segunda de manhã | analista + pesquisador em paralelo → gestor-anuncios |
+| `/conselho` | decisões de negócio (preço, oferta, onde investir) | Founder skills (conselho, CFO, painel de 100 compradores, marketing…) com os dados reais da Ciello |
 
 Também dá para chamar um agente direto: "use o sdr para gerar 20 leads de odontologia em Xanxerê".
 
