@@ -186,6 +186,10 @@ class Agente:
     spawns_colega: set = field(default_factory=set)
     paleta: int | None = None
     matiz: int | None = None
+    # agentes da Ciello que moram no escritório (residentes.py): não vêm de sessão nem são gravados
+    residente: bool = False
+    # Task/Agent deste agente que foram para um residente: id da ferramenta -> id do residente
+    redirecionados: dict = field(default_factory=dict)
 
     def status(self, tid):
         return self.ferramentas[tid][0] if tid in self.ferramentas else None
@@ -265,7 +269,7 @@ class Loja:
 
     def gravar(self):
         if self.gravar_agentes:
-            self.gravar_agentes([limpar(a.persistido()) for a in self.agentes.values() if not a.spawn_id])
+            self.gravar_agentes([limpar(a.persistido()) for a in self.agentes.values() if not a.spawn_id and not a.residente])
 
     def escolher_paleta(self, agente):
         """As primeiras N pessoas ganham cada uma um personagem; depois repete com outra cor (matiz ≥ 45°)."""
@@ -337,6 +341,8 @@ class Relogios:
         self.loja, self.laco = loja, loja.laco
         self.espera: dict[int, Temporizador] = {}
         self.permissao: dict[int, Temporizador] = {}
+        # quando uma tarefa que foi para um residente acaba sem tool_result (vez nova, Esc): residentes.py liga
+        self.ao_soltar = lambda pai, tid: None
 
     def cancelar_espera(self, aid):
         t = self.espera.pop(aid, None)
@@ -378,7 +384,11 @@ class Relogios:
                 a.permissao_enviada = True
                 self.loja.transmitir({"type": "agentToolPermission", "id": aid})
                 for mae in maes:
-                    self.loja.transmitir({"type": "subagentToolPermission", "id": aid, "parentToolId": mae})
+                    rid = a.redirecionados.get(mae)
+                    if rid is not None:  # o pedido é do residente que está fazendo a tarefa
+                        self.loja.transmitir({"type": "agentToolPermission", "id": rid})
+                    else:
+                        self.loja.transmitir({"type": "subagentToolPermission", "id": aid, "parentToolId": mae})
 
         self.permissao[aid] = self.laco.depois(PERMISSAO, venceu)
 
@@ -388,7 +398,7 @@ class Relogios:
 
     def reenviar_segundo_plano(self, a: Agente):
         for tid in a.segundo_plano:
-            if self.loja.promovido(a.id, tid):
+            if self.loja.promovido(a.id, tid) or tid in a.redirecionados:
                 continue
             st = a.status(tid)
             if st:
@@ -400,6 +410,8 @@ class Relogios:
         """Nova vez começando: tira as ferramentas (menos os agentes em segundo plano) e marca ativo."""
         if not a:
             return
+        for tid in [t for t in a.redirecionados if t not in a.segundo_plano]:
+            self.ao_soltar(a, tid)
         if a.segundo_plano:
             for tid in list(a.ferramentas):
                 if tid in a.segundo_plano:

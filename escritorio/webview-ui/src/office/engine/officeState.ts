@@ -5,6 +5,10 @@ import {
   CHARACTER_HIT_HALF_WIDTH,
   CHARACTER_HIT_HEIGHT,
   CHARACTER_SITTING_OFFSET_PX,
+  CONVERSA_CHANCE,
+  CONVERSA_ESPERA_SEC,
+  CONVERSA_MAX_SEC,
+  CONVERSA_MIN_SEC,
   DISMISS_BUBBLE_FAST_FADE_SEC,
   FURNITURE_ANIM_INTERVAL_SEC,
   GREETER_ID,
@@ -38,7 +42,7 @@ import type {
   TileType as TileTypeVal,
 } from '../types.js';
 import { CharacterState, Direction, PetState, TILE_SIZE } from '../types.js';
-import { createCharacter, updateCharacter } from './characters.js';
+import { createCharacter, setDestinoSocial, updateCharacter } from './characters.js';
 import { advanceMatrixEffect, startMatrixEffect } from './matrixEffectState.js';
 import { createPet, updatePet } from './petEntity.js';
 import { anchorTile, closestFreeSeat } from './seatPlacement.js';
@@ -130,6 +134,65 @@ export class OfficeState {
     this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles);
     // Pets are built last because they need walkableTiles populated for spawn.
     this.rebuildPetsFromLayout(this.layout);
+    setDestinoSocial((ch) => this.destinoConversa(ch));
+  }
+
+  // ── Ciello: a rotina dos agentes parados (conversar uns com os outros) ──────────
+
+  /** Às vezes, em vez de passear a esmo, o agente parado vai conversar com outro que também está parado. */
+  private destinoConversa(ch: Character): { col: number; row: number } | null {
+    ch.conversaCom = null;
+    if (ch.isSubagent || Math.random() > CONVERSA_CHANCE) return null;
+    const livres = [...this.characters.values()].filter(
+      (o) =>
+        o.id !== ch.id &&
+        !o.isActive &&
+        !o.isSubagent &&
+        !o.matrixEffect &&
+        !o.conversa &&
+        o.state !== CharacterState.TYPE,
+    );
+    if (livres.length === 0) return null;
+    const outro = livres[Math.floor(Math.random() * livres.length)];
+    const vizinhos = [
+      { col: outro.tileCol + 1, row: outro.tileRow },
+      { col: outro.tileCol - 1, row: outro.tileRow },
+      { col: outro.tileCol, row: outro.tileRow + 1 },
+      { col: outro.tileCol, row: outro.tileRow - 1 },
+    ].filter((t) => this.walkableTiles.some((w) => w.col === t.col && w.row === t.row));
+    if (vizinhos.length === 0) return null;
+    ch.conversaCom = outro.id;
+    // o outro espera um pouco no lugar para o colega chegar
+    outro.wanderTimer = Math.max(outro.wanderTimer, CONVERSA_ESPERA_SEC);
+    return vizinhos[Math.floor(Math.random() * vizinhos.length)];
+  }
+
+  /** Chegou do lado de quem ia conversar: os dois se viram um para o outro e batem papo por alguns segundos. */
+  private atualizarConversas(dt: number): void {
+    for (const ch of this.characters.values()) {
+      if (ch.conversa && ch.conversa > 0) {
+        ch.conversa = ch.isActive ? 0 : Math.max(0, ch.conversa - dt);
+      }
+      if (ch.conversaCom == null) continue;
+      if (ch.isActive) {
+        ch.conversaCom = null;
+        continue;
+      }
+      if (ch.state !== CharacterState.IDLE || ch.path.length > 0) continue;
+      const outro = this.characters.get(ch.conversaCom);
+      ch.conversaCom = null;
+      if (!outro || outro.isActive || outro.state !== CharacterState.IDLE) continue;
+      const dc = outro.tileCol - ch.tileCol;
+      const dr = outro.tileRow - ch.tileRow;
+      if (Math.abs(dc) + Math.abs(dr) !== 1) continue;
+      ch.dir = dc > 0 ? Direction.RIGHT : dc < 0 ? Direction.LEFT : dr > 0 ? Direction.DOWN : Direction.UP;
+      outro.dir = dc > 0 ? Direction.LEFT : dc < 0 ? Direction.RIGHT : dr > 0 ? Direction.UP : Direction.DOWN;
+      const tempo = CONVERSA_MIN_SEC + Math.random() * (CONVERSA_MAX_SEC - CONVERSA_MIN_SEC);
+      ch.conversa = tempo;
+      outro.conversa = tempo;
+      ch.wanderTimer = Math.max(ch.wanderTimer, tempo + 0.5);
+      outro.wanderTimer = Math.max(outro.wanderTimer, tempo + 1);
+    }
   }
 
   /** Rebuild all derived state from a new layout. Reassigns existing characters.
@@ -1159,6 +1222,7 @@ export class OfficeState {
         }
       }
     }
+    this.atualizarConversas(dt);
     // Remove characters that finished despawn
     for (const id of toDelete) {
       this.characters.delete(id);

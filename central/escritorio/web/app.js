@@ -133,6 +133,10 @@ function definicao(chave) {
     const a = chave.slice(7);
     return { titulo: nome(a), icone: 'agente', cor: CORES[(equipeCache.find((x) => x.nome === a) || {}).cor] || '#6E7FA3', w: 560, h: 600, render: renderAgente, cada: 2500, agente: a };
   }
+  if (chave.startsWith('term:')) {
+    const rotulo = (SALVO.terminais || {})[chave.slice(5)];
+    return { titulo: rotulo ? `Claude Code · ${rotulo}` : 'Claude Code', icone: 'terminal', cor: 'linear-gradient(135deg,#3A5582,#13213A)', w: 860, h: 540, render: renderTerminal, estatico: true };
+  }
   if (chave.startsWith('exec:')) return { titulo: 'Executando…', icone: 'terminal', cor: 'linear-gradient(135deg,#3A4256,#12151C)', w: 700, h: 460, render: renderExecucao, estatico: true };
   return null;
 }
@@ -206,6 +210,7 @@ function desmaximizar(j) {
 function alternarMax(j) { j.max ? desmaximizar(j) : maximizar(j); guardarGeo(j); }
 function fechar(j) {
   clearInterval(j.timer); clearInterval(j.timerExec);
+  if (j.aoFechar) j.aoFechar();
   j.el.classList.add('fechando');
   setTimeout(() => j.el.remove(), 120);
   janelas.delete(j.chave);
@@ -311,6 +316,7 @@ const tile = (def, cls = 'tile') => `<span class="${cls}" style="background:${de
 function barraTarefas() {
   const vazia = ![...janelas.values()].some((j) => !j.min);
   $('#fixados').innerHTML = `<button class="fixado ${vazia ? 'ativa' : ''}" id="mostrar-escritorio" title="Mostrar o escritório (minimiza as janelas)">${tile({ cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', icone: 'escritorio' })}</button>`
+    + `<button class="fixado" id="novo-terminal" title="Terminal do Claude Code: abre o Claude na pasta do assistente para ativar os agentes">${tile({ cor: 'linear-gradient(135deg,#3A5582,#13213A)', icone: 'terminal' })}</button>`
     + `<button class="fixado ${controles ? 'ligada' : ''}" id="engrenagem" title="${controles ? 'Esconder' : 'Mostrar'} os controles do escritório (+ Agente, Layout, Configurações, zoom)"><span class="tile">${icone('engrenagem')}</span></button>`;
   $('#abertas').innerHTML = [...janelas.values()].map((j) =>
     `<button class="aberta ${ativa === j && !j.min ? 'ativa' : ''}" data-chave="${esc(j.chave)}" title="${esc(j.def.titulo)}">${tile(j.def)}<span>${esc(j.def.titulo)}</span></button>`).join('');
@@ -335,6 +341,7 @@ function mostrarEscritorio() {
 $('#fixados').addEventListener('click', (e) => {
   if (e.target.closest('#engrenagem')) { controles = !controles; enviarControles(); barraTarefas(); return; }
   if (e.target.closest('#mostrar-escritorio')) mostrarEscritorio();
+  if (e.target.closest('#novo-terminal')) abrirTerminal({});
 });
 
 // engrenagem: mostra ou esconde os botões nativos de personalização do pixel-agents (a ponte esconde por padrão)
@@ -467,6 +474,7 @@ window.addEventListener('message', (e) => {
     (e.data.rotulos || []).map(agenteDoRotulo).filter(Boolean).forEach((a) => { noEscritorio[a] = null; const j = janelas.get(`agente:${a}`); if (j) desenhar(j, true); });
     return;
   }
+  if (e.data.evento === 'novoAgente') return void abrirTerminal({});
   if (e.data.evento !== 'clique') return;
   const proprio = agenteDoRotulo(e.data.nome);
   if (proprio) return void abrirDoEscritorio(proprio, '');
@@ -588,11 +596,89 @@ async function renderAgente(j) {
   const s = estadoAgente(a.nome);
   const eventos = estadoCache.eventos.filter((e) => e.agente === a.nome).slice(0, 10);
   const resto = a.descricao.split(': ').slice(1);
+  const painel = $('.iniciar-agente', j.corpo) || painelIniciar(a.nome); // o que você está digitando não se perde
+  const foco = document.activeElement && painel.contains(document.activeElement) ? document.activeElement : null;
   j.corpo.innerHTML = `<div class="cab-agente"><div class="avatar">${sprite(a.nome, 44)}</div><div><h1>${esc(nome(a.nome))}</h1><p>${esc(papel(a.descricao))}</p><div style="margin-top:8px">${chipEstado(s.estado)} ${s.tarefa && s.estado !== 'parado' ? `<small class="neutro">${esc(s.tarefa)}</small>` : ''}${tarefaNoEscritorio(a.nome) ? `<small class="neutro" style="display:block;margin-top:4px">pedido no escritório: ${esc(tarefaNoEscritorio(a.nome))}</small>` : ''}</div></div></div>
-  <div class="pagina"><h2 style="margin-top:0">O que faz</h2><p>${esc(resto.join(': ').replace(/ Use proactively.*$/, '') || a.descricao)}</p>
+  <div class="pagina"><div class="lugar-iniciar"></div><h2>O que faz</h2><p>${esc(resto.join(': ').replace(/ Use proactively.*$/, '') || a.descricao)}</p>
   ${a.acoes.length ? `<h2>Rodar agora</h2><div class="acoes" style="margin-top:0">${a.acoes.map((x, i) => `<button class="bt ${i ? '' : 'pri'}" data-acao="${esc(x.id)}">${icone('play')} ${esc(x.rotulo)}</button>`).join('')}</div>` : ''}
   ${COMANDOS[a.nome] ? `<h2>No Claude Code</h2><p class="comandos">${COMANDOS[a.nome].map((c) => `<code>${c}</code>`).join('')} ou "use o ${esc(a.nome)} para…"</p>` : ''}
   <h2>Últimas atividades</h2><div class="lista">${eventos.map((e) => `<div class="linha-item"><small style="width:46px">${esc(e.ts.slice(11, 16))}</small><div class="cresce">${esc(e.tarefa || '—')}</div>${chipEstado(e.estado)}</div>`).join('') || '<p class="sub">Ainda não trabalhou nesta sessão.</p>'}</div></div>`;
+  $('.lugar-iniciar', j.corpo).replaceWith(painel);
+  if (foco) foco.focus();
+}
+
+// Iniciar: o agente começa pelo terminal do Claude aqui dentro; no escritório ele vai para um PC e trabalha
+const SUGESTOES = {
+  sdr: ['gerar 20 leads de odontologia em Chapecó e escrever a 1ª mensagem', 'listar os follow-ups de hoje'],
+  closer: ['preparar a proposta para o lead que pediu preço', 'responder a objeção "está caro"'],
+  'pesquisador-mercado': ['pesquisar o que está em alta em IA para vendas esta semana', 'analisar os 3 concorrentes principais'],
+  roteirista: ['transformar a pauta da semana em 3 roteiros de reel'], 'produtor-video': ['produzir o vídeo do roteiro aprovado'],
+  'produtor-imagem': ['fazer as capas dos reels da semana'], postagem: ['agendar os posts prontos no Metricool'],
+  analista: ['montar o retrato semanal do Instagram'], 'gestor-anuncios': ['planejar uma campanha de R$ 300 para o CRM'],
+  'chefe-gabinete': ['montar o resumo do dia com as 3 prioridades'], financeiro: ['ver quem está atrasado e preparar as cobranças'],
+  'caixa-entrada': ['fazer a triagem do e-mail e sugerir horários de demo'], 'sucesso-cliente': ['responder as dúvidas de clientes de hoje'],
+};
+function painelIniciar(agente) {
+  const el = document.createElement('div');
+  el.className = 'iniciar-agente';
+  el.innerHTML = `<h2 style="margin-top:0">Iniciar</h2>
+    <textarea rows="2" placeholder="O que ${esc(nome(agente))} deve fazer? Ex.: ${esc((SUGESTOES[agente] || ['...'])[0])}"></textarea>
+    <div class="sugestoes">${(SUGESTOES[agente] || []).map((t) => `<button class="sugestao" type="button">${esc(t)}</button>`).join('')}</div>
+    <div class="acoes" style="margin-top:8px"><button class="bt ouro" data-iniciar>${icone('play')} Iniciar no Claude Code</button>
+    ${(COMANDOS[agente] || []).map((c) => `<button class="bt" data-comando="${esc(c)}" title="Roda o comando ${esc(c)}, que chama este agente junto com a equipe">${esc(c)}</button>`).join('')}</div>
+    <small class="neutro">Abre o terminal do Claude aqui no OS. No escritório, ${esc(nome(agente))} vai para um PC e começa a trabalhar.</small>`;
+  const caixa = $('textarea', el);
+  el.addEventListener('click', (e) => {
+    const sug = e.target.closest('.sugestao');
+    if (sug) { caixa.value = sug.textContent; caixa.focus(); return; }
+    const cmd = e.target.closest('[data-comando]');
+    if (cmd) return void abrirTerminal({ prompt: cmd.dataset.comando, titulo: cmd.dataset.comando });
+    if (e.target.closest('[data-iniciar]')) {
+      const tarefa = caixa.value.trim();
+      if (!tarefa) { caixa.focus(); caixa.classList.add('falta'); setTimeout(() => caixa.classList.remove('falta'), 900); return; }
+      abrirTerminal({ prompt: `Use o subagente ${agente} para: ${tarefa}`, titulo: nome(agente) });
+      caixa.value = '';
+    }
+  });
+  caixa.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) $('[data-iniciar]', el).click(); });
+  return el;
+}
+
+// ------------------------------------------------------------------ terminal do Claude Code dentro do OS (xterm.js)
+// abrirTerminal({ prompt, titulo }): abre uma janela com o Claude Code rodando na pasta do assistente; com prompt, ele
+// já começa por aquele pedido (ex.: "Use o subagente sdr para: ..."). Cada janela é um processo; fechar encerra.
+async function abrirTerminal({ prompt = '', titulo = '' } = {}) {
+  let r; try { r = await api('/api/terminal', { prompt, titulo }); } catch { return null; }
+  if (!r || !r.id) { aviso({ titulo: 'Terminal', texto: (r && r.erro) || 'Não deu para abrir o terminal.', cor: '#C8442F' }); return null; }
+  SALVO.terminais = { ...(SALVO.terminais || {}), [r.id]: titulo };
+  return abrir(`term:${r.id}`);
+}
+function renderTerminal(j) {
+  const id = j.chave.slice(5);
+  j.corpo.innerHTML = '<div class="terminal-claude"></div>';
+  const caixa = $('.terminal-claude', j.corpo);
+  if (typeof Terminal === 'undefined') { caixa.textContent = 'xterm.js não carregou (web/vendor/xterm).'; return; }
+  const term = new Terminal({ fontFamily: '"Cascadia Mono", Consolas, "Courier New", monospace', fontSize: 13, cursorBlink: true, scrollback: 5000,
+    theme: { background: '#13213A', foreground: '#F8F4E8', cursor: '#E0A81C', cursorAccent: '#13213A', selectionBackground: 'rgba(224,168,28,.35)' } });
+  const ajuste = new FitAddon.FitAddon(); term.loadAddon(ajuste); term.open(caixa);
+  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/terminal?token=${encodeURIComponent(TOKEN)}&id=${encodeURIComponent(id)}`);
+  const mandar = (m) => { if (ws.readyState === 1) ws.send(JSON.stringify(m)); };
+  const tamanho = () => { if (!j.el.isConnected || j.min) return; try { ajuste.fit(); } catch { return; } mandar({ tipo: 'tamanho', linhas: term.rows, colunas: term.cols }); };
+  let terminou = false;
+  ws.onopen = () => { tamanho(); term.focus(); };
+  ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.tipo === 'saida') term.write(m.dados); else if (m.tipo === 'fim') { terminou = true; term.write('\r\n\x1b[33m[o Claude Code terminou: feche esta janela ou abra outro terminal na barra de tarefas]\x1b[0m\r\n'); } };
+  ws.onclose = () => { if (!terminou) term.write('\r\n\x1b[31m[terminal desconectado: este terminal não existe mais; abra outro na barra de tarefas]\x1b[0m\r\n'); };
+  term.onData((d) => mandar({ tipo: 'entrada', dados: d }));
+  // Ctrl+C copia quando há seleção (senão vai para o Claude, que interrompe); Ctrl+V cola
+  term.attachCustomKeyEventHandler((e) => {
+    if (e.type !== 'keydown' || !(e.ctrlKey || e.metaKey)) return true;
+    if (e.key.toLowerCase() === 'c' && term.hasSelection()) { navigator.clipboard?.writeText(term.getSelection()); term.clearSelection(); return false; }
+    if (e.key.toLowerCase() === 'v') return false; // deixa o navegador colar (o xterm recebe pelo evento de colar)
+    return true;
+  });
+  let espera; const obs = new ResizeObserver(() => { clearTimeout(espera); espera = setTimeout(tamanho, 60); }); obs.observe(caixa);
+  j.el.addEventListener('pointerdown', () => setTimeout(() => term.focus(), 0));
+  j.aoFechar = () => { obs.disconnect(); ws.close(); term.dispose(); api('/api/terminal/fechar', { id }).catch(() => {}); delete SALVO.terminais[id]; salvar(); };
 }
 async function renderAtividade(j) {
   j.corpo.innerHTML = `<div class="pagina"><h1>Atividade</h1><p class="sub">O que cada agente e cada ferramenta fez, do mais novo para o mais antigo.</p><div class="lista">${estadoCache.eventos.map((e) =>
@@ -627,7 +713,11 @@ async function iniciar() {
   setInterval(puxarEstado, 1500); setInterval(puxarEquipe, 15000);
   const pedido = new URLSearchParams(location.hash.slice(1)).get('abrir');
   // um link só abre janelas (nunca roda ação) e no máximo 6
-  const lista = (pedido ? pedido.split(',') : (SALVO.abertas.length ? SALVO.abertas : ['briefing'])).filter((k) => { const d = definicao(k); return d && !d.acao; }).slice(0, 6);
+  // terminais só voltam se o processo ainda está rodando (o servidor pode ter sido reiniciado)
+  let vivos = []; try { vivos = (await api('/api/terminais')).ids || []; } catch { /* sem servidor */ }
+  const lista = (pedido ? pedido.split(',') : (SALVO.abertas.length ? SALVO.abertas : ['briefing']))
+    .filter((k) => !k.startsWith('term:') || (!pedido && vivos.includes(k.slice(5))))
+    .filter((k) => { const d = definicao(k); return d && !d.acao; }).slice(0, 6);
   lista.forEach((k) => abrir(k));
 }
 iniciar();

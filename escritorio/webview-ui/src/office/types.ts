@@ -211,6 +211,10 @@ export interface Character {
   waitingAwaitingInput?: boolean;
   /** Countdown timer for bubble (waiting: 2→0, permission: unused) */
   bubbleTimer: number;
+  /** Ciello: segundos restantes de conversa com outro agente (balão de conversa), 0 = sem conversa */
+  conversa?: number;
+  /** Ciello: id do agente com quem este vai conversar (andando até ele) */
+  conversaCom?: number | null;
   /** Timer to stay seated while inactive after seat reassignment (counts down to 0) */
   seatTimer: number;
   /** Whether this character represents a sub-agent (spawned by Task tool) */

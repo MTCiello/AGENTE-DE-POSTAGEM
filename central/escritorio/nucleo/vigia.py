@@ -236,6 +236,7 @@ class Sombra:
         self.pista = Pista(laco, self.loja)
         self.chaves = {}
         self.vivas = {}
+        self.residentes = None  # se a tarefa foi para um residente, a atividade aparece nele
 
     def observando(self, jsonl):
         return any(mesmo_caminho(a.jsonl, jsonl) for a in self.loja.valores())
@@ -273,6 +274,18 @@ class Sombra:
             return
         lider_id, tid = chave
         tipo = msg["type"]
+        lider = self.principal.get(lider_id)
+        if lider and tid in lider.redirecionados and self.residentes:
+            if tipo == "agentToolStart":
+                self.vivas.setdefault(msg["id"], {})[msg["toolId"]] = True
+                self.residentes.sub_inicio(lider, tid, msg["toolId"], msg.get("status") or "", msg.get("toolName") or "")
+            elif tipo == "agentToolsClear" or (tipo == "agentStatus" and msg.get("status") == "waiting"):
+                for t in list(self.vivas.get(msg["id"]) or {}):
+                    self.residentes.sub_fim(lider, tid, t)
+                self.vivas.pop(msg["id"], None)
+            elif tipo == "agentToolPermission":
+                self.residentes.permissao(lider, tid)
+            return
         if tipo == "agentToolStart":
             self.vivas.setdefault(msg["id"], {})[msg["toolId"]] = True
             self.principal.transmitir({"type": "subagentToolStart", "id": lider_id, "parentToolId": tid,
@@ -638,7 +651,7 @@ class Vigia:
                 continue
             if self.sombra.observando(e["jsonl"]) or any(mesmo_caminho(a.jsonl, e["jsonl"]) for a in self.loja.valores()):
                 continue
-            if not e.get("name") or tid not in lider.segundo_plano:
+            if not e.get("name") or tid not in lider.segundo_plano or tid in lider.redirecionados:
                 self.sombra.observar(lider, lider_id, e["jsonl"], tid)
                 continue
             aid, a = self.novo_agente(sessao=lider.sessao, pasta_projeto=lider.pasta_projeto, jsonl=e["jsonl"],

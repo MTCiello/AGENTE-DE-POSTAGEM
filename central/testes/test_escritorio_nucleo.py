@@ -147,6 +147,55 @@ class TesteTranscricao(Montagem):
         self.assertEqual(self.tipos().count("agentCreated"), 1)
 
 
+class TesteResidentes(Montagem):
+    def setUp(self):
+        super().setUp()
+        from nucleo.residentes import ID_BASE, Residentes
+        agentes = self.dir / "raiz" / ".claude" / "agents"
+        agentes.mkdir(parents=True)
+        for nome in ("sdr", "closer"):
+            (agentes / f"{nome}.md").write_text(f"---\nname: {nome}\ndescription: x\n---\ncorpo\n", encoding="utf-8")
+        self.res = Residentes(self.loja, self.vigia.rel)
+        self.res.carregar(self.dir / "raiz")
+        self.vigia.leitor.residentes = self.vigia.sombra.residentes = self.res
+        self.sdr = ID_BASE + 1  # closer, sdr em ordem alfabética
+        self.msgs.clear()
+
+    def test_residente_assume_a_tarefa_e_volta_para_a_rotina(self):
+        self.assertEqual(self.loja.get(self.sdr).nome, "SDR")
+        self.assertEqual(self.loja.get(self.sdr).pasta_nome, "Comercial")
+        self.vigia.acompanhar(self.projeto)
+        arq = self.sessao()
+        self.escrever(arq, {"type": "user", "message": {"content": "oi"}})
+        self.vigia.varrer_pasta(str(self.projeto))
+        coord = max(i for i, a in self.loja if not a.residente)
+        self.escrever(arq, {"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "t1", "name": "Task", "input": {"description": "follow-ups do dia", "subagent_type": "sdr"}}]}},
+            {"type": "progress", "parentToolUseID": "t1", "data": {"message": {"type": "assistant", "message": {
+                "content": [{"type": "tool_use", "id": "s1", "name": "Read", "input": {"file_path": "leads.csv"}}]}}}})
+        self.ler(coord)
+        self.assertIn({"type": "agentStatus", "id": self.sdr, "status": "active"}, self.msgs)
+        self.assertIn({"type": "agentToolStart", "id": self.sdr, "toolId": "t1", "status": "follow-ups do dia", "toolName": ""}, self.msgs)
+        self.assertIn({"type": "agentToolStart", "id": self.sdr, "toolId": "s1", "status": "Reading leads.csv", "toolName": "Read"}, self.msgs)
+        self.assertFalse([m for m in self.msgs if m["type"].startswith("subagent")])  # sem ajudante temporário
+        self.assertFalse([m for m in self.msgs if m["type"] == "agentToolStart" and m["id"] == coord and m["toolId"] == "t1"])
+        self.escrever(arq, {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t1"}]}})
+        self.ler(coord)
+        self.assertEqual(self.msgs[-1], {"type": "agentStatus", "id": self.sdr, "status": "waiting", "awaitingInput": False})
+        self.assertTrue(self.loja.get(self.sdr).esperando)
+        self.assertEqual(self.loja.get(coord).redirecionados, {})
+
+    def test_vez_nova_solta_o_residente_e_residente_nao_e_gravado(self):
+        gravados = []
+        self.loja.gravar_agentes = gravados.append
+        self.loja.gravar()
+        self.assertEqual(gravados[-1], [])
+        pai = self.loja.get(self.sdr)  # qualquer agente serve de "pai" aqui
+        self.assertTrue(self.res.comecar(pai, "tx", {"description": "closer: proposta"}))
+        self.vigia.rel.limpar_atividade(pai, pai.id)
+        self.assertTrue(self.loja.get(self.res.ids["closer"]).esperando)
+
+
 class TesteGanchos(Montagem):
     def test_sessao_confirmada_pelo_hook_vira_agente_e_para_de_adivinhar(self):
         g = G.Ganchos(self.vigia)

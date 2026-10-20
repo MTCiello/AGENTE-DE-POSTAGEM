@@ -111,6 +111,11 @@ transport.onMessage((m) => {
   }
 });
 
+/** + Agente: a área de trabalho abre o terminal do Claude Code dentro do Ciello OS. */
+export function pedirNovoAgente(): void {
+  avisar({ evento: 'novoAgente' });
+}
+
 /** Personagem clicado: a área de trabalho abre a janela do agente (ou de quem trabalha com ele). */
 export function avisarClique(id: number): void {
   avisar({ evento: 'clique', id, nome: nomes.get(id) ?? '', ajudantes: [...(ajudantes.get(id)?.values() ?? [])] });

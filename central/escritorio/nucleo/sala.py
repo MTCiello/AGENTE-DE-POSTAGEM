@@ -17,6 +17,7 @@ from . import persistencia as P
 from .agentes import LEITURA, PALETAS, SUBAGENTE, Laco, Loja, limpar
 from .ativos import Ativos
 from .ganchos import Ganchos
+from .residentes import Residentes
 from .vigia import Vigia, pasta_de_sessoes
 
 VERSAO = "1.5.0"
@@ -32,6 +33,10 @@ class Sala:
         self.vigia = Vigia(self.laco, self.loja, raiz_sessoes)
         self.ganchos = Ganchos(self.vigia)
         self.projeto, self.porta = projeto, porta
+        # os agentes da Ciello moram no escritório e recebem as tarefas que o Claude Code passa a eles
+        self.residentes = Residentes(self.loja, self.vigia.rel)
+        self.residentes.carregar(projeto)
+        self.vigia.leitor.residentes = self.vigia.sombra.residentes = self.ganchos.residentes = self.residentes
         self.token_gancho = secrets.token_urlsafe(24)
 
     # ---------------------------------------------------------- ciclo de vida
@@ -93,7 +98,8 @@ class Sala:
         if not privilegiada:
             return self._recusar(tipo, enviar)
         if tipo == "closeAgent":
-            self.vigia.fechar(msg.get("id"))
+            if not getattr(self.loja.get(msg.get("id")), "residente", False):  # os da casa não saem
+                self.vigia.fechar(msg.get("id"))
         elif tipo == "requestDiagnostics":
             enviar({"type": "agentDiagnostics", "agents": self._diagnostico()})
         elif tipo == "saveLayout" and isinstance(msg.get("layout"), dict):
@@ -197,7 +203,7 @@ class Sala:
         prefs = self._preferencias()
         enviar(prefs)
         instalado = G.instalados()
-        enviar({"type": "areaMappingsLoaded", "mappings": cfg["areas"]})
+        enviar({"type": "areaMappingsLoaded", "mappings": {**self.residentes.areas(), **cfg["areas"]}})
         self.vigia.ver_todas = prefs["watchAllSessions"]
         self.vigia.ganchos_ligados = cfg["hooks"] is True and instalado
         self.vigia.restaurar(P.estado()["agentes"])
@@ -224,17 +230,18 @@ class Sala:
             if a.equipe or a.nome or a.lider:
                 enviar(a.info_equipe(teamUsesTmux=a.equipe_tmux))
             for tid, (st, nome) in list(a.ferramentas.items()):
-                if tid in a.segundo_plano:
+                if tid in a.segundo_plano or tid in a.redirecionados:
                     continue
                 enviar({"type": "agentToolStart", "id": aid, "toolId": tid, "status": st, "toolName": nome or ""})
             for tid in a.segundo_plano:
-                if self.loja.promovido(aid, tid) or not a.status(tid):
+                if self.loja.promovido(aid, tid) or not a.status(tid) or tid in a.redirecionados:
                     continue
                 enviar({"type": "agentToolStart", "id": aid, "toolId": tid, "status": a.status(tid),
                         "toolName": a.nome_ferramenta(tid), "runInBackground": True,
                         "isTeammateSpawn": (tid in a.spawns_colega) or None})
             if a.esperando:
-                enviar({"type": "agentStatus", "id": aid, "status": "waiting"})
+                # residente parado é a rotina dele, não "acabou agora": sem visto nem som ao abrir a tela
+                enviar({"type": "agentStatus", "id": aid, "status": "waiting", "silencioso": True if a.residente else None})
             if a.contexto > 0:
                 enviar({"type": "agentContextUsage", "id": aid, "contextTokens": a.contexto, "maxContextTokens": a.contexto_max})
 

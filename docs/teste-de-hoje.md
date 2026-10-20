@@ -27,6 +27,7 @@ https://github.com/MTCiello/AGENTE-DE-POSTAGEM/archive/refs/heads/ccr-75504115-g
 
 - Se faltar Git, Node, ffmpeg ou Python, ele instala pelo winget e pede para **fechar e rodar de novo**.
 - Depois cria o ambiente Python (`.venv`) e instala o Remotion (`reels`, o único que ainda usa Node).
+- Ele também instala o `pywinpty`, que faz o terminal do Claude rodar dentro do Ciello OS. **Se você já tinha instalado antes, rode o `instalar.cmd` de novo.**
 - No fim pergunta se instala a voz (uns 3 GB). Se responder **S** e o seu Python for o 3.13, ele instala o Python 3.12 e refaz o ambiente do assistente nele, porque a voz ainda não roda no 3.13 (se pedir, feche e rode o `instalar.cmd` de novo).
 - O aviso amarelo `npm warn install-scripts ... esbuild` é só aviso do npm novo: pode ignorar.
 - Se o Windows avisar "o Windows protegeu o computador" num `.cmd`: **Mais informações → Executar assim mesmo**.
@@ -75,13 +76,23 @@ Abre uma janela preta (o servidor, deixe aberta) e o Ciello OS numa janela próp
 - [ ] **Ctrl + scroll** aproxima e afasta, e para em 2x e 6x.
 - [ ] Menu Iniciar → **Centralizar escritório** volta para o meio.
 
+**Como usar (resumo):** os 13 agentes moram no escritório. Parados, eles andam, conversam entre si (balão azul) e descansam na mesa. Para um agente trabalhar, ele precisa ser chamado pelo Claude Code, e há 3 jeitos:
+1. **Pela janela do agente:** clique no personagem (ou Menu Iniciar → agente) → escreva o que ele deve fazer em **Iniciar** (ou clique numa sugestão) → **Iniciar no Claude Code**. Abre o terminal do Claude aqui dentro com o pedido; o agente vai para um PC e começa.
+2. **Pelo terminal:** ícone do terminal na barra de tarefas (ao lado do escritório) e escreva, por exemplo, "use o sdr para gerar 20 leads de odontologia em Chapecó", ou um comando: `/bom-dia`, `/comercial`, `/semana`.
+3. **Pelos comandos da janela:** os botões como `/comercial` chamam a equipe toda daquela rotina.
+
+Os botões de **Rodar agora** (ex.: "Follow-ups de hoje") continuam rodando a ferramenta direto, sem o Claude Code.
+
 **Agentes trabalhando:**
-- [ ] Engrenagem → **+ Agente**: abre o Claude Code numa janela nova, já na pasta do assistente, e um personagem novo entra no escritório.
-- [ ] Nessa janela, rode `/bom-dia`. O personagem senta e "digita"; os balões mostram o que ele faz em português ("Lendo...", "Rodando...").
-- [ ] Rode `/comercial`. Os ajudantes (sdr, closer...) aparecem ao lado do coordenador.
-- [ ] **Clique no personagem** do coordenador: abre a janela do agente que está trabalhando com ele (ex.: SDR). Clique num ajudante: abre a janela dele.
-- [ ] Quando o Claude Code pede permissão para algo, aparece o balão de "..." em cima do personagem na hora (é o hook funcionando).
-- [ ] Ao fechar a janela do Claude Code (`/exit`), o personagem sai do escritório.
+- [ ] Assim que abre, o escritório tem os 13 agentes andando, conversando e descansando nas mesas (PCs desligados).
+- [ ] Clique no **SDR** no escritório: abre a janela dele. Em **Iniciar**, escolha "listar os follow-ups de hoje" → **Iniciar no Claude Code**. Abriu a janela **Claude Code · SDR** com o pedido já enviado?
+- [ ] No escritório, o SDR foi até um PC, o PC ligou e ele "digita"; os balões mostram o que ele faz em português ("Lendo...", "Rodando...").
+- [ ] Quando termina, aparece o visto verde em cima dele e ele volta para a rotina.
+- [ ] Ícone do terminal na barra de tarefas → rode `/comercial`: o SDR e o Closer vão para os PCs da área Comercial.
+- [ ] Quando o Claude Code pede permissão, aparece o balão de "..." em cima de quem está pedindo (é o hook funcionando). Responda no terminal.
+- [ ] No terminal: Ctrl+C com texto selecionado copia; Ctrl+V cola; redimensionar a janela ajusta o terminal.
+- [ ] Engrenagem → **+ Agente** também abre um terminal novo aqui dentro.
+- [ ] Fechar a janela do terminal encerra aquele Claude Code.
 
 **Layout:**
 - [ ] Engrenagem → **Layout**: mude um móvel de lugar, **Salvar**, feche o `Ciello.cmd` e abra de novo. A mudança ficou.

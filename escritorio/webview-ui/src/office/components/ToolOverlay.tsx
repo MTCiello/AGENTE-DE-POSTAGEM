@@ -28,7 +28,11 @@ import type { OfficeState } from '../engine/officeState.js';
 import { overlayProjection } from '../projection.js';
 import { getCachedSprite } from '../sprites/spriteCache.js';
 import { traduzirStatus } from '../statusPtBr.js';
-import { BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/spriteData.js';
+import {
+  BUBBLE_CONVERSA_SPRITE,
+  BUBBLE_PERMISSION_SPRITE,
+  BUBBLE_WAITING_SPRITE,
+} from '../sprites/spriteData.js';
 import type { ToolActivity } from '../types.js';
 import { CharacterState } from '../types.js';
 
@@ -168,14 +172,21 @@ export function ToolOverlay({
         // canvas renderer used. The idle "Waiting for input" state speaks
         // through its label, not a bubble.
         let bubbleNode = null;
-        if (ch.bubbleType && !(ch.bubbleType === 'waiting' && ch.waitingAwaitingInput)) {
+        // Ciello: dois agentes parados conversando ganham o balão de conversa (os avisos de trabalho têm prioridade)
+        const conversando = !ch.bubbleType && (ch.conversa ?? 0) > 0;
+        if (conversando || (ch.bubbleType && !(ch.bubbleType === 'waiting' && ch.waitingAwaitingInput))) {
           const cachedBubble = getCachedSprite(
-            ch.bubbleType === 'permission' ? BUBBLE_PERMISSION_SPRITE : BUBBLE_WAITING_SPRITE,
+            conversando
+              ? BUBBLE_CONVERSA_SPRITE
+              : ch.bubbleType === 'permission'
+                ? BUBBLE_PERMISSION_SPRITE
+                : BUBBLE_WAITING_SPRITE,
             zoom,
           );
           const bubbleSittingOff = ch.state === CharacterState.TYPE ? BUBBLE_SITTING_OFFSET_PX : 0;
-          const alpha =
-            ch.bubbleType === 'waiting' && ch.bubbleTimer < BUBBLE_FADE_DURATION_SEC
+          const alpha = conversando
+            ? Math.min(1, (ch.conversa ?? 0) / BUBBLE_FADE_DURATION_SEC)
+            : ch.bubbleType === 'waiting' && ch.bubbleTimer < BUBBLE_FADE_DURATION_SEC
               ? ch.bubbleTimer / BUBBLE_FADE_DURATION_SEC
               : 1;
           bubbleNode = (

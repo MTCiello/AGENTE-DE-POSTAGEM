@@ -570,7 +570,8 @@ export function useExtensionMessages(
           return { ...prev, [id]: awaiting };
         });
         os.setAgentActive(id, status === 'active');
-        if (status === 'waiting') {
+        // Ciello: "silencioso" = agente residente na rotina dele (sem visto de pronto nem som)
+        if (status === 'waiting' && msg.silencioso !== true) {
           os.showWaitingBubble(id, msg.awaitingInput === true);
           playDoneSound();
         }

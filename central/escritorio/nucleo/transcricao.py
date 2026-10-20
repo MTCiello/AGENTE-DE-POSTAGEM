@@ -51,6 +51,7 @@ class Leitor:
         self.ao_detectar_segundo_plano = lambda lider_id: None
         self.ao_terminar_segundo_plano = lambda lider_id, tid: None
         self.ao_trocar_equipe = lambda lider_id, equipe_anterior: None
+        self.residentes = None  # residentes.Residentes: a tarefa vai para o agente que mora no escritório
 
     # ------------------------------------------------------------------ equipe
     def ligar_equipe(self, a: Agente):
@@ -124,6 +125,8 @@ class Leitor:
                                 colega.equipe_tmux = True
                                 loja.transmitir(colega.info_equipe(teamUsesTmux=True))
                     sub = nome in SUBAGENTE
+                    if sub and self.residentes and self.residentes.comecar(a, b["id"], entrada):
+                        continue  # o próprio agente (residente) senta e trabalha; nada de ajudante ao lado
                     colega_spawn = sub and isinstance(entrada.get("name"), str) and len(entrada["name"]) > 0
                     if colega_spawn:
                         a.spawns_colega.add(b["id"])
@@ -162,6 +165,11 @@ class Leitor:
                 tid = m.group(1)
                 a.segundo_plano.pop(tid, None)
                 a.subferramentas.pop(tid, None)
+                if tid in a.redirecionados:
+                    a.tirar_ferramenta(tid)
+                    self.residentes.terminar(a, tid)
+                    self.ao_terminar_segundo_plano(aid, tid)
+                    return
                 loja.transmitir({"type": "subagentClear", "id": aid, "parentToolId": tid})
                 a.tirar_ferramenta(tid)
                 self.ao_terminar_segundo_plano(aid, tid)
@@ -188,13 +196,20 @@ class Leitor:
             a.equipe, a.lider = colega["equipe"], True
             self.ligar_equipe(a)
             loja.transmitir(a.info_equipe())
+        redirecionado = tid in a.redirecionados
         if not colega and nome in SUBAGENTE and resultado_assincrono(b):
             a.segundo_plano[tid] = True
             st = a.status(tid)
-            if st:
+            if st and not redirecionado:
                 loja.transmitir({"type": "agentToolStart", "id": aid, "toolId": tid, "status": st, "toolName": nome,
                                  "runInBackground": True, "isTeammateSpawn": (tid in a.spawns_colega) or None})
             self.ao_detectar_segundo_plano(aid)
+            return
+        if redirecionado:
+            a.subferramentas.pop(tid, None)
+            a.tirar_ferramenta(tid)
+            self.residentes.terminar(a, tid)
+            self.ao_terminar_segundo_plano(aid, tid)
             return
         if nome in SUBAGENTE:
             a.subferramentas.pop(tid, None)
@@ -215,6 +230,8 @@ class Leitor:
                     continue
                 nome = a.nome_ferramenta(tid)
                 a.tirar_ferramenta(tid)
+                if tid in a.redirecionados:
+                    self.residentes.terminar(a, tid)
                 if nome in SUBAGENTE:
                     a.subferramentas.pop(tid, None)
                     self.ao_terminar_segundo_plano(aid, tid)
@@ -222,6 +239,8 @@ class Leitor:
                 loja.transmitir({"type": "agentToolsClear", "id": aid})
             rel.reenviar_segundo_plano(a)
         elif a.ferramentas and not a.segundo_plano:
+            for tid in list(a.redirecionados):
+                self.residentes.terminar(a, tid)
             a.ferramentas.clear()
             a.subferramentas.clear()
             if not a.gancho_entregue:
@@ -257,14 +276,20 @@ class Leitor:
                     a.subferramentas.setdefault(mae, {})[b["id"]] = nome
                     if nome not in ISENTAS:
                         nao_isenta = True
-                    self.loja.transmitir({"type": "subagentToolStart", "id": aid, "parentToolId": mae, "toolId": b["id"], "status": st})
+                    if mae in a.redirecionados:
+                        self.residentes.sub_inicio(a, mae, b["id"], st, nome)
+                    else:
+                        self.loja.transmitir({"type": "subagentToolStart", "id": aid, "parentToolId": mae, "toolId": b["id"], "status": st})
             if nao_isenta and not a.gancho_entregue:
                 self.rel.iniciar_permissao(aid)
         elif msg.get("type") == "user":
             for b in conteudo:
                 if isinstance(b, dict) and b.get("type") == "tool_result" and b.get("tool_use_id"):
                     a.subferramentas.get(mae, {}).pop(b["tool_use_id"], None)
-                    self.rel.feito_depois({"type": "subagentToolDone", "id": aid, "parentToolId": mae, "toolId": b["tool_use_id"]})
+                    if mae in a.redirecionados:
+                        self.residentes.sub_fim(a, mae, b["tool_use_id"])
+                    else:
+                        self.rel.feito_depois({"type": "subagentToolDone", "id": aid, "parentToolId": mae, "toolId": b["tool_use_id"]})
             presa = any(n not in ISENTAS for subs in a.subferramentas.values() for n in subs.values())
             if presa and not a.gancho_entregue:
                 self.rel.iniciar_permissao(aid)

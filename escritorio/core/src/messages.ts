@@ -121,6 +121,8 @@ export interface AgentStatus {
   id: number;
   status: AgentActivityStatus;
   awaitingInput?: boolean;
+  /** Ciello: agente residente voltando à rotina; fica parado sem visto de pronto nem som */
+  silencioso?: boolean;
 }
 
 export type AgentActivityStatus = 'active' | 'waiting';

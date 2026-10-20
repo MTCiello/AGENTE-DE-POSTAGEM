@@ -187,6 +187,7 @@ class Ganchos:
         vigia.registrar = self.registrar
         vigia.desregistrar = self.desregistrar
         self.SUBAGENTE = SUBAGENTE | COLEGA | DENTRO_DA_VEZ
+        self.residentes = None
 
     # ---------------------------------------------------------- roteamento
     def registrar(self, sessao, aid):
@@ -361,7 +362,7 @@ class Ganchos:
             self.vigia.procurar_colegas(a.pasta_projeto, bruto["session_id"], aid)
             return
         mae = next((tid for tid, (_, nome) in a.ferramentas.items() if nome in self.SUBAGENTE), None)
-        if not mae:
+        if not mae or mae in a.redirecionados:  # residente: o JSONL do subagente mostra o trabalho nele
             return
         sub_id = f"hook-sub-{tipo_agente}-{int(time.time() * 1000)}"
         a.subferramentas.setdefault(mae, {})[sub_id] = tipo_agente
@@ -375,7 +376,7 @@ class Ganchos:
                 self.esperando(c, i)
             return
         mae = next((tid for tid, (_, nome) in a.ferramentas.items() if nome in self.SUBAGENTE and tid in a.subferramentas), None)
-        if not mae:
+        if not mae or mae in a.redirecionados:
             return
         a.subferramentas.pop(mae, None)
         self.loja.transmitir({"type": "subagentClear", "id": aid, "parentToolId": mae})
@@ -392,7 +393,8 @@ class Ganchos:
         a.permissao_enviada = True
         self.loja.transmitir({"type": "agentToolPermission", "id": aid})
         for mae in a.subferramentas:
-            self.loja.transmitir({"type": "subagentToolPermission", "id": aid, "parentToolId": mae})
+            if not (self.residentes and self.residentes.permissao(a, mae)):
+                self.loja.transmitir({"type": "subagentToolPermission", "id": aid, "parentToolId": mae})
 
     def _colega_fim(self, bruto, a: Agente, aid, tarefa_concluida):
         nome = nome_do_colega(bruto)
@@ -414,6 +416,8 @@ class Ganchos:
                 continue
             nome = a.nome_ferramenta(tid)
             a.tirar_ferramenta(tid)
+            if tid in a.redirecionados and self.residentes:
+                self.residentes.terminar(a, tid)
             if nome in self.SUBAGENTE:
                 a.subferramentas.pop(tid, None)
                 self.vigia.leitor.ao_terminar_segundo_plano(aid, tid)

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { noCielloOS } from '../ciello/ciello.js';
+import { noCielloOS, pedirNovoAgente } from '../ciello/ciello.js';
 import type { Directory } from '../hooks/useExtensionMessages.js';
 import { isBrowserRuntime } from '../runtime.js';
 import { transport } from '../transport/index.js';
@@ -53,9 +53,9 @@ export function BottomToolbar({
   // from a Directory row. Opening (not toggling) so a click that follows the
   // hover — which already opened the drawer — doesn't close it.
   const handleAgentClick = () => {
-    // Ciello OS: abre o Claude Code numa janela nova, na pasta do assistente (o escritório adota a sessão)
+    // Ciello OS: abre o terminal do Claude Code dentro do OS, na pasta do assistente (o escritório adota a sessão)
     if (noCielloOS) {
-      transport.send({ type: 'launchAgent' });
+      pedirNovoAgente();
       return;
     }
     setIsDrawerOpen(true);
@@ -99,7 +99,7 @@ export function BottomToolbar({
             variant="accent"
             onClick={handleAgentClick}
             className={isDrawerOpen ? 'bg-accent-bright' : 'bg-accent hover:bg-accent-bright'}
-            title={noCielloOS ? 'Abrir o Claude Code numa janela nova, na pasta do assistente' : undefined}
+            title={noCielloOS ? 'Abrir o terminal do Claude Code aqui no OS, na pasta do assistente' : undefined}
           >
             + Agente
           </Button>

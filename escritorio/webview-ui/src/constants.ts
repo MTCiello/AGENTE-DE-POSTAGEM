@@ -17,6 +17,12 @@ export const WANDER_MOVES_BEFORE_REST_MIN = 3;
 export const WANDER_MOVES_BEFORE_REST_MAX = 6;
 export const SEAT_REST_MIN_SEC = 120.0;
 export const SEAT_REST_MAX_SEC = 240.0;
+// Ciello: rotina dos agentes parados. Chance de o próximo passeio ser ir conversar com outro agente parado,
+// quanto o outro espera o colega chegar e quanto dura a conversa (com balão).
+export const CONVERSA_CHANCE = 0.35;
+export const CONVERSA_ESPERA_SEC = 10.0;
+export const CONVERSA_MIN_SEC = 4.0;
+export const CONVERSA_MAX_SEC = 9.0;
 
 // ── Matrix Effect ────────────────────────────────────────────
 export const MATRIX_EFFECT_DURATION_SEC = 0.3;

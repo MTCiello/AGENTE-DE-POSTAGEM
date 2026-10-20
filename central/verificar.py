@@ -278,7 +278,9 @@ def escritorio():
     a = Ativos(tela)
     if not a.personagens or not a.moveis:
         return FALHA, "sprites do escritório não carregaram (pasta assets do build)"
-    return OK, f"pronto no Ciello.cmd: {len(a.personagens)} personagens, {len(a.moveis['catalog'])} móveis, sem Node"
+    if os.name == "nt" and importlib.util.find_spec("winpty") is None:
+        return AVISO, "escritório ok, mas o terminal do Claude dentro do OS precisa do pywinpty: rode o instalar.cmd de novo"
+    return OK, f"pronto no Ciello.cmd: {len(a.personagens)} personagens, {len(a.moveis['catalog'])} móveis, terminal do Claude, sem Node"
 
 
 def voz():

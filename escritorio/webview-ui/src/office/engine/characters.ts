@@ -46,6 +46,13 @@ function directionBetween(
   return Direction.UP;
 }
 
+/** Ciello: quem decide se o passeio de agora é ir conversar com alguém (OfficeState liga). Devolve o quadrado de
+ *  destino ou null para seguir com o passeio comum. */
+let destinoSocial: ((ch: Character) => { col: number; row: number } | null) | null = null;
+export function setDestinoSocial(fn: typeof destinoSocial): void {
+  destinoSocial = fn;
+}
+
 export function createCharacter(
   id: number,
   palette: number,
@@ -103,7 +110,8 @@ export function updateCharacter(
     case CharacterState.TYPE: {
       if (ch.frameTimer >= TYPE_FRAME_DURATION_SEC) {
         ch.frameTimer -= TYPE_FRAME_DURATION_SEC;
-        ch.frame = (ch.frame + 1) % 2;
+        // Ciello: só digita quem está trabalhando; descansando na mesa fica parado (PC desligado)
+        ch.frame = ch.isActive ? (ch.frame + 1) % 2 : 0;
       }
       // If no longer active, stand up and start wandering (after seatTimer expires)
       if (!ch.isActive) {
@@ -187,7 +195,8 @@ export function updateCharacter(
           }
         }
         if (walkableTiles.length > 0) {
-          const target = walkableTiles[Math.floor(Math.random() * walkableTiles.length)];
+          const target =
+            destinoSocial?.(ch) ?? walkableTiles[Math.floor(Math.random() * walkableTiles.length)];
           const path = findPath(
             ch.tileCol,
             ch.tileRow,

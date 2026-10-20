@@ -52,8 +52,9 @@ O escritório é nosso: a tela pixel (`escritorio/`) começou como fork do [pixe
 O editor **Layout** do escritório (engrenagem → Layout) continua funcionando para mudar o que quiser.
 
 **Como os agentes aparecem:**
-- **Com equipes ligadas** (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` no `.claude/settings.json` do seu PC): `/semana`, `/comercial` e `/segunda` criam teammates com o nome de cada agente (sdr, closer, pesquisador-mercado…). Cada um senta numa mesa com o nome em cima. As equipes são experimentais e gastam mais uso.
-- **Sem equipes:** os agentes rodam como subagentes e aparecem como personagens ao lado do coordenador, com o balão mostrando "sdr: follow-ups do dia".
+- **Os 13 moram no escritório**, cada um na sua área (Pesquisa, Estúdio, Comercial, Análise & Anúncios, Postagem), com o nome em cima ao passar o mouse. Parados, andam, conversam e descansam na mesa.
+- **Quando o Claude Code chama um agente** (por `/comercial`, `/semana`, "use o sdr para..." ou pela janela dele), é o próprio personagem que vai para o PC e trabalha. A sessão do Claude Code (o coordenador) também aparece, sentada e digitando.
+- **Equipes do Claude Code** (opcional, `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`): teammates com nome próprio continuam virando personagens separados. São experimentais e gastam mais uso.
 - **Animações:** digitando quando trabalha, "…" quando pede permissão, ✓ quando termina, passeio pelo escritório quando está livre.
 
 ## Ciello OS: o app inteiro numa área de trabalho
@@ -62,7 +63,9 @@ Clique duas vezes em **`Ciello.cmd`**. Abre numa janela própria do Edge (ou Chr
 
 - **O fundo da área de trabalho é o Escritório**, ao vivo, **em português** e no azul da Ciello, centralizado ao abrir. Ele roda dentro do próprio Ciello OS (`--sem-escritorio` desliga; aí o fundo mostra a logo).
 - **Engrenagem na barra de tarefas:** os controles do escritório (**+ Agente**, **Layout**, **Configurações**, botões de zoom e os cartões dos agentes) ficam escondidos; a engrenagem mostra e esconde. Os menus usam as cores e as fontes da Ciello; os balões em cima dos personagens continuam em pixel.
-- **+ Agente** abre o Claude Code numa janela nova, já na pasta do assistente; a sessão aparece no escritório sozinha.
+- **Terminal do Claude dentro do OS:** o ícone de terminal na barra de tarefas (e o **+ Agente** do escritório) abre uma janela com o Claude Code rodando na pasta do assistente (`central/escritorio/terminal.py`, xterm.js; no Windows usa o `pywinpty`). Cada janela é um processo; fechar a janela encerra.
+- **Os agentes moram no escritório** (`central/escritorio/nucleo/residentes.py`): os 13 de `.claude/agents/` ficam no escritório, cada um na sua área. Parados, andam, conversam entre si e descansam na mesa; quando o Claude Code chama um deles (`subagent_type`, ou descrição "sdr: ..."), é ele que vai para o PC e trabalha, e volta para a rotina quando termina.
+- **Iniciar pela janela do agente:** escreva a tarefa (ou clique numa sugestão) e **Iniciar no Claude Code**: abre o terminal com "Use o subagente <agente> para: <tarefa>".
 - **Mover e dar zoom:** segure o **botão do meio (scroll)** e arraste para mover o escritório; **Ctrl + scroll** aproxima e afasta, entre **2x e 6x** (`ZOOM_MIN`/`ZOOM_MAX` em `escritorio/webview-ui/src/constants.ts`). O scroll sozinho também move. Menu Iniciar → **Centralizar escritório** volta para o meio.
 - **Clicar num personagem do escritório abre a janela daquele agente**. Para isso funcionar, o agente precisa ter nome: teammate com o nome do agente (equipes ligadas) ou subagente com a descrição começando pelo nome (`sdr: follow-ups do dia`), como os comandos `/bom-dia`, `/comercial`, `/semana` já pedem. Clicar no coordenador abre a janela de quem está trabalhando com ele; sem ninguém, abre a Equipe.
 - **Apps só no menu Iniciar** (o botão com a nuvem): Bom dia, Financeiro, Comercial, Conteúdo e Instagram, Tendências, Concorrentes, Anúncios, Equipe, Atividade e Verificação, além da equipe de agentes. Não há ícones na área de trabalho.
@@ -90,7 +93,6 @@ Interface em `central/escritorio/web/` (HTML, CSS e JavaScript sem dependências
 
 ## Funções futuras
 
-- **Agentes com mesa e nome no escritório:** ligar as equipes do Claude Code (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` no `.claude/settings.json` do PC). Até lá, os agentes aparecem como ajudantes do coordenador, com o nome no balão.
 - **Resultado dos anúncios no painel:** Meta Ads conectado ao Metricool, alimentando `anuncios/`.
 - **Atribuição de lead por anúncio ou post:** texto de origem no link do WhatsApp.
 - **Recepcionista por voz** (atender ligação 24h): precisa de telefonia paga (ex.: número virtual + agente de voz). Fica para quando houver investimento.

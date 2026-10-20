@@ -46,6 +46,10 @@ sys.path.insert(0, str(AQUI.parent))
 import status  # noqa: E402
 import briefing  # noqa: E402
 import financeiro  # noqa: E402
+import atexit  # noqa: E402
+
+import terminal  # noqa: E402
+from nucleo import persistencia  # noqa: E402
 from nucleo import websocket  # noqa: E402
 from nucleo.sala import Sala  # noqa: E402
 
@@ -57,6 +61,8 @@ TIPOS = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
          ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".mp4": "video/mp4",
          ".ttf": "font/ttf", ".ico": "image/x-icon", ".json": "application/json", ".webmanifest": "application/manifest+json"}
 sala = None  # o escritório (nucleo.sala.Sala), criado no main
+terminais = terminal.Terminais(RAIZ)  # terminais do Claude dentro do OS (janela "Claude Code")
+atexit.register(terminais.fechar_todos)
 
 # O que os botões das janelas podem rodar: id -> (rótulo, agente, argumentos). Nada fora desta lista roda.
 ACOES = {
@@ -308,6 +314,31 @@ class Painel(BaseHTTPRequestHandler):
             return self._json({"erro": "esperava WebSocket"}, 400)
         sala.conectar(conexao, privilegiada)
 
+    def _terminal(self):
+        """A janela "Claude Code" conversa com o terminal por aqui (só com o token desta sessão do Ciello OS)."""
+        consulta = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+        if not secrets.compare_digest((consulta.get("token") or [""])[0], TOKEN):
+            return self._json({"erro": "token inválido"}, 403)
+        t = terminais.get((consulta.get("id") or [""])[0])
+        if t is None:
+            return self._json({"erro": "terminal não encontrado"}, 404)
+        conexao = websocket.aceitar(self)
+        if conexao is None:
+            return self._json({"erro": "esperava WebSocket"}, 400)
+        t.ouvir(conexao.enviar)
+        try:
+            while (texto := conexao.receber()) is not None:
+                try:
+                    msg = json.loads(texto)
+                except ValueError:
+                    continue
+                if msg.get("tipo") == "entrada" and isinstance(msg.get("dados"), str):
+                    t.escrever(msg["dados"])
+                elif msg.get("tipo") == "tamanho":
+                    t.redimensionar(int(msg.get("linhas") or 0), int(msg.get("colunas") or 0))
+        finally:
+            t.largar(conexao.enviar)
+
     def do_GET(self):
         if not self._local():
             return
@@ -329,6 +360,8 @@ class Painel(BaseHTTPRequestHandler):
             return self._tela(caminho[len("/escritorio/"):])
         if caminho == "/ws":  # a tela abre o WebSocket na raiz do endereço
             return self._websocket()
+        if caminho == "/terminal":
+            return self._terminal()
         if caminho in ("/", "/index.html"):
             html = (WEB / "index.html").read_text(encoding="utf-8").replace("__CIELLO_TOKEN__", TOKEN)
             return self._enviar(html.encode("utf-8"), TIPOS[".html"])
@@ -336,6 +369,8 @@ class Painel(BaseHTTPRequestHandler):
             return self._arquivo(WEB, caminho[5:])
         if caminho.startswith("/midia/"):
             return self._arquivo(RAIZ / "midia", urllib.request.unquote(caminho[7:]))
+        if caminho == "/api/terminais":
+            return self._json({"ids": [tid for tid, t in terminais.todos.items() if t.fim is None]})
         if caminho == "/api/estado":
             return self._json(status.ultimo_estado())
         if caminho == "/api/kpis":
@@ -362,6 +397,13 @@ class Painel(BaseHTTPRequestHandler):
             if pedido.get("acao") not in ACOES:
                 return self._json({"erro": "ação desconhecida"}, 400)
             return self._json(rodar(pedido["acao"]))
+        if self.path == "/api/terminal":
+            prompt = pedido.get("prompt") if isinstance(pedido.get("prompt"), str) and pedido["prompt"].strip() else None
+            t = terminais.abrir(prompt, str(pedido.get("titulo") or "")[:80], persistencia.preferencia("bypassPermissions"))
+            return self._json({"id": t.id})
+        if self.path == "/api/terminal/fechar":
+            terminais.fechar(pedido.get("id"))
+            return self._json({"ok": True})
         return self._json({"erro": "não encontrado"}, 404)
 
     def _gancho(self):
