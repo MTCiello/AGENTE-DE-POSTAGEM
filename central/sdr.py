@@ -5,11 +5,13 @@ Fluxo:
   2. buscar      roda o gosom/google-maps-scraper (MIT; executável em comercial/bin/, Docker opcional)
   3. qualificar  lê o resultado, pontua cada empresa (0–100) e junta em comercial/leads.csv
   4. abordar     monta a 1ª mensagem personalizada de cada lead com link wa.me (você envia do seu WhatsApp, 1 a 1)
-  5. marcar      registra o que aconteceu (contatado, respondeu, demo, cliente, perdido, nao_contatar)
+  5. marcar      registra o que aconteceu (contatado, respondeu, demo, cliente, perdido, nao_contatar); anotar guarda uma observação
   6. hoje        lista os follow-ups do dia (cadência D+2, D+5, D+10) com o link pronto
   +  entrada     lead que chegou sozinho (DM, anúncio, site, indicação): registra e devolve a resposta em segundos
   7. crm         exporta a planilha para importar no CIELLO CRM
   +  instalar-scraper  baixa o executável do gosom para o seu sistema em comercial/bin/ (o instalar.cmd já faz)
+
+Tudo também funciona pela janela Comercial do Ciello OS, sem o Claude (a busca no Maps roda pelo botão).
 
 Uso:
   python central/sdr.py consultas --segmentos imobiliaria odontologia --cidades "Chapecó SC"
@@ -397,6 +399,17 @@ def cmd_marcar(a):
     print(f"#{l['id']} {l['empresa']}: {l['etapa']}" + (f" · próximo contato {l['proximo_contato']}" if l["proximo_contato"] else ""))
 
 
+def cmd_anotar(a):
+    """Anota algo no lead sem mudar a etapa (ligação, conversa, combinado)."""
+    leads = ler_leads()
+    l = next((x for x in leads if x["id"] == str(a.id)), None)
+    if not l:
+        sys.exit(f"Lead #{a.id} não encontrado.")
+    l["obs"] = (l.get("obs", "") + f" | {dt.date.today():%d/%m}: {a.texto.strip()}").strip(" |")
+    gravar_leads(leads)
+    print(f"#{l['id']} {l['empresa']}: anotado")
+
+
 # ---------------------------------------------------------------- 7. crm
 
 def cmd_crm(a):
@@ -420,7 +433,8 @@ def cmd_crm(a):
     print(f"{len(leads)} leads -> {destino}" + ("" if mapa_arq.exists() else "  (colunas genéricas; ajuste em comercial/crm_colunas.json)"))
 
 
-def main():
+def parser():
+    """Os comandos da linha de comando. O Ciello OS usa este mesmo parser para operar sem o Claude."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("consultas"); s.add_argument("--segmentos", nargs="*"); s.add_argument("--cidades", nargs="*"); s.set_defaults(f=cmd_consultas)
@@ -428,6 +442,7 @@ def main():
     s = sub.add_parser("qualificar"); s.add_argument("arquivo"); s.add_argument("--segmento", default=""); s.add_argument("--minimo", type=int, default=35); s.set_defaults(f=cmd_qualificar)
     s = sub.add_parser("abordar"); s.add_argument("--top", type=int, default=15); s.add_argument("--assinatura", default="Mateus"); s.set_defaults(f=cmd_abordar)
     s = sub.add_parser("marcar"); s.add_argument("id", type=int); s.add_argument("etapa", choices=ETAPAS); s.add_argument("--obs", default=""); s.set_defaults(f=cmd_marcar)
+    s = sub.add_parser("anotar", help="anota algo no lead sem mudar a etapa"); s.add_argument("id", type=int); s.add_argument("texto"); s.set_defaults(f=cmd_anotar)
     s = sub.add_parser("hoje"); s.set_defaults(f=cmd_hoje)
     s = sub.add_parser("entrada", help="lead que chegou sozinho: registra e devolve a resposta pronta")
     s.add_argument("--nome", default=""); s.add_argument("--empresa", default=""); s.add_argument("--telefone", default="")
@@ -437,7 +452,11 @@ def main():
     s = sub.add_parser("crm"); s.add_argument("--todos", action="store_true", help="inclui leads ainda não contatados"); s.add_argument("--separador", default=";"); s.set_defaults(f=cmd_crm)
     s = sub.add_parser("instalar-scraper", help="baixa o executável do Google Maps para comercial/bin/")
     s.add_argument("--forcar", action="store_true", help="baixa de novo mesmo se já existir"); s.set_defaults(f=cmd_instalar_scraper)
-    a = ap.parse_args()
+    return ap
+
+
+def main():
+    a = parser().parse_args()
     from status import trabalhando
     with trabalhando("sdr", a.cmd):
         a.f(a)

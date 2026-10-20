@@ -169,6 +169,8 @@ function abrir(chave, dados = {}) {
 }
 
 async function desenhar(j, silencioso) {
+  const foco = document.activeElement;
+  if (silencioso && foco && j.corpo.contains(foco) && foco.matches('input, select, textarea')) return;
   const rolagem = j.corpo.scrollTop;
   if (!silencioso) j.corpo.innerHTML = '<div class="pagina"><p class="sub">Carregando…</p></div>';
   try { await j.def.render(j); } catch (e) { if (!silencioso) j.corpo.innerHTML = `<div class="pagina"><div class="vazio">Não consegui carregar: ${esc(e.message || e)}</div></div>`; }
@@ -293,7 +295,13 @@ function ligarJanela(j) {
   }));
 
   // botões dentro das janelas: data-acao roda uma ação da lista do servidor, data-abrir abre outra janela
+  // campos com data-mudar: o select avisa ao escolher, a caixa de busca a cada letra
+  const mudou = (e) => { const f = e.target.closest('[data-mudar]'); if (f && j.fns && j.fns[f.dataset.mudar] && (e.type === 'change') === (f.tagName === 'SELECT')) j.fns[f.dataset.mudar](f.dataset, f); };
+  el.addEventListener('change', mudou); el.addEventListener('input', mudou);
   el.addEventListener('click', (e) => {
+    const f = e.target.closest('[data-fn]');
+    if (f && f.dataset.fn === 'aba') { e.preventDefault(); j.aba = f.dataset.aba; return desenhar(j, true); }
+    if (f && j.fns && j.fns[f.dataset.fn]) { e.preventDefault(); return j.fns[f.dataset.fn](f.dataset, f); }
     const a = e.target.closest('[data-acao]'); if (a) return rodarAcao(a.dataset.acao);
     const o = e.target.closest('[data-abrir]'); if (o) abrir(o.dataset.abrir);
   });
@@ -488,6 +496,97 @@ window.addEventListener('message', (e) => {
   abrir('equipe');
 });
 
+// ------------------------------------------------------------------ operação sem o Claude: formulários nas janelas
+// Os formulários chamam as ferramentas do PC direto (servidor: /api/operar e /api/enviar → central/escritorio/operacao.py).
+// Nada é enviado a ninguém daqui: as mensagens aparecem prontas com o link do WhatsApp e você envia.
+const SEM_CLAUDE = '<p class="sem-claude">Funciona sem o Claude: tudo nesta janela roda direto no seu PC.</p>';
+const linkar = (t) => esc(t).replace(/https?:\/\/[^\s<]+/g, (u) => `<a href="${u}" target="_blank" rel="noopener">${u.includes('wa.me/') ? 'Abrir no WhatsApp' : u}</a>`);
+const hojeISO = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+const wa = (link, rotulo = 'Abrir no WhatsApp') => (link ? `<a class="bt wa" href="${esc(link)}" target="_blank" rel="noopener">${rotulo}</a>` : '<small class="neutro">sem WhatsApp: ligar</small>');
+const zap = (fone) => { const d = String(fone || '').replace(/\D/g, ''); return d ? `https://wa.me/${d.length <= 11 ? '55' + d : d}` : ''; };
+
+function redesenharTudo() {
+  if (document.activeElement && document.activeElement.matches('select')) document.activeElement.blur(); // a lista escolhida não segura a atualização
+  janelas.forEach((x) => { if (!x.def.estatico) desenhar(x, true); });
+}
+
+async function operar(op, dados) {
+  let r;
+  try { r = await api('/api/operar', { op, dados }); } catch { return { ok: false, saida: 'Servidor desligado: abra o Ciello.cmd de novo.' }; }
+  if (r.erro) r = { ok: false, saida: r.erro };
+  if (r.ok) redesenharTudo();
+  return r;
+}
+async function enviarArquivo(tipo, arquivo, opcoes = {}) {
+  const q = new URLSearchParams({ tipo, nome: arquivo.name, ...opcoes });
+  try {
+    const r = await fetch(`/api/enviar?${q}`, { method: 'POST', headers: { 'X-Ciello-Token': TOKEN, 'Content-Type': 'application/octet-stream' }, body: arquivo });
+    const d = await r.json(); if (d.ok) redesenharTudo(); return d.erro ? { ok: false, saida: d.erro } : d;
+  } catch { return { ok: false, saida: 'Servidor desligado: abra o Ciello.cmd de novo.' }; }
+}
+// um clique que roda direto (sem formulário), com aviso do resultado
+async function rapido(op, dados, titulo) {
+  const r = await operar(op, dados);
+  aviso({ titulo: r.ok ? titulo : 'Não deu certo', texto: r.saida, cor: r.ok ? '#1F8A4C' : '#C8442F' });
+  return r;
+}
+async function copiar(texto) {
+  try { await navigator.clipboard.writeText(texto); aviso({ titulo: 'Copiado', texto: 'Cole no WhatsApp.', cor: '#3A5582' }); } catch { /* sem permissão */ }
+}
+
+/* Diálogo dentro da janela. campos: [{ nome, rotulo, tipo: texto|numero|data|mes|escolha|area|sim|arquivo|marcar, opcoes, valor, dica, obrigatorio, meia }]
+   enviar(dados) devolve { ok, saida }; o resultado aparece no próprio diálogo (com os links clicáveis). */
+function dialogo(j, { titulo, texto = '', campos = [], botao = 'Salvar', enviar, extra = '' }) {
+  $('.dialogo', j.el)?.remove();
+  const el = document.createElement('div'); el.className = 'dialogo';
+  const campo = (c) => {
+    const id = `c-${c.nome}`; const v = c.valor ?? '';
+    const req = c.obrigatorio ? ' required' : '';
+    let input;
+    if (c.tipo === 'escolha') input = `<select name="${c.nome}" id="${id}"${req}>${(c.opcoes || []).map((o) => { const [val, rot] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(rot)}</option>`; }).join('')}</select>`;
+    else if (c.tipo === 'area') input = `<textarea name="${c.nome}" id="${id}" rows="3"${req}>${esc(v)}</textarea>`;
+    else if (c.tipo === 'sim') return `<label class="sim"><input type="checkbox" name="${c.nome}" ${v ? 'checked' : ''}> ${esc(c.rotulo)}</label>`;
+    else if (c.tipo === 'marcar') return `<fieldset class="marcar"><legend>${esc(c.rotulo)}</legend>${(c.opcoes || []).map((o) => `<label><input type="checkbox" name="${c.nome}" value="${esc(o)}" ${(c.valor || []).includes(o) ? 'checked' : ''}> ${esc(o)}</label>`).join('')}</fieldset>`;
+    else if (c.tipo === 'arquivo') input = `<input type="file" name="${c.nome}" id="${id}" accept="${esc(c.aceita || '')}"${req}>`;
+    else input = `<input name="${c.nome}" id="${id}" type="${{ data: 'date', mes: 'month' }[c.tipo] || 'text'}" ${c.tipo === 'numero' ? 'inputmode="decimal"' : ''} value="${esc(v)}" placeholder="${esc(c.exemplo || '')}"${req}>`;
+    return `<label class="campo ${c.meia ? 'meia' : ''}" for="${id}"><span>${esc(c.rotulo)}${c.obrigatorio ? ' *' : ''}</span>${input}${c.dica ? `<small>${esc(c.dica)}</small>` : ''}</label>`;
+  };
+  el.innerHTML = `<form class="caixa-dialogo" novalidate><header><b>${esc(titulo)}</b><button type="button" class="x" title="Fechar">${icone('fechar', 12)}</button></header>
+    <div class="corpo-dialogo">${texto ? `<p class="sub">${texto}</p>` : ''}<div class="campos">${campos.map(campo).join('')}</div>${extra}<div class="resultado" hidden></div></div>
+    <footer><button type="button" class="bt cancelar">Cancelar</button><button type="submit" class="bt pri">${esc(botao)}</button></footer></form>`;
+  j.el.appendChild(el);
+  const form = $('form', el); const res = $('.resultado', el);
+  const sair = () => el.remove();
+  $('.x', el).onclick = sair; $('.cancelar', el).onclick = sair;
+  el.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); sair(); } });
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const dados = {};
+    for (const c of campos) {
+      if (c.tipo === 'marcar') dados[c.nome] = [...form.querySelectorAll(`[name="${c.nome}"]:checked`)].map((x) => x.value);
+      else if (c.tipo === 'sim') dados[c.nome] = form.elements[c.nome].checked;
+      else if (c.tipo === 'arquivo') dados[c.nome] = form.elements[c.nome].files[0] || null;
+      else dados[c.nome] = form.elements[c.nome].value.trim();
+      if (c.obrigatorio && !dados[c.nome]) { res.hidden = false; res.className = 'resultado erro'; res.textContent = `Preencha: ${c.rotulo}`; form.elements[c.nome]?.focus?.(); return; }
+    }
+    const b = $('[type=submit]', el); b.disabled = true; b.textContent = 'Salvando…';
+    const r = await enviar(dados, form);
+    b.disabled = false; b.textContent = botao;
+    res.hidden = false; res.className = `resultado ${r.ok ? 'ok' : 'erro'}`;
+    res.innerHTML = `<pre>${linkar(r.saida || (r.ok ? 'Pronto.' : 'Não deu certo.'))}</pre>`;
+    if (r.ok) { $('.cancelar', el).textContent = 'Fechar'; b.style.display = 'none'; }
+  };
+  setTimeout(() => form.querySelector('input:not([type=checkbox]),select,textarea')?.focus(), 30);
+  return el;
+}
+const formOp = (op, extra = {}) => (dados) => operar(op, { ...dados, ...extra });
+
+// abas dentro de uma janela (a escolhida fica guardada na janela entre as atualizações)
+function abas(j, lista) {
+  j.aba = lista.some(([k]) => k === j.aba) ? j.aba : lista[0][0];
+  return `<nav class="abas">${lista.map(([k, r, n]) => `<button class="${k === j.aba ? 'on' : ''}" data-fn="aba" data-aba="${k}">${esc(r)}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</nav>`;
+}
+
 // ------------------------------------------------------------------ apps: bom dia
 async function renderBriefing(j) {
   const d = await api('/api/app/briefing');
@@ -510,41 +609,189 @@ function barras(itens, fmt = brlCurto) {
 }
 async function renderFinanceiro(j) {
   const d = await api('/api/app/financeiro'); const s = d.situacao;
-  const acoes = `<div class="acoes"><button class="bt pri" data-acao="fin_faturar">Faturas do mês</button><button class="bt" data-acao="fin_cobrar">Cobranças do dia</button><button class="bt" data-acao="posvenda">Pós-venda</button><button class="bt" data-acao="fin_resumo">Resumo completo</button></div>`;
+  const nomeMes = (m) => ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][+m.slice(5) - 1];
+  const kpi = (r, v, e = '', c = 'neutro') => `<div class="kpi"><small>${r}</small><strong>${v}</strong><em class="${c}">${e}</em></div>`;
+  const ativos = d.clientes.filter((c) => c.status === 'ativo');
+  const porId = Object.fromEntries(d.clientes.map((c) => [c.id, c]));
+  const clienteOpcoes = (lista) => lista.map((c) => [c.id, `#${c.id} · ${c.empresa}`]);
+  const cats = ['', ...d.categorias];
+
+  // ---- formulários
+  const camposCliente = (c = {}) => [
+    { nome: 'empresa', rotulo: 'Empresa', valor: c.empresa, obrigatorio: !c.id, exemplo: 'Imobiliária Exemplo' },
+    { nome: 'contato', rotulo: 'Contato (nome)', valor: c.contato, meia: true }, { nome: 'whatsapp', rotulo: 'WhatsApp', valor: c.whatsapp, exemplo: '49 99999-8888', meia: true },
+    { nome: 'valor', rotulo: 'Mensalidade (R$)', tipo: 'numero', valor: c.valor_mensal ? String(+c.valor_mensal).replace('.', ',') : '', obrigatorio: !c.id, exemplo: '149,90', meia: true },
+    { nome: 'dia', rotulo: 'Dia do vencimento', valor: c.dia_vencimento || (c.id ? '' : '10'), meia: true },
+    { nome: 'plano', rotulo: 'Plano', valor: c.plano, meia: true },
+    ...(c.id ? [{ nome: 'obs', rotulo: 'Observação', tipo: 'area', valor: c.obs }] : [{ nome: 'inicio', rotulo: 'Início', tipo: 'data', valor: hojeISO(), meia: true, dica: 'A 1ª fatura sai no 1º vencimento depois do início.' }]),
+  ];
+  j.fns = {
+    novoCliente: () => dialogo(j, { titulo: 'Novo cliente', texto: 'Assinante do CIELLO CRM. Depois gere as faturas do mês.', campos: camposCliente(), botao: 'Cadastrar', enviar: formOp('fin_cliente') }),
+    editar: ({ id }) => dialogo(j, { titulo: `Editar ${porId[id].empresa}`, campos: camposCliente(porId[id]), enviar: formOp('fin_editar', { id }) }),
+    cancelar: ({ id }) => dialogo(j, { titulo: `Cancelar ${porId[id].empresa}`, texto: 'O cliente sai do MRR e não recebe mais fatura. Dá para reativar depois.',
+      campos: [{ nome: 'motivo', rotulo: 'Motivo', tipo: 'area', exemplo: 'preço, não usou, fechou a empresa…' }, { nome: 'data', rotulo: 'Data', tipo: 'data', valor: hojeISO() }], botao: 'Cancelar assinatura', enviar: formOp('fin_cancelar', { id }) }),
+    reativar: ({ id }) => rapido('fin_editar', { id, reativar: true }, 'Cliente reativado'),
+    nps: ({ id }) => dialogo(j, { titulo: 'Registrar NPS', texto: 'De 0 a 10, quanto o cliente recomendaria o CRM. 9–10 recebe o pedido de avaliação no Google; até 6 é risco de cancelamento.',
+      campos: [{ nome: 'id', rotulo: 'Cliente', tipo: 'escolha', opcoes: clienteOpcoes(ativos), valor: id }, { nome: 'nota', rotulo: 'Nota', tipo: 'escolha', opcoes: [...Array(11).keys()].reverse().map(String), valor: '10' }],
+      enviar: formOp('fin_nps') }),
+    pagamento: ({ id }) => dialogo(j, { titulo: 'Registrar pagamento', texto: d.faturas_abertas.length ? 'Fatura recebida por Pix, boleto ou dinheiro.' : 'Nenhuma fatura em aberto. Gere as faturas do mês antes.',
+      campos: [{ nome: 'id', rotulo: 'Fatura', tipo: 'escolha', opcoes: d.faturas_abertas.map((f) => [f.id, `#${f.id} · ${f.empresa} · ${f.competencia} · ${brl(f.valor)}`]), valor: id, obrigatorio: true }, { nome: 'data', rotulo: 'Pago em', tipo: 'data', valor: hojeISO() }],
+      botao: 'Dar baixa', enviar: formOp('fin_pago') }),
+    recebi: ({ id }) => rapido('fin_pago', { id }, 'Pagamento registrado'),
+    lancar: () => dialogo(j, { titulo: 'Lançar receita ou despesa', texto: 'Para o que não vem no extrato do banco (Pix em outra conta, dinheiro). Um crédito que bate com uma fatura em aberto já dá baixa nela.',
+      campos: [{ nome: 'tipo', rotulo: 'Tipo', tipo: 'escolha', opcoes: [['despesa', 'Despesa (saída)'], ['receita', 'Receita (entrada)']], meia: true }, { nome: 'valor', rotulo: 'Valor (R$)', tipo: 'numero', obrigatorio: true, exemplo: '59,90', meia: true },
+        { nome: 'descricao', rotulo: 'Descrição', obrigatorio: true, exemplo: 'Canva Pro, Pix do cliente X…' }, { nome: 'categoria', rotulo: 'Categoria', tipo: 'escolha', opcoes: cats.map((c) => [c, c || 'automática (pelas regras)']), meia: true },
+        { nome: 'data', rotulo: 'Data', tipo: 'data', valor: hojeISO(), meia: true }],
+      botao: 'Lançar', enviar: ({ tipo, valor, ...r }) => operar('fin_lancar', { ...r, valor: (tipo === 'despesa' ? '-' : '') + valor.replace(/^-/, '') }) }),
+    extrato: () => dialogo(j, { titulo: 'Importar extrato do banco', texto: 'Exporte o extrato no app ou site do banco em <b>OFX</b> (melhor) ou CSV. O Ciello classifica as despesas, dá baixa nas faturas pagas e pega o saldo. Pode importar o mesmo período de novo: nada duplica.',
+      campos: [{ nome: 'arquivo', rotulo: 'Arquivo do extrato', tipo: 'arquivo', aceita: '.ofx,.csv', obrigatorio: true }], botao: 'Importar', enviar: ({ arquivo }) => enviarArquivo('extrato', arquivo) }),
+    faturar: () => rapido('fin_faturar', { mes: d.mes }, `Faturas de ${nomeMes(d.mes)}`),
+    caixa: () => dialogo(j, { titulo: 'Caixa e configurações', texto: 'O saldo do banco é o ponto de partida do caixa (o extrato OFX já atualiza sozinho).',
+      campos: [{ nome: 'saldo', rotulo: 'Saldo do banco hoje (R$)', tipo: 'numero', valor: d.config.saldo_inicial ? String(d.config.saldo_inicial).replace('.', ',') : '', meia: true },
+        { nome: 'data', rotulo: 'Data do saldo', tipo: 'data', valor: d.config.data_saldo || hojeISO(), meia: true },
+        { nome: 'alerta', rotulo: 'Avisar se o caixa previsto ficar abaixo de (R$)', tipo: 'numero', valor: String(d.config.alerta_saldo).replace('.', ',') },
+        { nome: 'link_avaliacao', rotulo: 'Link de avaliação no Google', valor: d.config.link_avaliacao, exemplo: 'https://g.page/r/…/review' },
+        { nome: 'assinatura', rotulo: 'Assinatura das mensagens', valor: d.config.assinatura, meia: true }],
+      enviar: (x) => operar('fin_config', { ...x, saldo: x.saldo && x.saldo !== String(d.config.saldo_inicial).replace('.', ',') ? x.saldo : '', data: x.saldo ? x.data : '' }) }),
+    enviado: ({ tipo, id, etapa }) => rapido('fin_enviado', { tipo, id, etapa }, 'Registrado como enviado'),
+    copiar: ({ i, lista }) => copiar(d[lista][+i].mensagem),
+    categoria: ({ id }, el) => el.value && rapido('fin_categoria', { id, categoria: el.value }, 'Lançamento classificado'),
+    reclassificar: () => rapido('fin_reclassificar', {}, 'Regras aplicadas'),
+  };
+
+  const barra = `<div class="acoes topo"><button class="bt pri" data-fn="novoCliente">+ Cliente</button><button class="bt" data-fn="pagamento">Registrar pagamento</button>
+    <button class="bt" data-fn="lancar">Lançar receita/despesa</button><button class="bt" data-fn="extrato">Importar extrato</button>
+    <button class="bt" data-fn="faturar" title="Cria as faturas de ${nomeMes(d.mes)} para os clientes ativos (não duplica)">Gerar faturas de ${nomeMes(d.mes)}</button><button class="bt" data-fn="caixa">Caixa</button></div>`;
   if (!s.tem_dados) {
-    j.corpo.innerHTML = `<div class="pagina"><h1>Financeiro</h1><p class="sub">Assinaturas, cobrança, caixa e crescimento.</p><div class="vazio">Sem dados ainda. Cadastre o 1º cliente:<br><br><code>python central/financeiro.py cliente --empresa "Nome" --valor 149 --dia 10</code><br><br>e importe o extrato do banco em OFX: <code>financeiro.py importar extrato.ofx</code></div>${acoes}</div>`;
+    j.corpo.innerHTML = `<div class="pagina"><h1>Financeiro</h1><p class="sub">Assinaturas, cobrança, caixa e crescimento.</p>${SEM_CLAUDE}${barra}
+    <div class="passos"><h2>Para começar</h2><ol>
+      <li><button class="bt pri" data-fn="novoCliente">Cadastrar o 1º cliente</button> nome, mensalidade e dia do vencimento.</li>
+      <li><button class="bt" data-fn="caixa">Informar o saldo do banco</button> é o ponto de partida do caixa.</li>
+      <li><button class="bt" data-fn="extrato">Importar o extrato</button> (OFX ou CSV do banco): classifica as despesas e dá baixa nas faturas.</li></ol></div></div>`;
     return;
   }
-  const atual = d.serie[d.serie.length - 1]; const mes = (m) => ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][+m.slice(5) - 1];
-  const kpi = (r, v, e = '', c = 'neutro') => `<div class="kpi"><small>${r}</small><strong>${v}</strong><em class="${c}">${e}</em></div>`;
+  const atual = d.serie[d.serie.length - 1];
   const atraso = s.atrasadas.reduce((t, f) => t + f.valor, 0);
-  j.corpo.innerHTML = `<div class="pagina"><h1>Financeiro</h1><p class="sub">${num(s.clientes_ativos)} clientes ativos · despesa média ${brl(s.despesa_media)}/mês</p>
-  <div class="kpis">${kpi('MRR', brl(s.mrr), `ARPA ${brl(atual.arpa)}`)}${kpi('Caixa hoje', brl(s.caixa), `30 dias: ${brl(s.previsao['30'])}`, s.previsao['30'] >= s.caixa ? 'bom' : 'ruim')}
-  ${kpi('Atrasadas', s.atrasadas.length, s.atrasadas.length ? brl(atraso) : 'tudo em dia', s.atrasadas.length ? 'ruim' : 'bom')}${kpi('CAC', atual.cac != null ? brl(atual.cac) : '—', atual.payback != null ? `paga em ${atual.payback.toFixed(1).replace('.', ',')} meses` : 'sem cliente de anúncio no mês')}</div>
-  <div class="grade2" style="margin-top:12px"><div class="cartao"><h2 style="margin-top:0">MRR · últimos 6 meses</h2>${barras(d.serie.map((m) => ({ r: mes(m.mes), v: m.mrr })))}</div>
-  <div class="cartao"><h2 style="margin-top:0">Previsão de caixa</h2>${barras([{ r: 'hoje', v: s.caixa, cor: 'linear-gradient(180deg,#5E92E6,#2F5BA8)' }, ...['30', '60', '90'].map((k) => ({ r: `${k} dias`, v: s.previsao[k], cor: s.previsao[k] < s.caixa ? 'linear-gradient(180deg,#E9826C,#C8442F)' : undefined }))])}</div></div>
-  ${s.alertas.length ? `<h2>Alertas</h2><div class="lista">${s.alertas.map((a) => `<div class="linha-item" style="border-left:4px solid var(--vermelho)">${esc(a)}</div>`).join('')}</div>` : ''}
-  ${s.atrasadas.length ? `<h2>Faturas atrasadas</h2><div class="lista">${s.atrasadas.map((f) => `<div class="linha-item"><div class="cresce"><b>${esc(f.empresa)}</b><small>fatura #${esc(f.id)} · ${f.dias} dias de atraso</small></div><b>${brl(f.valor)}</b></div>`).join('')}</div>` : ''}
-  <h2>Clientes</h2><table class="tab"><tr><th>Empresa</th><th>Mensalidade</th><th>Desde</th><th>NPS</th><th>Situação</th></tr>${d.clientes.map((c) => `<tr><td>${esc(c.empresa)}</td><td>${brl(+c.valor_mensal)}</td><td>${ddmm(c.inicio)}</td><td>${esc(c.nps || '—')}</td><td>${c.status === 'ativo' ? '<span class="chip pronto">ativo</span>' : '<span class="chip erro">cancelado</span>'}</td></tr>`).join('')}</table>
-  ${Object.keys(atual.por_categoria).length ? `<h2>Despesas do mês por categoria</h2>${barras(Object.entries(atual.por_categoria).slice(0, 6).map(([r, v]) => ({ r, v, cor: 'linear-gradient(180deg,#8FA3C7,#3A5582)' })))}` : ''}
-  ${acoes}</div>`;
+  const fila = d.cobrancas.length + d.posvenda.length;
+  const msgCartao = (x, i, lista, titulo, botoes) => `<div class="cartao msg"><div class="cab"><b>${titulo}</b></div><pre class="texto-msg">${esc(x.mensagem)}</pre>
+    <div class="acoes-linha">${wa(x.link)}<button class="bt" data-fn="copiar" data-lista="${lista}" data-i="${i}">Copiar</button>${botoes}</div></div>`;
+
+  let corpo = '';
+  if (j.aba === 'clientes') {
+    corpo = `<table class="tab"><tr><th>Empresa</th><th>Contato</th><th>Mensalidade</th><th>Vence</th><th>Desde</th><th>NPS</th><th>Situação</th><th></th></tr>${d.clientes.map((c) => `<tr>
+      <td><b>${esc(c.empresa)}</b>${c.obs ? `<br><small class="neutro">${esc(c.obs)}</small>` : ''}</td><td>${esc(c.contato)}${c.whatsapp ? `<br><a href="${esc(zap(c.whatsapp))}" target="_blank" rel="noopener"><small>${esc(c.whatsapp)}</small></a>` : ''}</td>
+      <td>${brl(+c.valor_mensal)}</td><td>dia ${esc(c.dia_vencimento)}</td><td>${ddmm(c.inicio)}</td><td>${esc(c.nps || '—')}</td>
+      <td>${c.status === 'ativo' ? '<span class="chip pronto">ativo</span>' : `<span class="chip erro" title="${esc(c.motivo)}">cancelado</span>`}</td>
+      <td class="acoes-linha"><button class="bt mini" data-fn="editar" data-id="${c.id}">Editar</button>${c.status === 'ativo' ? `<button class="bt mini" data-fn="nps" data-id="${c.id}">NPS</button><button class="bt mini" data-fn="cancelar" data-id="${c.id}">Cancelar</button>` : `<button class="bt mini" data-fn="reativar" data-id="${c.id}">Reativar</button>`}</td></tr>`).join('')}</table>`;
+  } else if (j.aba === 'cobranca') {
+    corpo = `<p class="sub">Mensagens prontas. Abra no WhatsApp, revise, envie e marque aqui. Nada é enviado sozinho.</p>
+    <h2>Cobranças (${d.cobrancas.length})</h2>${d.cobrancas.map((x, i) => msgCartao(x, i, 'cobrancas', `${esc(x.empresa)} · ${brl(x.valor)} · ${x.dias} dias de atraso <span class="chip esperando">D+${x.etapa}</span>`,
+      `<button class="bt" data-fn="enviado" data-tipo="cobranca" data-id="${x.fatura_id}" data-etapa="${x.etapa}">Enviei</button><button class="bt pri" data-fn="recebi" data-id="${x.fatura_id}">Recebi</button>`)).join('') || '<p class="sub">Nenhuma cobrança para hoje.</p>'}
+    <h2>Pós-venda (${d.posvenda.length})</h2>${d.posvenda.map((x, i) => msgCartao(x, i, 'posvenda', `${esc(x.empresa)} <span class="chip pronto">${esc(x.rotulo)}</span>`,
+      `<button class="bt" data-fn="enviado" data-tipo="posvenda" data-id="${x.cliente_id}" data-etapa="${x.etapa}">Enviei</button>${x.etapa === '30' ? `<button class="bt" data-fn="nps" data-id="${x.cliente_id}">Registrar NPS</button>` : ''}`)).join('') || '<p class="sub">Nenhum pós-venda para hoje.</p>'}`;
+  } else if (j.aba === 'lancamentos') {
+    corpo = `${d.a_classificar.length ? `<h2>A classificar (${d.a_classificar.length})</h2><div class="lista">${d.a_classificar.map((l) => `<div class="linha-item"><div class="cresce"><b>${esc(l.descricao)}</b><small>${ddmm(l.data)} · ${esc(l.origem)}</small></div><b class="${+l.valor < 0 ? 'ruim' : 'bom'}">${brl(+l.valor)}</b>
+      <select data-mudar="categoria" data-id="${l.id}"><option value="">categoria…</option>${d.categorias.map((c) => `<option>${esc(c)}</option>`).join('')}</select></div>`).join('')}</div>
+      <div class="acoes"><button class="bt" data-fn="reclassificar" title="Aplica de novo as regras de financeiro/categorias.json">Reclassificar pelas regras</button></div>` : ''}
+    <h2>Últimos lançamentos</h2><table class="tab"><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Valor</th></tr>${d.lancamentos.map((l) => `<tr><td>${ddmm(l.data)}</td><td>${esc(l.descricao)}${l.fatura_id ? ` <small class="neutro">fatura #${esc(l.fatura_id)}</small>` : ''}</td><td>${esc(l.categoria)}</td><td class="${+l.valor < 0 ? 'ruim' : 'bom'}">${brl(+l.valor)}</td></tr>`).join('') || '<tr><td colspan="4">Nenhum lançamento: importe o extrato ou lance à mão.</td></tr>'}</table>`;
+  } else {
+    corpo = `<div class="kpis">${kpi('MRR', brl(s.mrr), `${num(s.clientes_ativos)} clientes · ARPA ${brl(atual.arpa)}`)}${kpi('Caixa hoje', brl(s.caixa), `30 dias: ${brl(s.previsao['30'])}`, s.previsao['30'] >= s.caixa ? 'bom' : 'ruim')}
+    ${kpi('Atrasadas', s.atrasadas.length, s.atrasadas.length ? brl(atraso) : 'tudo em dia', s.atrasadas.length ? 'ruim' : 'bom')}${kpi('CAC', atual.cac != null ? brl(atual.cac) : '—', atual.payback != null ? `paga em ${atual.payback.toFixed(1).replace('.', ',')} meses` : 'sem cliente de anúncio no mês')}</div>
+    ${!d.faturado_no_mes && ativos.length ? `<div class="faixa">As faturas de ${nomeMes(d.mes)} ainda não foram geradas. <button class="bt pri mini" data-fn="faturar">Gerar agora</button></div>` : ''}
+    <div class="grade2" style="margin-top:12px"><div class="cartao"><h2 style="margin-top:0">MRR · últimos 6 meses</h2>${barras(d.serie.map((m) => ({ r: nomeMes(m.mes), v: m.mrr })))}</div>
+    <div class="cartao"><h2 style="margin-top:0">Previsão de caixa</h2>${barras([{ r: 'hoje', v: s.caixa, cor: 'linear-gradient(180deg,#5E92E6,#2F5BA8)' }, ...['30', '60', '90'].map((k) => ({ r: `${k} dias`, v: s.previsao[k], cor: s.previsao[k] < s.caixa ? 'linear-gradient(180deg,#E9826C,#C8442F)' : undefined }))])}</div></div>
+    ${s.alertas.length ? `<h2>Alertas</h2><div class="lista">${s.alertas.map((a) => `<div class="linha-item" style="border-left:4px solid var(--vermelho)">${esc(a)}</div>`).join('')}</div>` : ''}
+    <h2>Faturas em aberto (${d.faturas_abertas.length})</h2><div class="lista">${d.faturas_abertas.map((f) => `<div class="linha-item"><div class="cresce"><b>${esc(f.empresa)}</b><small>fatura #${esc(f.id)} · ${esc(f.competencia)} · vence ${ddmm(f.vencimento)}${f.dias > 0 ? ` · <span class="ruim">${f.dias} dias de atraso</span>` : ''}</small></div><b>${brl(f.valor)}</b><button class="bt mini pri" data-fn="recebi" data-id="${f.id}">Recebi</button></div>`).join('') || '<p class="sub">Tudo pago.</p>'}</div>
+    ${Object.keys(atual.por_categoria).length ? `<h2>Despesas do mês por categoria</h2>${barras(Object.entries(atual.por_categoria).slice(0, 6).map(([r, v]) => ({ r, v, cor: 'linear-gradient(180deg,#8FA3C7,#3A5582)' })))}` : ''}
+    <div class="acoes"><button class="bt" data-acao="fin_resumo">Resumo completo</button><button class="bt" data-abrir="agente:financeiro">Agente Financeiro</button></div>`;
+  }
+  j.corpo.innerHTML = `<div class="pagina"><h1>Financeiro</h1><p class="sub">${num(s.clientes_ativos)} clientes ativos · despesa média ${brl(s.despesa_media)}/mês</p>${SEM_CLAUDE}${barra}
+  ${abas(j, [['geral', 'Visão geral'], ['clientes', 'Clientes', d.clientes.length], ['cobranca', 'Cobrança e pós-venda', fila], ['lancamentos', 'Lançamentos', d.a_classificar.length || '']])}${corpo}</div>`;
 }
 
 // ------------------------------------------------------------------ apps: comercial
+const ROTULO_ETAPA = { novo: 'novo', contatado: 'contatado', respondeu: 'respondeu', demo: 'demo', proposta: 'proposta', cliente: 'cliente', perdido: 'perdido', frio: 'frio', nao_contatar: 'não contatar' };
+const ORIGENS = [['instagram', 'Instagram (DM)'], ['anuncio', 'Anúncio'], ['site', 'Site'], ['indicacao', 'Indicação'], ['outro', 'Outro']];
 async function renderComercial(j) {
   const d = await api('/api/app/comercial');
-  const acoes = `<div class="acoes"><button class="bt pri" data-acao="sdr_hoje">Follow-ups de hoje</button><button class="bt" data-acao="sdr_abordar">Abordar os 15 melhores</button><button class="bt" data-acao="sdr_crm">Exportar para o CRM</button><button class="bt" data-abrir="agente:sdr">SDR</button><button class="bt" data-abrir="agente:closer">Closer</button></div>`;
-  if (!d.funil) {
-    j.corpo.innerHTML = `<div class="pagina"><h1>Comercial</h1><p class="sub">Prospecção, follow-up e fechamento do CIELLO CRM.</p><div class="vazio">Sem leads ainda. No Claude Code: <code>/comercial</code>, ou <code>python central/sdr.py consultas</code> → <code>buscar</code> → <code>qualificar</code>.</div>${acoes}</div>`;
-    return;
+  const porId = Object.fromEntries(d.leads.map((l) => [l.id, l]));
+  const etapaSel = (l) => `<select class="etapa" data-mudar="etapa" data-id="${l.id}" data-atual="${esc(l.etapa)}" title="Mudar a etapa">${d.etapas.map((e) => `<option value="${e}" ${e === l.etapa ? 'selected' : ''}>${esc(ROTULO_ETAPA[e] || e)}</option>`).join('')}</select>`;
+  const marcar = (id, etapa, titulo, obs = '') => rapido('sdr_marcar', { id, etapa, obs }, titulo);
+  j.filtro = j.filtro || { texto: '', etapa: '' };
+  j.fns = {
+    entrada: () => dialogo(j, { titulo: 'Lead que chegou sozinho', texto: 'Alguém chamou pela DM, anúncio, site ou indicação? Registre aqui e responda na hora: a mensagem pronta aparece embaixo, com o link do WhatsApp.',
+      campos: [{ nome: 'nome', rotulo: 'Nome da pessoa', meia: true }, { nome: 'empresa', rotulo: 'Empresa', meia: true }, { nome: 'telefone', rotulo: 'WhatsApp', exemplo: '49 99999-8888', meia: true },
+        { nome: 'origem', rotulo: 'Veio por', tipo: 'escolha', opcoes: ORIGENS, meia: true }, { nome: 'segmento', rotulo: 'Segmento', tipo: 'escolha', opcoes: [['', '—'], ...d.segmentos], meia: true },
+        { nome: 'cidade', rotulo: 'Cidade', meia: true }, { nome: 'mensagem', rotulo: 'O que a pessoa disse', tipo: 'area' }],
+      botao: 'Registrar', enviar: formOp('sdr_entrada') }),
+    anotar: ({ id }) => dialogo(j, { titulo: `Anotar · ${porId[id].empresa}`, texto: esc(porId[id].obs || ''), campos: [{ nome: 'texto', rotulo: 'Anotação', tipo: 'area', obrigatorio: true, exemplo: 'liguei, pediu para retornar sexta…' }], enviar: formOp('sdr_anotar', { id }) }),
+    etapa: ({ id, atual }, el) => {
+      const nova = el.value;
+      if (nova === 'cliente') {
+        const l = porId[id];
+        return dialogo(j, { titulo: `${l.empresa} fechou!`, texto: 'Cadastre como cliente no Financeiro (a empresa e o WhatsApp vêm do lead). A etapa do lead vira "cliente".',
+          campos: [{ nome: 'valor', rotulo: 'Mensalidade (R$)', tipo: 'numero', obrigatorio: true, exemplo: '149,90', meia: true }, { nome: 'dia', rotulo: 'Dia do vencimento', valor: '10', meia: true }, { nome: 'contato', rotulo: 'Contato (nome)' }],
+          botao: 'Cadastrar cliente', enviar: async (x) => { const r = await operar('fin_cliente', { ...x, lead: id }); if (!r.ok) return r; const m = await operar('sdr_marcar', { id, etapa: 'cliente' }); return { ok: m.ok, saida: `${r.saida}\n${m.saida}` }; } });
+      }
+      if (nova === 'nao_contatar' && !confirm(`${porId[id].empresa} vai para a lista de não contatar e nunca mais recebe mensagem. Confirma?`)) { el.value = atual; return null; }
+      return marcar(id, nova, `Etapa: ${ROTULO_ETAPA[nova]}`);
+    },
+    enviei: ({ id }) => marcar(id, 'contatado', 'Contato registrado (próximo follow-up agendado)'),
+    respondeu: ({ id }) => marcar(id, 'respondeu', 'Respondeu: vai para os quentes'),
+    perdido: ({ id }) => marcar(id, 'perdido', 'Marcado como perdido'),
+    copiar: ({ i, lista }) => copiar(d[lista][+i].mensagem),
+    filtrar: (_, el) => { j.filtro[el.name] = el.value; pintarLeads(); },
+    consultas: () => dialogo(j, { titulo: 'O que buscar no Google Maps', texto: 'Escolha os segmentos e as cidades. Depois clique em "Buscar no Google Maps" (leva alguns minutos e roda no seu PC).',
+      campos: [{ nome: 'segmentos', rotulo: 'Segmentos', tipo: 'marcar', opcoes: d.segmentos, valor: d.segmentos.slice(0, 3) }, { nome: 'cidades', rotulo: 'Cidades', tipo: 'marcar', opcoes: d.cidades, valor: d.cidades.slice(0, 1) }],
+      botao: 'Gerar as buscas', enviar: formOp('sdr_consultas') }),
+    planilha: () => dialogo(j, { titulo: 'Importar planilha de leads', texto: 'Qualquer CSV com as colunas <code>title</code>, <code>phone</code>, <code>website</code>, <code>review_count</code>, <code>review_rating</code> (o formato do buscador do Google Maps). Cada empresa ganha uma nota de 0 a 100; repetidas e da lista de não contatar ficam de fora.',
+      campos: [{ nome: 'arquivo', rotulo: 'Planilha (.csv)', tipo: 'arquivo', aceita: '.csv,.json', obrigatorio: true }, { nome: 'segmento', rotulo: 'Segmento (se a planilha não diz)', tipo: 'escolha', opcoes: [['', '—'], ...d.segmentos], meia: true },
+        { nome: 'minimo', rotulo: 'Nota mínima', valor: '35', meia: true }],
+      botao: 'Importar', enviar: ({ arquivo, ...o }) => enviarArquivo('leads', arquivo, o) }),
+    crm: () => dialogo(j, { titulo: 'Exportar para o CIELLO CRM', texto: 'Gera a planilha para importar no CRM (em comercial/, fora do git).', campos: [{ nome: 'todos', rotulo: 'Incluir os leads ainda não contatados', tipo: 'sim' }], botao: 'Exportar', enviar: formOp('sdr_crm') }),
+  };
+  const barra = `<div class="acoes topo"><button class="bt pri" data-fn="entrada">+ Lead que chegou</button><button class="bt" data-fn="planilha">Importar planilha</button><button class="bt" data-fn="crm">Exportar para o CRM</button><button class="bt" data-abrir="agente:sdr">SDR</button><button class="bt" data-abrir="agente:closer">Closer</button></div>`;
+  const msgCartao = (l, i, lista, extra) => `<div class="cartao msg"><div class="cab"><b>${esc(l.empresa)}</b> <small class="neutro">${esc([l.segmento, l.cidade, l.pontos && `${l.pontos} pts`, extra].filter(Boolean).join(' · '))}</small>
+    ${l.maps ? `<a href="${esc(l.maps)}" target="_blank" rel="noopener"><small>Maps</small></a>` : ''}</div>${l.dor_citada ? `<blockquote>“…${esc(l.dor_citada)}…”</blockquote>` : ''}
+    <pre class="texto-msg">${esc(l.mensagem)}</pre><div class="acoes-linha">${l.link ? wa(l.link) : `<small class="neutro">fixo: ligar ${esc(l.telefone)}</small>`}<button class="bt" data-fn="copiar" data-lista="${lista}" data-i="${i}">Copiar</button>
+    <button class="bt pri" data-fn="enviei" data-id="${l.id}">Enviei</button>${lista === 'followups' ? `<button class="bt" data-fn="respondeu" data-id="${l.id}">Respondeu</button>` : ''}<button class="bt" data-fn="perdido" data-id="${l.id}" title="Não tem interesse">Perdido</button></div></div>`;
+
+  function linhasLeads() {
+    const t = j.filtro.texto.toLowerCase();
+    const lista = d.leads.filter((l) => (!j.filtro.etapa || l.etapa === j.filtro.etapa) && (!t || [l.empresa, l.segmento, l.cidade, l.telefone, l.obs].join(' ').toLowerCase().includes(t)));
+    return `<p class="sub">${lista.length} de ${d.leads.length} leads${lista.length > 300 ? ' (mostrando 300)' : ''}</p><table class="tab"><tr><th>#</th><th>Empresa</th><th>Pts</th><th>Etapa</th><th>Próximo contato</th><th></th></tr>${lista.slice(0, 300).map((l) => `<tr>
+      <td>${esc(l.id)}</td><td><b>${esc(l.empresa)}</b><br><small class="neutro">${esc([l.segmento, l.cidade, l.obs].filter(Boolean).join(' · '))}</small></td><td>${esc(l.pontos)}</td><td>${etapaSel(l)}</td>
+      <td>${l.proximo_contato ? `<span class="${l.proximo_contato <= d.hoje ? 'ruim' : ''}">${ddmm(l.proximo_contato)}</span>` : '—'}</td>
+      <td class="acoes-linha">${l.telefone ? `<a class="bt mini" href="${esc(zap(l.telefone))}" target="_blank" rel="noopener" title="${esc(l.telefone)}">WhatsApp</a>` : ''}<button class="bt mini" data-fn="anotar" data-id="${l.id}">Anotar</button></td></tr>`).join('')}</table>`;
   }
-  const topo = Math.max(1, d.funil.etapas[0].n);
-  const lead = (l, extra = '') => `<div class="linha-item"><div class="cresce"><b>${esc(l.empresa)}</b><small>${esc([l.segmento, l.cidade, l.obs || l.dor_citada].filter(Boolean).join(' · '))}</small></div>${extra}</div>`;
-  j.corpo.innerHTML = `<div class="pagina"><h1>Comercial</h1><p class="sub">${num(d.funil.total)} leads · ${num(d.funil.perdidos)} perdidos ou frios</p>
-  <div class="grade2"><div class="cartao"><h2 style="margin-top:0">Funil</h2><div class="funil">${d.funil.etapas.map((e, i) => `<div><span>${esc(e.etapa)}</span><i style="width:${Math.max(2, 100 * e.n / topo)}%"></i><b>${e.n}</b><small>${i && d.funil.etapas[i - 1].n ? Math.round(100 * e.n / d.funil.etapas[i - 1].n) + '%' : ''}</small></div>`).join('')}</div></div>
-  <div class="cartao"><h2 style="margin-top:0">Quentes · responder hoje</h2><div class="lista">${d.quentes.map((l) => lead(l, `<span class="chip esperando">${esc(l.etapa)}</span>`)).join('') || '<p class="sub">Ninguém esperando resposta.</p>'}</div></div></div>
-  <h2>Follow-ups de hoje (${d.followups.length})</h2><div class="lista">${d.followups.map((l) => lead(l, `<small>último contato ${ddmm(l.ultimo_contato)}</small>`)).join('') || '<p class="sub">Nenhum follow-up para hoje.</p>'}</div>
-  <h2>Melhores leads novos</h2><div class="lista">${d.novos.map((l) => lead(l, `<span class="chip pronto">${esc(l.pontos)} pts</span>`)).join('') || '<p class="sub">Fila vazia.</p>'}</div>${acoes}</div>`;
+  function pintarLeads() { const c = $('.lista-leads', j.corpo); if (c) c.innerHTML = linhasLeads(); }
+
+  let corpo;
+  if (j.aba === 'leads') {
+    corpo = `<div class="filtros"><input name="texto" placeholder="Buscar empresa, cidade, telefone…" value="${esc(j.filtro.texto)}" data-mudar="filtrar">
+      <select name="etapa" data-mudar="filtrar"><option value="">todas as etapas</option>${d.etapas.map((e) => `<option value="${e}" ${e === j.filtro.etapa ? 'selected' : ''}>${esc(ROTULO_ETAPA[e])}</option>`).join('')}</select></div><div class="lista-leads">${linhasLeads()}</div>`;
+  } else if (j.aba === 'buscar') {
+    corpo = `<p class="sub">Prospecção ativa sem o Claude: o buscador gratuito do Google Maps roda no seu PC, e cada empresa ganha uma nota de 0 a 100.</p>
+    <div class="passos"><ol>
+      <li><button class="bt ${d.tem_consultas ? '' : 'pri'}" data-fn="consultas">Escolher segmentos e cidades</button> ${d.tem_consultas ? '<span class="chip pronto">buscas prontas</span>' : ''}</li>
+      <li><button class="bt ${d.tem_consultas && !d.tem_resultado ? 'pri' : ''}" data-acao="sdr_buscar" ${d.tem_consultas && d.tem_buscador ? '' : 'disabled'}>Buscar no Google Maps</button>
+        ${d.tem_buscador ? '<small class="neutro">leva de 5 a 30 minutos; acompanhe na janela que abre</small>' : '<small class="ruim">buscador não instalado: rode o instalar.cmd de novo</small>'}</li>
+      <li><button class="bt ${d.tem_resultado ? 'pri' : ''}" data-acao="sdr_qualificar" ${d.tem_resultado ? '' : 'disabled'}>Qualificar o resultado</button> <small class="neutro">junta as empresas novas na sua lista de leads</small></li>
+      <li>Abra a aba <a data-fn="aba" data-aba="hoje" href="#">Hoje</a>: as melhores aparecem com a 1ª mensagem pronta.</li></ol></div>
+    <h2>Ou importe uma planilha</h2><p class="sub">De outra ferramenta, de um evento ou de uma lista que você já tem.</p><div class="acoes" style="margin-top:0"><button class="bt" data-fn="planilha">Importar planilha de leads</button></div>`;
+  } else if (!d.funil) {
+    corpo = `<div class="passos"><h2>Sem leads ainda</h2><ol><li><button class="bt pri" data-fn="aba" data-aba="buscar">Buscar empresas no Google Maps</button></li>
+      <li><button class="bt" data-fn="planilha">Importar uma planilha</button></li><li><button class="bt" data-fn="entrada">Registrar quem chegou sozinho</button> (DM, anúncio, indicação)</li></ol></div>`;
+  } else {
+    const topo = Math.max(1, d.funil.etapas[0].n);
+    corpo = `<div class="grade2"><div class="cartao"><h2 style="margin-top:0">Funil</h2><div class="funil">${d.funil.etapas.map((e, i) => `<div><span>${esc(e.etapa)}</span><i style="width:${Math.max(2, 100 * e.n / topo)}%"></i><b>${e.n}</b><small>${i && d.funil.etapas[i - 1].n ? Math.round(100 * e.n / d.funil.etapas[i - 1].n) + '%' : ''}</small></div>`).join('')}</div></div>
+    <div class="cartao"><h2 style="margin-top:0">Quentes · responder hoje</h2><div class="lista">${d.quentes.map((l) => `<div class="linha-item"><div class="cresce"><b>${esc(l.empresa)}</b><small>${esc([l.segmento, l.cidade, l.obs].filter(Boolean).join(' · '))}</small></div>
+      ${l.telefone ? `<a class="bt mini wa" href="${esc(zap(l.telefone))}" target="_blank" rel="noopener">WhatsApp</a>` : ''}${etapaSel(l)}</div>`).join('') || '<p class="sub">Ninguém esperando resposta.</p>'}</div></div></div>
+    <h2>Follow-ups de hoje (${d.followups.length})</h2>${d.followups.map((l, i) => msgCartao(l, i, 'followups', `tentativa ${+l.tentativas + 1}`)).join('') || '<p class="sub">Nenhum follow-up para hoje.</p>'}
+    <h2>Abordar · melhores leads novos (${d.abordar.length})</h2>${d.abordar.map((l, i) => msgCartao(l, i, 'abordar')).join('') || '<p class="sub">Fila vazia: busque mais leads na aba Buscar leads.</p>'}`;
+  }
+  j.corpo.innerHTML = `<div class="pagina"><h1>Comercial</h1><p class="sub">${d.funil ? `${num(d.funil.total)} leads · ${num(d.funil.perdidos)} perdidos ou frios` : 'Prospecção, follow-up e fechamento do CIELLO CRM.'}</p>${SEM_CLAUDE}${barra}
+  ${abas(j, [['hoje', 'Hoje', d.followups.length + d.quentes.length || ''], ['leads', 'Leads', d.leads.length], ['buscar', 'Buscar leads']])}${corpo}</div>`;
 }
 
 // ------------------------------------------------------------------ apps: conteúdo
@@ -552,12 +799,29 @@ async function renderConteudo(j) {
   const d = await api('/api/app/conteudo'); const i = d.instagram;
   const kpi = (r, v, e = '', c = 'neutro') => `<div class="kpi"><small>${r}</small><strong>${v}</strong><em class="${c}">${e}</em></div>`;
   const delta = i && i.seguidores_antes != null ? i.seguidores - i.seguidores_antes : null;
+  const COLS = [['gancho', 'Gancho (início da fala)'], ['data', 'Data'], ['views', 'Views'], ['alcance', 'Alcance'], ['salvamentos', 'Salv.'], ['compartilhamentos', 'Comp.'], ['comentarios', 'Coment.'], ['tempo_medio_s', 'Tempo (s)']];
+  const linhaReel = () => `<tr>${COLS.map(([k]) => `<td><input name="r-${k}" ${k === 'data' ? 'type="date"' : ''} ${k === 'gancho' ? '' : 'inputmode="decimal"'}></td>`).join('')}</tr>`;
+  j.fns = {
+    retrato: () => {
+      const el = dialogo(j, { titulo: 'Anotar números do Instagram', texto: 'Sem o Claude para puxar do Metricool? Copie os números do app do Instagram (Painel profissional → Insights, últimos 30 dias). O relatório semanal e o Bom dia usam este retrato.',
+        campos: [{ nome: 'data', rotulo: 'Data do retrato', tipo: 'data', valor: hojeISO(), meia: true }, { nome: 'seguidores', rotulo: 'Seguidores', tipo: 'numero', obrigatorio: true, valor: i ? i.seguidores : '', meia: true },
+          { nome: 'alcance', rotulo: 'Contas alcançadas (30 dias)', tipo: 'numero', meia: true }, { nome: 'contas_engajadas', rotulo: 'Contas com engajamento', tipo: 'numero', meia: true }, { nome: 'posts', rotulo: 'Posts no período', tipo: 'numero', meia: true }],
+        extra: `<h3>Reels do período (opcional)</h3><div class="tab-rolagem"><table class="tab reels-form"><tr>${COLS.map(([, r]) => `<th>${r}</th>`).join('')}</tr>${linhaReel().repeat(3)}</table></div><button type="button" class="bt mini mais-reel">+ reel</button>`,
+        botao: 'Salvar retrato',
+        enviar: (dados, form) => {
+          const reels = [...form.querySelectorAll('.reels-form tr')].slice(1).map((tr) => Object.fromEntries(COLS.map(([k]) => [k, $(`[name="r-${k}"]`, tr).value.trim()]))).filter((r) => r.gancho);
+          return operar('ig_retrato', { ...dados, reels });
+        } });
+      $('.mais-reel', el).onclick = () => $('.reels-form', el).insertAdjacentHTML('beforeend', linhaReel());
+    },
+  };
   j.corpo.innerHTML = `<div class="pagina"><h1>Conteúdo e Instagram</h1><p class="sub">@ciellotec${i ? ` · retrato de ${ddmm(i.data)}` : ''}</p>
+  <div class="acoes topo"><button class="bt pri" data-fn="retrato">Anotar números do Instagram</button><button class="bt" data-acao="relatorio">Relatório semanal</button></div>
   ${i ? `<div class="kpis">${kpi('Seguidores', num(i.seguidores), delta != null ? `${delta >= 0 ? '+' : ''}${delta} na semana` : '', delta >= 0 ? 'bom' : 'ruim')}${kpi('Alcance 30 dias', num(i.alcance))}
-  ${kpi('Tempo médio no reel', `${String(i.tempo_medio).replace('.', ',')}s`, 'meta 6s', i.tempo_medio >= 6 ? 'bom' : 'ruim')}${kpi('Salvamentos', `${String(i.salvamentos_pct).replace('.', ',')}%`, 'meta 1%', i.salvamentos_pct >= 1 ? 'bom' : 'ruim')}</div>` : '<div class="vazio">Sem retrato do Instagram ainda: rode /segunda no Claude Code.</div>'}
+  ${kpi('Tempo médio no reel', `${String(i.tempo_medio).replace('.', ',')}s`, 'meta 6s', i.tempo_medio >= 6 ? 'bom' : 'ruim')}${kpi('Salvamentos', `${String(i.salvamentos_pct).replace('.', ',')}%`, 'meta 1%', i.salvamentos_pct >= 1 ? 'bom' : 'ruim')}</div>` : '<div class="vazio">Sem retrato do Instagram ainda. Clique em <b>Anotar números do Instagram</b> (ou rode /segunda no Claude Code).</div>'}
   <h2>Posts · próximos e recentes</h2><div class="posts">${d.posts.map((p) => `<div class="post">${p.capa ? `<img src="${esc(p.capa)}" alt="" loading="lazy">` : '<div class="sem-capa"></div>'}<div><b>${ddmm(p.data)}</b>${esc(p.titulo)}<br>${p.final ? '<span class="chip pronto">vídeo pronto</span>' : '<span class="chip esperando">sem vídeo final</span>'}</div></div>`).join('')}</div>
   ${i && i.reels.length ? `<h2>Reels que mais alcançaram</h2><table class="tab"><tr><th>Data</th><th>Gancho</th><th>Alcance</th><th>Tempo</th></tr>${i.reels.map((r) => `<tr><td>${ddmm(r.data)}</td><td>${esc(r.gancho)}</td><td>${num(r.alcance)}</td><td>${String(r.tempo_medio_s ?? '').replace('.', ',')}s</td></tr>`).join('')}</table>` : ''}
-  <div class="acoes"><button class="bt pri" data-acao="relatorio">Relatório semanal</button><button class="bt" data-acao="ganchos">Ranking de ganchos</button><button class="bt" data-abrir="agente:produtor-video">Produtor de vídeo</button><button class="bt" data-abrir="agente:postagem">Postagem</button></div></div>`;
+  <div class="acoes"><button class="bt" data-acao="ganchos">Ranking de ganchos</button><button class="bt" data-abrir="agente:produtor-video">Produtor de vídeo</button><button class="bt" data-abrir="agente:postagem">Postagem</button></div></div>`;
 }
 
 // ------------------------------------------------------------------ apps: tendências e concorrentes
@@ -575,10 +839,19 @@ async function renderRelatorio(j, qual) {
 async function renderAnuncios(j) {
   const d = await api('/api/app/anuncios'); const r = d.resumo;
   const kpi = (t, v) => `<div class="kpi"><small>${t}</small><strong>${v}</strong></div>`;
+  const porNome = Object.fromEntries((d.campanhas || []).map((c) => [c.nome, c]));
+  const campos = (c = {}) => [{ nome: 'nome', rotulo: 'Nome da campanha', valor: c.nome, obrigatorio: true }, { nome: 'inicio', rotulo: 'Início', tipo: 'data', valor: c.inicio || hojeISO(), meia: true }, { nome: 'fim', rotulo: 'Fim', tipo: 'data', valor: c.fim, meia: true },
+    { nome: 'objetivo', rotulo: 'Objetivo', valor: c.objetivo, exemplo: 'mensagens no WhatsApp', meia: true }, { nome: 'publico', rotulo: 'Público', valor: c.publico, meia: true }, { nome: 'criativo', rotulo: 'Criativo', valor: c.criativo },
+    ...[['gasto', 'Gasto (R$)'], ['impressoes', 'Impressões'], ['cliques', 'Cliques'], ['conversas', 'Conversas'], ['demos', 'Demos'], ['clientes', 'Clientes']].map(([k, r]) => ({ nome: k, rotulo: r, tipo: 'numero', valor: c[k] != null ? String(c[k]).replace('.', ',') : '', meia: true }))];
+  j.fns = {
+    nova: () => dialogo(j, { titulo: 'Registrar campanha', texto: 'Copie os números do Gerenciador de Anúncios. Só número real, nada estimado.', campos: campos(), enviar: (x) => operar('anuncio', x) }),
+    editar: ({ nome: n }) => dialogo(j, { titulo: `Atualizar ${n}`, campos: campos(porNome[n]), enviar: (x) => operar('anuncio', x) }),
+  };
   j.corpo.innerHTML = `<div class="pagina"><h1>Anúncios</h1><p class="sub">Testes no Meta Ads, lidos do Gerenciador de Anúncios ou do Metricool.</p>
+  <div class="acoes topo"><button class="bt pri" data-fn="nova">+ Campanha</button></div>
   ${r ? `<div class="kpis">${kpi('Investido', brl(r.gasto))}${kpi('Conversas', num(r.conversas))}${kpi('Custo por conversa', r.custo_conversa != null ? brl(r.custo_conversa) : '—')}${kpi('Custo por cliente', r.custo_cliente != null ? brl(r.custo_cliente) : '—')}</div>
-  <h2>Campanhas</h2><table class="tab"><tr><th>Campanha</th><th>Período</th><th>Gasto</th><th>Conversas</th><th>Demos</th><th>Clientes</th></tr>${d.campanhas.map((c) => `<tr><td><b>${esc(c.nome)}</b><br><small class="neutro">${esc(c.publico || '')}</small></td><td>${ddmm(c.inicio)}–${ddmm(c.fim)}</td><td>${brl(c.gasto)}</td><td>${num(c.conversas)}</td><td>${num(c.demos)}</td><td>${num(c.clientes)}</td></tr>`).join('')}</table>`
-    : '<div class="vazio">Nenhuma campanha registrada em <code>anuncios/</code>. O gestor de anúncios grava cada teste lá.</div>'}
+  <h2>Campanhas</h2><table class="tab"><tr><th>Campanha</th><th>Período</th><th>Gasto</th><th>Conversas</th><th>Demos</th><th>Clientes</th><th></th></tr>${d.campanhas.map((c) => `<tr><td><b>${esc(c.nome)}</b><br><small class="neutro">${esc(c.publico || '')}</small></td><td>${ddmm(c.inicio)}–${ddmm(c.fim)}</td><td>${brl(c.gasto)}</td><td>${num(c.conversas)}</td><td>${num(c.demos)}</td><td>${num(c.clientes)}</td><td><button class="bt mini" data-fn="editar" data-nome="${esc(c.nome)}">Atualizar</button></td></tr>`).join('')}</table>`
+    : '<div class="vazio">Nenhuma campanha registrada ainda. Clique em <b>+ Campanha</b> e copie os números do Gerenciador de Anúncios.</div>'}
   <div class="acoes"><button class="bt pri" data-abrir="agente:gestor-anuncios">Gestor de anúncios</button></div></div>`;
 }
 

@@ -14,7 +14,10 @@ Fluxo do mês:
   python central/financeiro.py nps 3 10                 # nota do cliente 3 (9–10 recebe o pedido de avaliação no Google)
   python central/financeiro.py resumo                   # MRR, churn, CAC, LTV, caixa, previsão 30/60/90 dias, o que não bate
 
-Outros: pago, cancelar, lancar (Pix/dinheiro fora do extrato), config (saldo inicial, alerta de saldo, link de avaliação).
+Outros: pago, cancelar, editar, lancar (Pix/dinheiro fora do extrato), categoria (classificar na mão),
+config (saldo inicial, alerta de saldo, link de avaliação).
+
+Tudo isso também funciona pela janela Financeiro do Ciello OS, sem o Claude.
 
 Os dados ficam em financeiro/ (fora do git: o repositório é público). Só financeiro/categorias.json vai para o git.
 Mensagens nunca são enviadas daqui: você revisa e envia do seu WhatsApp.
@@ -168,6 +171,22 @@ def cmd_cancelar(a):
     c.update(status="cancelado", cancelado_em=a.data or hoje().isoformat(), motivo=a.motivo)
     gravar(CLIENTES, C_CLIENTE, clientes)
     print(f"cliente #{c['id']} {c['empresa']} cancelado ({c['motivo'] or 'sem motivo anotado'})")
+
+
+def cmd_editar(a):
+    clientes = ler(CLIENTES, C_CLIENTE)
+    c = achar(clientes, a.id, "cliente")
+    for campo in ("empresa", "contato", "whatsapp", "plano", "obs"):
+        if getattr(a, campo) is not None:
+            c[campo] = getattr(a, campo).strip()
+    if a.valor is not None:
+        c["valor_mensal"] = f"{a.valor:.2f}"
+    if a.dia is not None:
+        c["dia_vencimento"] = str(a.dia)
+    if a.reativar:
+        c.update(status="ativo", cancelado_em="", motivo="")
+    gravar(CLIENTES, C_CLIENTE, clientes)
+    print(f"cliente #{c['id']} {c['empresa']}: {reais(float(c['valor_mensal']))}/mês, vence dia {c['dia_vencimento']}, {c['status']}")
 
 
 def achar(linhas, id_, nome):
@@ -327,6 +346,21 @@ def cmd_reclassificar(a):
     print(f"{n} lançamentos reclassificados · {sum(l['categoria'] == SEM_CATEGORIA for l in lancs)} ainda a classificar")
 
 
+def cmd_categoria(a):
+    """Classifica um lançamento na mão (o que as regras de financeiro/categorias.json não pegaram)."""
+    lancs = ler(LANCAMENTOS, C_LANC)
+    l = achar(lancs, a.id, "lançamento")
+    l["categoria"] = a.categoria.strip()
+    gravar(LANCAMENTOS, C_LANC, lancs)
+    print(f"lançamento #{l['id']} {reais(float(l['valor']))} \"{l['descricao'][:40]}\" · {l['categoria']}")
+
+
+def categorias():
+    """Categorias conhecidas: as das regras, a receita de assinaturas e as que já foram usadas."""
+    nomes = [RECEITA] + [r["categoria"] for r in regras()] + [l["categoria"] for l in ler(LANCAMENTOS, C_LANC)]
+    return [c for i, c in enumerate(nomes) if c and c != SEM_CATEGORIA and c not in nomes[:i]]
+
+
 def cmd_lancar(a):
     lancs = ler(LANCAMENTOS, C_LANC)
     l = {"id": proximo_id(lancs), "data": a.data or hoje().isoformat(), "descricao": a.descricao, "valor": f"{a.valor:.2f}",
@@ -380,23 +414,30 @@ def etapa_devida(dias, feitas):
     return etapa_atual(dias, COBRANCA, feitas)
 
 
-def cmd_cobrar(a):
-    cfg = config()
-    L = [f"# Cobranças de {hoje().isoformat()}", "", "Revise e envie do seu WhatsApp. Depois: `python central/financeiro.py enviado cobranca ID`.", ""]
-    n = 0
-    for f in atrasadas():
+def cobrancas_devidas(ref=None):
+    """Cobranças a enviar hoje: fatura, etapa (D+3, D+7, D+14), mensagem pronta e link wa.me."""
+    assinatura = config()["assinatura"]
+    out = []
+    for f in atrasadas(ref):
         etapa = etapa_devida(f["dias"], f["cobrancas"])
-        if not etapa:
-            continue
-        msg = msg_cobranca(f, etapa, cfg["assinatura"])
-        link = link_wa(f["cliente"].get("whatsapp"), msg)
-        L += [f"## Fatura #{f['id']} · {f['cliente'].get('empresa', '?')} · {reais(float(f['valor']))} · {f['dias']} dias (etapa D+{etapa})",
-              "", "```", msg, "```", "", f"[Abrir no WhatsApp]({link})" if link else "Sem WhatsApp cadastrado: ligar.", ""]
-        n += 1
+        if etapa:
+            msg = msg_cobranca(f, etapa, assinatura)
+            out.append({"fatura_id": f["id"], "cliente_id": f["cliente_id"], "empresa": f["cliente"].get("empresa", "?"),
+                        "valor": float(f["valor"]), "dias": f["dias"], "etapa": etapa, "mensagem": msg,
+                        "link": link_wa(f["cliente"].get("whatsapp"), msg)})
+    return out
+
+
+def cmd_cobrar(a):
+    L = [f"# Cobranças de {hoje().isoformat()}", "", "Revise e envie do seu WhatsApp. Depois: `python central/financeiro.py enviado cobranca ID`.", ""]
+    devidas = cobrancas_devidas()
+    for c in devidas:
+        L += [f"## Fatura #{c['fatura_id']} · {c['empresa']} · {reais(c['valor'])} · {c['dias']} dias (etapa D+{c['etapa']})",
+              "", "```", c["mensagem"], "```", "", f"[Abrir no WhatsApp]({c['link']})" if c["link"] else "Sem WhatsApp cadastrado: ligar.", ""]
     destino = PASTA / "cobrancas" / f"{hoje().isoformat()}.md"
     destino.parent.mkdir(parents=True, exist_ok=True)
     destino.write_text("\n".join(L), encoding="utf-8")
-    print(f"{n} cobranças para enviar -> {destino}" if n else "nenhuma cobrança devida hoje")
+    print(f"{len(devidas)} cobranças para enviar -> {destino}" if devidas else "nenhuma cobrança devida hoje")
 
 
 def posvenda_devida(c, ref=None):
@@ -421,29 +462,37 @@ def msg_posvenda(c, etapa, cfg):
             f"Se indicar e ele fechar, seu próximo mês sai por nossa conta.")
 
 
-def cmd_posvenda(a):
+def posvendas_devidos(ref=None):
+    """Mensagens de pós-venda de hoje (D+1, D+7, D+30, D+90 e o pedido de avaliação para NPS 9–10), prontas e com link."""
     cfg = config()
-    L = [f"# Pós-venda de {hoje().isoformat()}", "", "Revise e envie. Depois: `python central/financeiro.py enviado posvenda CLIENTE`.", ""]
-    n = 0
+    out = []
     for c in ler(CLIENTES, C_CLIENTE):
-        etapa = posvenda_devida(c)
+        etapa = posvenda_devida(c, ref)
         if etapa:
             msg = msg_posvenda(c, etapa, cfg)
-            L += [f"## Cliente #{c['id']} · {c['empresa']} · D+{etapa}", "", "```", msg, "```", "",
-                  f"[Abrir no WhatsApp]({link_wa(c['whatsapp'], msg)})" if c["whatsapp"] else "Sem WhatsApp cadastrado.", ""]
-            n += 1
-        if c["nps"] and int(c["nps"]) >= 9 and "avaliacao" not in c["posvenda"].split(","):
+            out.append({"cliente_id": c["id"], "empresa": c["empresa"], "etapa": str(etapa), "rotulo": f"D+{etapa}",
+                        "mensagem": msg, "link": link_wa(c["whatsapp"], msg)})
+        if c["status"] == "ativo" and c["nps"] and int(c["nps"]) >= 9 and "avaliacao" not in c["posvenda"].split(","):
             link = cfg["link_avaliacao"] or "(configure: python central/financeiro.py config --link-avaliacao URL)"
             msg = (f"Que bom que você curtiu, obrigado! 🙏 Se puder deixar essa nota no Google, ajuda muito outros empresários "
                    f"a conhecer a Ciello: {link}")
-            L += [f"## Cliente #{c['id']} · {c['empresa']} · pedido de avaliação (NPS {c['nps']})", "", "```", msg, "```", "",
-                  f"[Abrir no WhatsApp]({link_wa(c['whatsapp'], msg)})" if c["whatsapp"] else "", "",
-                  f"Depois: `python central/financeiro.py enviado posvenda {c['id']} --etapa avaliacao`", ""]
-            n += 1
+            out.append({"cliente_id": c["id"], "empresa": c["empresa"], "etapa": "avaliacao",
+                        "rotulo": f"pedido de avaliação (NPS {c['nps']})", "mensagem": msg, "link": link_wa(c["whatsapp"], msg)})
+    return out
+
+
+def cmd_posvenda(a):
+    L = [f"# Pós-venda de {hoje().isoformat()}", "", "Revise e envie. Depois: `python central/financeiro.py enviado posvenda CLIENTE`.", ""]
+    devidos = posvendas_devidos()
+    for p in devidos:
+        L += [f"## Cliente #{p['cliente_id']} · {p['empresa']} · {p['rotulo']}", "", "```", p["mensagem"], "```", "",
+              f"[Abrir no WhatsApp]({p['link']})" if p["link"] else "Sem WhatsApp cadastrado.", ""]
+        if p["etapa"] == "avaliacao":
+            L += [f"Depois: `python central/financeiro.py enviado posvenda {p['cliente_id']} --etapa avaliacao`", ""]
     destino = PASTA / "posvenda" / f"{hoje().isoformat()}.md"
     destino.parent.mkdir(parents=True, exist_ok=True)
     destino.write_text("\n".join(L), encoding="utf-8")
-    print(f"{n} mensagens de pós-venda -> {destino}" if n else "nenhum pós-venda devido hoje")
+    print(f"{len(devidos)} mensagens de pós-venda -> {destino}" if devidos else "nenhum pós-venda devido hoje")
 
 
 def cmd_enviado(a):
@@ -616,21 +665,23 @@ def cmd_config(a):
     print(json.dumps(cfg, ensure_ascii=False, indent=1))
 
 
-def main():
-    try:
-        sys.stdout.reconfigure(encoding="utf-8")
-    except (AttributeError, ValueError):
-        pass
+def parser():
+    """Os comandos da linha de comando. O Ciello OS usa este mesmo parser para operar sem o Claude."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("cliente"); s.add_argument("--empresa", default=""); s.add_argument("--lead", type=int); s.add_argument("--contato", default="")
     s.add_argument("--whatsapp", default=""); s.add_argument("--plano", default=""); s.add_argument("--valor", type=float, required=True)
     s.add_argument("--dia", type=int, default=10); s.add_argument("--inicio"); s.set_defaults(f=cmd_cliente)
+    s = sub.add_parser("editar", help="muda os dados de um cliente (só o que for informado)"); s.add_argument("id")
+    for campo in ("empresa", "contato", "whatsapp", "plano", "obs"):
+        s.add_argument(f"--{campo}")
+    s.add_argument("--valor", type=float); s.add_argument("--dia", type=int); s.add_argument("--reativar", action="store_true"); s.set_defaults(f=cmd_editar)
     s = sub.add_parser("cancelar"); s.add_argument("id"); s.add_argument("--data"); s.add_argument("--motivo", default=""); s.set_defaults(f=cmd_cancelar)
     s = sub.add_parser("faturar"); s.add_argument("--mes", help="AAAA-MM (padrão: mês atual)"); s.set_defaults(f=cmd_faturar)
     s = sub.add_parser("pago"); s.add_argument("id"); s.add_argument("--data"); s.set_defaults(f=cmd_pago)
     s = sub.add_parser("importar"); s.add_argument("arquivo", help="extrato .ofx ou .csv"); s.set_defaults(f=cmd_importar)
     s = sub.add_parser("reclassificar"); s.add_argument("--todos", action="store_true"); s.set_defaults(f=cmd_reclassificar)
+    s = sub.add_parser("categoria", help="classifica um lançamento na mão"); s.add_argument("id"); s.add_argument("categoria"); s.set_defaults(f=cmd_categoria)
     s = sub.add_parser("lancar"); s.add_argument("--valor", type=float, required=True, help="negativo = despesa")
     s.add_argument("--descricao", required=True); s.add_argument("--categoria"); s.add_argument("--data"); s.set_defaults(f=cmd_lancar)
     s = sub.add_parser("cobrar"); s.set_defaults(f=cmd_cobrar)
@@ -641,7 +692,15 @@ def main():
     s = sub.add_parser("resumo"); s.add_argument("--mes"); s.add_argument("--meses", type=int, default=6); s.set_defaults(f=cmd_resumo)
     s = sub.add_parser("config"); s.add_argument("--saldo", type=float); s.add_argument("--data"); s.add_argument("--alerta", type=float)
     s.add_argument("--link-avaliacao"); s.add_argument("--assinatura"); s.set_defaults(f=cmd_config)
-    a = ap.parse_args()
+    return ap
+
+
+def main():
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+    a = parser().parse_args()
     a.f(a)
 
 

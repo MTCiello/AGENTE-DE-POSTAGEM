@@ -2,9 +2,9 @@
 
 Roteiro para baixar o assistente no seu PC (Windows) e testar tudo, com foco no **Ciello OS e no escritório novo** (em Python, sem Node). Marque o que deu certo. Se algo falhar, me mande o `estado\verificacao.txt` ou um print da mensagem de erro.
 
-**Tempo:** uns 40 minutos para o essencial (passos 1 a 5). O resto é opcional.
+**Tempo:** uns 50 minutos para o essencial (passos 1 a 6). O resto é opcional.
 
-**Antes de começar:** o Claude Code instalado e com login feito (é ele que faz os agentes trabalharem). Para conferir, abra o PowerShell e rode `claude --version`. Se não tiver: `irm https://claude.ai/install.ps1 | iex` e depois `claude` para entrar na conta.
+**Antes de começar:** o Claude Code instalado e com login feito (é ele que faz os agentes trabalharem; o passo 6 mostra o que funciona mesmo sem ele). Para conferir, abra o PowerShell e rode `claude --version`. Se não tiver: `irm https://claude.ai/install.ps1 | iex` e depois `claude` para entrar na conta.
 
 ## 1. Baixar (5 min)
 
@@ -94,19 +94,50 @@ Os botões de **Rodar agora** (ex.: "Follow-ups de hoje") continuam rodando a fe
 - [ ] Engrenagem → **+ Agente** também abre um terminal novo aqui dentro.
 - [ ] Fechar a janela do terminal encerra aquele Claude Code.
 
-**Layout:**
+**Layout e áreas:**
 - [ ] Engrenagem → **Layout**: mude um móvel de lugar, **Salvar**, feche o `Ciello.cmd` e abra de novo. A mudança ficou.
+- [ ] Engrenagem → **Layout** → clique numa área → **Adicionar agente…** e escolha alguém de outra área (ex.: o Analista na Postagem). Ele vai na hora para uma mesa da área nova, e continua lá depois de fechar e abrir o `Ciello.cmd`.
+- [ ] **Sem duplicados:** com uma ou duas sessões do Claude Code abertas, feche e abra o `Ciello.cmd`. Cada agente aparece uma vez só (nada de dois SDRs).
 
 Se algo do escritório falhar, me mande um print e o que aparece na janela preta do `Ciello.cmd`.
 
-## 6. Ver o que já foi produzido (5 min)
+## 6. Operar sem o Claude (~10 min)
+
+O Ciello OS não depende do Claude: os números e o dia a dia rodam direto no seu PC. Acabaram os tokens? Feche o Claude Code e teste tudo isto só pelas janelas (cada uma mostra o selo verde **Funciona sem o Claude**). Para não misturar com dados reais, use nomes de teste e apague depois (Cancelar no cliente, Perdido no lead).
+
+**Financeiro** (menu Iniciar → Financeiro):
+- [ ] **+ Cliente**: "Cliente Teste", R$ 149, dia 10. Apareceu na aba **Clientes**.
+- [ ] **Caixa**: informe o saldo do banco de hoje. O "Caixa hoje" mudou.
+- [ ] **Gerar faturas** do mês. Em **Visão geral**, a fatura aparece em "Faturas em aberto"; clique **Recebi** e ela some.
+- [ ] **Importar extrato**: escolha o OFX (ou CSV) exportado do app do banco. Quantas despesas ficaram "a classificar": ____ (classifique na aba **Lançamentos**, escolhendo a categoria na lista).
+- [ ] **Lançar receita/despesa**: um Pix que não passou pelo extrato.
+- [ ] Aba **Cobrança e pós-venda**: as mensagens já vêm escritas. **Abrir no WhatsApp** abre a conversa com o texto pronto (nada é enviado sozinho; você revisa e envia). Depois clique **Enviei**.
+- [ ] Na aba **Clientes**: **Editar**, **NPS** e **Cancelar** (o cancelado sai do MRR; **Reativar** traz de volta).
+
+**Comercial** (menu Iniciar → Comercial):
+- [ ] **+ Lead que chegou**: um nome e um WhatsApp de teste. A resposta pronta aparece com o link do WhatsApp.
+- [ ] Aba **Hoje**: os melhores leads novos aparecem com a 1ª mensagem pronta. **Enviei** marca o contato e agenda o follow-up (2, 5 e 10 dias); os follow-ups do dia aparecem aqui com a mensagem certa para a tentativa.
+- [ ] Aba **Leads**: busque pelo nome, filtre por etapa, mude a etapa na lista. Mudar para **cliente** abre o cadastro no Financeiro já com a empresa e o WhatsApp do lead.
+- [ ] Aba **Buscar leads**: escolha segmentos e cidades → **Buscar no Google Maps** (leva de 5 a 30 minutos) → **Qualificar o resultado**. Ou **Importar planilha** com uma lista que você já tenha.
+- [ ] **Exportar para o CRM**: gera a planilha em `comercial\`.
+
+**Conteúdo e Anúncios:**
+- [ ] Conteúdo → **Anotar números do Instagram**: copie do app do Instagram (Painel profissional → Insights) os seguidores, o alcance e os números de 1 ou 2 reels. Os cartões atualizam e o **Relatório semanal** usa esse retrato.
+- [ ] Anúncios → **+ Campanha**: copie os números do Gerenciador de Anúncios. **Atualizar** muda os números da mesma campanha.
+- [ ] **Bom dia**: as 3 prioridades e os números aparecem sem o Claude (o botão **Atualizar briefing** também).
+
+O que precisa do Claude: os agentes (pesquisa, roteiro, vídeo, legendas, análise escrita, puxar números do Metricool). O resto é do OS.
+
+## 7. Ver o que já foi produzido (5 min)
 
 - [ ] `midia\final\2026-10-27-crm-plano.mp4`: o plano-sequência do CRM. Nota de 0 a 10 comparando com o reel de referência: ____
 - [ ] `midia\capas\`: as capas da semana.
 - [ ] `radar\2026-10-19.md`: a pauta sugerida para a semana de 26/10.
 - [ ] `metricas\relatorio-2026-10-19.md`: o primeiro relatório do perfil.
 
-## 7. SDR de verdade (opcional, ~15 min)
+## 8. SDR de verdade (opcional, ~15 min)
+
+Pelo Ciello OS: Comercial → aba **Buscar leads** (passo 6). Ou, pela linha de comando:
 
 O `instalar.cmd` já baixa o buscador do Google Maps para `comercial\bin\`. Se o `testar.cmd` ainda avisar que falta, rode `python central\sdr.py instalar-scraper`. Na 1ª busca ele baixa o navegador que usa (uns minutos).
 
@@ -121,7 +152,9 @@ python central\sdr.py abordar --top 10
 - [ ] Abriu `comercial\abordagens\AAAA-MM-DD.md` com mensagens e links do WhatsApp.
 - [ ] As empresas do topo são bons clientes para o CRM? Anote 2 que estão fora do lugar.
 
-## 8. Chefe de gabinete, financeiro, vigia e pós-venda (opcional, ~15 min)
+## 9. Chefe de gabinete, financeiro, vigia e pós-venda (opcional, ~15 min)
+
+O financeiro e o pós-venda também ficam todos na janela Financeiro (passo 6). Pela linha de comando:
 
 ```powershell
 .venv\Scripts\activate
@@ -137,7 +170,7 @@ python central\financeiro.py resumo
 - [ ] As despesas do extrato caíram na categoria certa? Quantas ficaram "a classificar": ____
 - [ ] Opcional: `agendar.cmd` para o briefing sair sozinho às 7h.
 
-## 9. Clone no Kaggle e voz (opcionais, para outro dia se faltar tempo)
+## 10. Clone no Kaggle e voz (opcionais, para outro dia se faltar tempo)
 
 **Clone (~1 h, quase tudo esperando download):** kaggle.com → conta com telefone verificado → *Create → New Notebook → File → Import Notebook* → `central\clone\ciello_clone_kaggle.ipynb` → **GPU T4 x2** e **Internet On** → *Run All* → abra o link `gradio.live` e siga o "Teste desta noite" no fim do notebook. **Desligue a sessão (Stop session) no fim.**
 - [ ] Boca acompanha o português? 0 a 10: ____ · Parece real? 0 a 10: ____
@@ -159,10 +192,11 @@ python central\voz.py roteiros\2026-10-27-crm-plano.json --saida audio\crm --nom
 | Os personagens demoram uns segundos para reagir | Os hooks não foram instalados: engrenagem → Configurações → marque **Detecção instantânea (hooks)** |
 | Quer tirar os hooks | Mesmo lugar, desmarque. A cópia do seu `settings.json` original fica em `~/.claude/settings.json.ciello.backup` |
 | "+ Agente" abre uma janela dizendo que o Claude Code não foi encontrado | Instale com `irm https://claude.ai/install.ps1 \| iex`, abra um terminal novo e tente de novo |
+| Um formulário diz "Servidor desligado" | A janela preta do `Ciello.cmd` foi fechada: abra de novo (os dados já salvos continuam lá) |
 | O personagem não abre janela ao clicar | O agente precisa de nome: ajudante com a descrição começando pelo nome (`sdr: ...`), como os comandos `/bom-dia` e `/comercial` já fazem |
 
 ## O que eu preciso de volta
 1. O `estado\verificacao.txt`.
-2. Os itens do passo 5 que não funcionaram (com print, se der).
+2. Os itens dos passos 5 e 6 que não funcionaram (com print, se der).
 3. Sua nota para o vídeo do CRM e o que mudaria.
 4. Preço e planos do CRM e o cabeçalho da planilha de importação.

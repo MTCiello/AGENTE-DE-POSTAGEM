@@ -60,7 +60,7 @@ def coletar(ref):
     if fin["atrasadas"]:
         total = sum(f["valor"] for f in fin["atrasadas"])
         add(100 + max(f["dias"] for f in fin["atrasadas"]), "financeiro",
-            f"Cobrar {len(fin['atrasadas'])} fatura(s) atrasada(s) ({financeiro.reais(total)}): `python central/financeiro.py cobrar`")
+            f"Cobrar {len(fin['atrasadas'])} fatura(s) atrasada(s) ({financeiro.reais(total)}): Financeiro → Cobrança e pós-venda (ou `python central/financeiro.py cobrar`)")
     for alerta in fin["alertas"]:
         if alerta.startswith("caixa previsto"):
             add(85, "financeiro", f"Atenção ao caixa: {alerta}")
@@ -69,7 +69,7 @@ def coletar(ref):
         elif "classificar" in alerta:
             add(20, "financeiro", f"{alerta}: ajuste financeiro/categorias.json")
     if fin["posvenda_devidos"]:
-        add(55, "sucesso-cliente", f"{fin['posvenda_devidos']} mensagem(ns) de pós-venda: `python central/financeiro.py posvenda`")
+        add(55, "sucesso-cliente", f"{fin['posvenda_devidos']} mensagem(ns) de pós-venda: Financeiro → Cobrança e pós-venda (ou `python central/financeiro.py posvenda`)")
 
     leads = ler_leads()
     quentes = [l for l in leads if l["etapa"] in QUENTES]
@@ -79,7 +79,7 @@ def coletar(ref):
         add(95, "closer", f"Responder {len(parados)} lead(s) quente(s) parado(s) desde ontem ou antes: {nomes}")
     devidos = [l for l in leads if l["etapa"] == "contatado" and l.get("proximo_contato") and l["proximo_contato"] <= ref.isoformat()]
     if devidos:
-        add(70, "sdr", f"Enviar {len(devidos)} follow-up(s) do dia: `python central/sdr.py hoje`")
+        add(70, "sdr", f"Enviar {len(devidos)} follow-up(s) do dia: Comercial → Hoje (ou `python central/sdr.py hoje`)")
     fila = sum(l["etapa"] == "novo" for l in leads)
     if fila < 15:
         add(50, "sdr", f"Fila com {fila} lead(s) novo(s): gerar mais (consultas → buscar → qualificar)")
@@ -120,12 +120,12 @@ def numeros(fin, leads, ref):
                  f"{financeiro.reais(fin['mrr'])} · {fin['clientes_ativos']} clientes"
                  + (f" · fôlego {fin['runway_meses']} meses" if fin["runway_meses"] else ""))
     else:
-        L.append("- **Financeiro** ainda sem dados: cadastre o 1º cliente (`financeiro.py cliente`) e importe o extrato do banco")
+        L.append("- **Financeiro** ainda sem dados: na janela Financeiro, **+ Cliente** e **Importar extrato** (funciona sem o Claude)")
     if leads:
         por = {e: sum(l["etapa"] == e for l in leads) for e in ("novo", "contatado", *QUENTES, "cliente")}
         L.append("- **Comercial** " + " · ".join(f"{k} {v}" for k, v in por.items()))
     else:
-        L.append("- **Comercial** sem leads ainda: `/comercial` ou `python central/sdr.py consultas`")
+        L.append("- **Comercial** sem leads ainda: Comercial → **Buscar leads** (sem o Claude) ou `/comercial`")
     retrato = ultimo_arquivo(RAIZ / "metricas", "20??-??-??.json")
     if retrato:
         p = json.loads(retrato.read_text(encoding="utf-8"))["perfil"]

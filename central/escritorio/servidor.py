@@ -21,9 +21,9 @@ Fontes (todas locais):
   radar/                   tendências e vigia de concorrentes
 
 Os botões das janelas só rodam a lista fixa de ACOES abaixo, e só a partir desta página (token por sessão).
+Os formulários (cliente, pagamento, extrato, lead, funil, Instagram, anúncios) operam sem o Claude: operacao.py.
 """
 import argparse
-import csv
 import json
 import os
 import re
@@ -48,6 +48,8 @@ import briefing  # noqa: E402
 import financeiro  # noqa: E402
 import atexit  # noqa: E402
 
+import operacao  # noqa: E402
+import sdr  # noqa: E402
 import terminal  # noqa: E402
 from nucleo import persistencia  # noqa: E402
 from nucleo import websocket  # noqa: E402
@@ -75,6 +77,8 @@ ACOES = {
     "sdr_hoje": ("Follow-ups de hoje", "sdr", ["central/sdr.py", "hoje"]),
     "sdr_abordar": ("Abordar os 15 melhores leads", "sdr", ["central/sdr.py", "abordar", "--top", "15"]),
     "sdr_crm": ("Exportar para o CIELLO CRM", "sdr", ["central/sdr.py", "crm"]),
+    "sdr_buscar": ("Buscar empresas no Google Maps", "sdr", ["central/sdr.py", "buscar"]),
+    "sdr_qualificar": ("Qualificar o resultado da busca", "sdr", ["central/sdr.py", "qualificar", "comercial/bruto/resultados.csv"]),
     "vigia": ("Vigia de concorrentes", "pesquisador-mercado", ["central/vigia.py", "checar"]),
     "radar": ("Radar de tendências", "pesquisador-mercado", ["central/radar.py"]),
     "ganchos": ("Ranking de ganchos", "pesquisador-mercado", ["central/ganchos.py", "ranking"]),
@@ -95,11 +99,7 @@ def ler_json(p, padrao=None):
 
 
 def ler_leads():
-    arq = RAIZ / "comercial" / "leads.csv"
-    if not arq.exists():
-        return []
-    with arq.open(encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+    return sdr.ler_leads()
 
 
 def campanhas():
@@ -182,21 +182,56 @@ def app_briefing():
 def app_financeiro():
     clientes = financeiro.ler(financeiro.CLIENTES, financeiro.C_CLIENTE)
     lancs = financeiro.ler(financeiro.LANCAMENTOS, financeiro.C_LANC)
-    mes = financeiro.hoje().strftime("%Y-%m")
+    faturas = financeiro.ler(financeiro.FATURAS, financeiro.C_FATURA)
+    ref = financeiro.hoje()
+    mes = ref.strftime("%Y-%m")
     serie = [financeiro.metricas_mes(financeiro.meses_atras(mes, i), clientes, lancs) for i in range(5, -1, -1)]
-    return {"situacao": financeiro.situacao(), "serie": serie,
-            "clientes": [{k: c[k] for k in ("id", "empresa", "plano", "valor_mensal", "inicio", "status", "nps")} for c in clientes]}
+    por_id = {c["id"]: c for c in clientes}
+    abertas = [{"id": f["id"], "empresa": por_id.get(f["cliente_id"], {}).get("empresa", "?"), "competencia": f["competencia"],
+                "vencimento": f["vencimento"], "valor": float(f["valor"] or 0), "dias": (ref - financeiro.data(f["vencimento"])).days}
+               for f in faturas if not f["pago_em"]]
+    ultimos = sorted(lancs, key=lambda l: (l["data"], int(l["id"]) if l["id"].isdigit() else 0), reverse=True)
+    cfg = financeiro.config()
+    return {"situacao": financeiro.situacao(), "serie": serie, "clientes": clientes,
+            "faturas_abertas": sorted(abertas, key=lambda f: f["vencimento"]),
+            "faturado_no_mes": any(f["competencia"] == mes for f in faturas), "mes": mes,
+            "cobrancas": financeiro.cobrancas_devidas(), "posvenda": financeiro.posvendas_devidos(),
+            "lancamentos": ultimos[:40], "a_classificar": [l for l in ultimos if l["categoria"] == financeiro.SEM_CATEGORIA][:40],
+            "categorias": financeiro.categorias(),
+            "config": {k: cfg[k] for k in ("saldo_inicial", "data_saldo", "alerta_saldo", "link_avaliacao", "assinatura")}}
 
 
 def app_comercial():
     leads = ler_leads()
     hoje = financeiro.hoje().isoformat()
-    campos = ("id", "empresa", "segmento", "cidade", "etapa", "pontos", "ultimo_contato", "proximo_contato", "dor_citada", "origem", "obs")
-    resumo = lambda l: {k: l.get(k, "") for k in campos}
-    return {"funil": kpis()["funil"],
+    try:
+        cfg_icp = sdr.icp()
+    except (OSError, ValueError):
+        cfg_icp = {"segmentos": {}, "cidades": []}
+    assinatura = financeiro.config()["assinatura"]
+    campos = ("id", "empresa", "segmento", "cidade", "telefone", "whatsapp", "site", "email", "nota_google", "avaliacoes", "pontos",
+              "etapa", "ultimo_contato", "proximo_contato", "tentativas", "dor_citada", "maps", "origem", "obs")
+    resumo = lambda l: {k: l.get(k) or "" for k in campos}
+
+    def com_msg(l, msg):
+        return {**resumo(l), "mensagem": msg, "link": sdr.link_wa(l["telefone"], msg) if l.get("whatsapp") and l.get("telefone") else ""}
+
+    followups = [com_msg(l, sdr.seguimento(l, int(l.get("tentativas") or 1))) for l in leads
+                 if l["etapa"] == "contatado" and l.get("proximo_contato") and l["proximo_contato"] <= hoje]
+    novos = sorted((l for l in leads if l["etapa"] == "novo" and l.get("telefone")), key=lambda l: -int(l.get("pontos") or 0))[:15]
+    abordar = []
+    for l in novos:
+        try:
+            abordar.append(com_msg(l, sdr.primeira_mensagem(l, cfg_icp, assinatura)))
+        except (KeyError, ValueError):
+            abordar.append(com_msg(l, ""))
+    return {"funil": kpis()["funil"], "hoje": hoje,
             "quentes": [resumo(l) for l in leads if l["etapa"] in ("respondeu", "demo", "proposta")],
-            "followups": [resumo(l) for l in leads if l["etapa"] == "contatado" and l.get("proximo_contato") and l["proximo_contato"] <= hoje],
-            "novos": [resumo(l) for l in sorted((l for l in leads if l["etapa"] == "novo"), key=lambda l: -int(l.get("pontos") or 0))[:8]]}
+            "followups": followups, "abordar": abordar, "novos": [resumo(l) for l in novos[:8]],
+            "leads": [resumo(l) for l in leads], "etapas": sdr.ETAPAS, "segmentos": list(cfg_icp["segmentos"]),
+            "cidades": cfg_icp["cidades"], "tem_consultas": (sdr.PASTA / "bruto" / "consultas.txt").exists(),
+            "tem_resultado": (sdr.PASTA / "bruto" / "resultados.csv").exists(),
+            "tem_buscador": any(p.is_file() for p in (sdr.PASTA / "bin").glob("google*maps*scraper*"))}
 
 
 def app_conteudo():
@@ -262,6 +297,18 @@ def rodar(acao):
 
     threading.Thread(target=trabalho, daemon=True).start()
     return ex
+
+
+# ---------------------------------------------------------------- operação sem o Claude (janelas Financeiro, Comercial, Conteúdo, Anúncios)
+
+def operar(op, dados):
+    if op == "ig_retrato":
+        return operacao.salvar_retrato(dados)
+    if op == "anuncio":
+        return operacao.salvar_campanha(dados)
+    if op == "sdr_entrada" and not dados.get("assinatura"):
+        dados = {**dados, "assinatura": financeiro.config()["assinatura"]}
+    return operacao.operar(op, dados)
 
 
 # ---------------------------------------------------------------- servidor
@@ -392,11 +439,20 @@ class Painel(BaseHTTPRequestHandler):
         if self.headers.get("X-Ciello-Token") != TOKEN:
             return self._json({"erro": "token inválido"}, 403)
         tam = int(self.headers.get("Content-Length") or 0)
-        pedido = json.loads(self.rfile.read(tam) or b"{}") if tam else {}
+        if self.path.startswith("/api/enviar?"):
+            return self._enviar_arquivo(tam)
+        if tam > 1_000_000:
+            return self._json({"erro": "pedido grande demais"}, 413)
+        try:
+            pedido = json.loads(self.rfile.read(tam) or b"{}") if tam else {}
+        except ValueError:
+            return self._json({"erro": "JSON inválido"}, 400)
         if self.path == "/api/rodar":
             if pedido.get("acao") not in ACOES:
                 return self._json({"erro": "ação desconhecida"}, 400)
             return self._json(rodar(pedido["acao"]))
+        if self.path == "/api/operar":
+            return self._json(operar(pedido.get("op"), pedido.get("dados") or {}))
         if self.path == "/api/terminal":
             prompt = pedido.get("prompt") if isinstance(pedido.get("prompt"), str) and pedido["prompt"].strip() else None
             t = terminais.abrir(prompt, str(pedido.get("titulo") or "")[:80], persistencia.preferencia("bypassPermissions"))
@@ -405,6 +461,14 @@ class Painel(BaseHTTPRequestHandler):
             terminais.fechar(pedido.get("id"))
             return self._json({"ok": True})
         return self._json({"erro": "não encontrado"}, 404)
+
+    def _enviar_arquivo(self, tam):
+        """Extrato do banco ou planilha de leads mandados pela janela (o arquivo vai no corpo, o resto na URL)."""
+        if not 0 < tam <= 25_000_000:
+            return self._json({"ok": False, "saida": "arquivo vazio ou maior que 25 MB"}, 413)
+        dados = self.rfile.read(tam)
+        q = {k: v[0] for k, v in urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).items()}
+        return self._json(operacao.importar_arquivo(q.get("tipo"), q.get("nome"), dados, q))
 
     def _gancho(self):
         """Evento de hook do Claude Code (central/escritorio/gancho.py), com o token anotado em servidor.json."""
