@@ -318,6 +318,7 @@ class Vigia:
         self.ganchos_ligados = False
         self.ver_todas = False
         self.global_varrido = False
+        self.residentes = None  # residentes.Residentes: colega com nome de agente da casa não vira personagem novo
         self.timers = []
         # ganchos (preenchidos pela sala)
         self.registrar = lambda sessao, aid: None
@@ -406,12 +407,45 @@ class Vigia:
         a = self.loja.get(aid)
         if not a:
             return
+        if a.residente:  # agente da casa não sai do escritório: só larga a sessão e volta para a rotina
+            return self._soltar_residente(a)
         self.pista.parar(aid)
         self.rel.cancelar_espera(aid)
         self.rel.cancelar_permissao(aid)
         self.ao_tirar(aid, a)
         self.loja.tirar(aid)
         self.loja.gravar()
+
+    def _soltar_residente(self, a: Agente):
+        self.pista.parar(a.id)
+        self.rel.cancelar_espera(a.id)
+        self.rel.cancelar_permissao(a.id)
+        if a.sessao:
+            self.desregistrar(a.sessao)
+        a.jsonl, a.sessao, a.deslocamento, a.sobra = "", "", 0, b""
+        a.lider_id = a.equipe = a.equipe_tmux = None
+        a.ferramentas.clear()
+        a.subferramentas.clear()
+        a.esperando, a.permissao_enviada = True, False
+        self.loja.transmitir(a.info_equipe())
+        self.loja.transmitir({"type": "agentToolsClear", "id": a.id})
+        self.loja.transmitir({"type": "agentStatus", "id": a.id, "status": "waiting", "awaitingInput": False})
+
+    def _assumir(self, r: Agente, arq, sessao, lider_id, lider):
+        """O colega de equipe com nome de agente da casa: o próprio residente passa a ler a sessão dele."""
+        if mesmo_caminho(r.jsonl, arq):
+            return
+        self.pista.parar(r.id)
+        r.jsonl, r.deslocamento, r.sobra, r.linhas = arq, 0, b"", 0
+        r.sessao, r.lider_id = sessao, lider_id
+        r.equipe = lider.equipe if lider else None
+        r.equipe_tmux = lider.equipe_tmux if lider else None
+        r.ultimo_dado = time.time()
+        self.loja.transmitir(r.info_equipe(teamUsesTmux=r.equipe_tmux))
+        if sessao:
+            self.registrar(sessao, r.id)
+        self.pista.observar(r.id)
+        self.pista.ler_novas(r.id)
 
     def tirar_colega(self, aid, motivo=""):
         a = self.loja.get(aid)
@@ -499,7 +533,16 @@ class Vigia:
                 continue
             if any(mesmo_caminho(a.jsonl, arq) for a in self.loja.valores()):
                 continue
-            meta = meta_equipe(arq) if self.ganchos_ligados else None
+            meta = meta_equipe(arq)
+            if meta and meta is not ... and self.residentes:
+                rid = self.residentes.por_nome(meta.get("nome"))
+                if rid is not None:  # sessão de colega com nome de agente da casa: o residente assume, sem clone
+                    self.conhecidos.add(arq)
+                    lider = next((x for x in self.loja.valores() if x.equipe == meta["equipe"] and x.lider_id is None
+                                  and not x.residente), None)
+                    self._assumir(self.loja.get(rid), arq, Path(arq).stem, lider.id if lider else None, lider)
+                    continue
+            meta = meta if self.ganchos_ligados else None
             if meta and meta is not ... and meta.get("nome"):
                 if any(a.equipe == meta["equipe"] and a.lider_id is None for a in self.loja.valores()):
                     continue
@@ -611,6 +654,10 @@ class Vigia:
             if self.sombra.observando(arq) or any(mesmo_caminho(a.jsonl, arq) for a in self.loja.valores()):
                 continue
             self.colegas_conhecidos.add(arq)
+            rid = self.residentes.por_nome(e["colega"]) if self.residentes else None
+            if rid is not None and self.loja.get(rid):
+                self._assumir(self.loja.get(rid), arq, e.get("sessao") or sessao, lider_id, lider)
+                continue
             existente = next((a for a in self.loja.valores() if a.lider_id == lider_id and a.nome == e["colega"]), None)
             if existente:
                 self.pista.parar(existente.id)
@@ -651,6 +698,11 @@ class Vigia:
                 continue
             if self.sombra.observando(e["jsonl"]) or any(mesmo_caminho(a.jsonl, e["jsonl"]) for a in self.loja.valores()):
                 continue
+            rid = self.residentes.por_nome(e.get("name")) if self.residentes else None
+            if rid is not None and tid not in lider.redirecionados:  # spawn com nome de agente da casa: é ele
+                chave = next(k for k, v in self.residentes.ids.items() if v == rid)
+                desc = (lider.status(tid) or "").removeprefix("Subtask:").strip()
+                self.residentes.comecar(lider, tid, {"subagent_type": chave, "description": desc})
             if not e.get("name") or tid not in lider.segundo_plano or tid in lider.redirecionados:
                 self.sombra.observar(lider, lider_id, e["jsonl"], tid)
                 continue
@@ -713,10 +765,13 @@ class Vigia:
             if not arq or not os.path.exists(arq):
                 continue
             aid = p["id"]
-            if aid in self.loja:
+            if aid in self.loja or any(mesmo_caminho(a.jsonl, arq) for a in self.loja.valores()):
+                # já acompanhada (pelo id, ou adotada de novo com outro id): não cria a mesma sessão duas vezes
                 self.conhecidos.add(arq)
                 maior = max(maior, aid)
                 continue
+            if self.residentes and self.residentes.por_nome(p.get("agentName")) is not None:
+                continue  # colega antigo com nome de agente da casa: o residente cuida se a sessão voltar
             a = Agente(id=aid, sessao=p.get("sessionId") or Path(arq).stem, pasta_projeto=p.get("projectDir") or "",
                        jsonl=arq, ultimo_dado=time.time(), pasta_nome=p.get("directoryName") or p.get("folderName"),
                        equipe=p.get("teamName"), nome=p.get("agentName"), lider=p.get("isTeamLead"),

@@ -279,7 +279,7 @@ export function EditorToolbar({
             variant={isAreasActive ? 'active' : 'default'}
             size="md"
             onClick={() => onToolChange(EditTool.AREA_PAINT)}
-            title="Defina áreas ligadas a pastas: cada agente aparece na área da pasta dele"
+            title="Defina as áreas e quem trabalha em cada uma: cada agente senta na área dele"
           >
             Áreas
           </Button>
@@ -438,8 +438,8 @@ export function EditorToolbar({
         <div className="flex flex-col-reverse gap-4 pb-2">
           <AreaAddRow areas={areas} onAddArea={onAddArea} />
           <div className="text-xs text-text-muted px-4 leading-none">
-            Pinte as áreas no mapa e depois ligue as pastas de trabalho. Os agentes vão sentar na área
-            da pasta deles.
+            Pinte as áreas no mapa e depois escolha quem trabalha em cada uma (os agentes da Ciello e as
+            pastas das sessões). Cada um senta na área dele.
           </div>
           {/* Fixed 4-per-row grid; no overflow clip, or the upward Add-folder dropdown is cut off. */}
           <div className="grid grid-cols-[repeat(4,130px)] gap-4">
@@ -853,7 +853,7 @@ function AreaCard({
 
       <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pixel-scrollbar">
         {mappedFolders.length === 0 ? (
-          <span className="text-xs text-text-muted italic">Nenhuma pasta ligada</span>
+          <span className="text-xs text-text-muted italic">Ninguém nesta área</span>
         ) : (
           mappedFolders.map((folder) => (
             <div key={folder} className="flex items-center gap-4 py-1 px-2">
@@ -870,7 +870,7 @@ function AreaCard({
                   e?.stopPropagation();
                   onAreaMappingChange(folder, area.label, 'remove');
                 }}
-                title="Desligar pasta"
+                title="Tirar desta área"
               >
                 x
               </Button>
@@ -888,9 +888,9 @@ function AreaCard({
             if (availableFolders.length === 0) return;
             setAddFolderOpen((v) => !v);
           }}
-          title={availableFolders.length === 0 ? 'Todas as pastas já estão ligadas' : 'Ligar uma pasta…'}
+          title={availableFolders.length === 0 ? 'Todos já estão nesta área' : 'Colocar um agente nesta área…'}
         >
-          Adicionar pasta…
+          Adicionar agente…
         </Button>
         <Dropdown isOpen={addFolderOpen}>
           {availableFolders.map((f) => (

@@ -133,6 +133,12 @@ class TesteTranscricao(Montagem):
         uso = next(m for m in self.msgs if m["type"] == "agentContextUsage")
         self.assertEqual((uso["contextTokens"], uso["maxContextTokens"]), (1100, 200_000))
 
+    def test_restaurar_nao_duplica_sessao_ja_adotada_com_outro_id(self):
+        arq = self.adotar()
+        self.loja.proximo_id = 50
+        self.vigia.restaurar([{"id": 7, "isExternal": True, "jsonlFile": str(arq), "sessionId": "x", "projectDir": str(self.projeto)}])
+        self.assertEqual([a.id for a in self.loja.valores()], [1])
+
     def test_sessao_antiga_nao_e_adotada_e_fechada_nao_volta(self):
         arq = self.adotar()
         self.vigia.fechar(1)
@@ -157,13 +163,14 @@ class TesteResidentes(Montagem):
             (agentes / f"{nome}.md").write_text(f"---\nname: {nome}\ndescription: x\n---\ncorpo\n", encoding="utf-8")
         self.res = Residentes(self.loja, self.vigia.rel)
         self.res.carregar(self.dir / "raiz")
-        self.vigia.leitor.residentes = self.vigia.sombra.residentes = self.res
+        self.vigia.leitor.residentes = self.vigia.sombra.residentes = self.vigia.residentes = self.res
         self.sdr = ID_BASE + 1  # closer, sdr em ordem alfabética
         self.msgs.clear()
 
     def test_residente_assume_a_tarefa_e_volta_para_a_rotina(self):
         self.assertEqual(self.loja.get(self.sdr).nome, "SDR")
-        self.assertEqual(self.loja.get(self.sdr).pasta_nome, "Comercial")
+        self.assertEqual(self.loja.get(self.sdr).pasta_nome, "SDR")
+        self.assertEqual(self.res.areas()["SDR"], ["Comercial"])
         self.vigia.acompanhar(self.projeto)
         arq = self.sessao()
         self.escrever(arq, {"type": "user", "message": {"content": "oi"}})
@@ -184,6 +191,25 @@ class TesteResidentes(Montagem):
         self.assertEqual(self.msgs[-1], {"type": "agentStatus", "id": self.sdr, "status": "waiting", "awaitingInput": False})
         self.assertTrue(self.loja.get(self.sdr).esperando)
         self.assertEqual(self.loja.get(coord).redirecionados, {})
+
+    def test_colega_de_equipe_com_nome_de_agente_da_casa_nao_duplica(self):
+        self.vigia.acompanhar(self.projeto)
+        lider_arq = self.sessao()
+        self.escrever(lider_arq, {"type": "user", "message": {"content": "oi"}})
+        self.vigia.varrer_pasta(str(self.projeto))
+        lider_id = max(i for i, a in self.loja if not a.residente)
+        self.loja.get(lider_id).equipe = "time-1"
+        colega = self.sessao("bbbbbbbb-1111-2222-3333-444444444444")
+        self.escrever(colega, {"type": "user", "teamName": "time-1", "agentName": "sdr", "message": {"content": "vai"}})
+        antes = len(self.loja.agentes)
+        self.vigia.procurar_colegas(str(self.projeto), self.loja.get(lider_id).sessao, lider_id)
+        self.assertEqual(len(self.loja.agentes), antes)  # nenhum SDR novo: o residente assumiu
+        sdr = self.loja.get(self.sdr)
+        self.assertEqual(Path(sdr.jsonl).name, colega.name)
+        self.assertEqual(sdr.lider_id, lider_id)
+        self.vigia.tirar_colega(self.sdr, "equipe")  # a equipe acabou: ele volta para a rotina, não some
+        self.assertIn(self.sdr, self.loja)
+        self.assertEqual((sdr.jsonl, sdr.lider_id, sdr.esperando), ("", None, True))
 
     def test_vez_nova_solta_o_residente_e_residente_nao_e_gravado(self):
         gravados = []

@@ -123,6 +123,21 @@ export class OfficeState {
 
   setAreaMappings(mappings: Record<string, string[]>): void {
     this.areaMappings = mappings;
+    // Ciello: quem mudou de área troca de lugar na hora (vai andando até um lugar livre da área nova)
+    for (const ch of this.characters.values()) {
+      if (ch.isSubagent || !ch.directoryName || !ch.seatId) continue;
+      if (this.seatNaArea(ch.seatId, ch.directoryName)) continue;
+      const novo = this.findFreeSeat(ch.directoryName);
+      if (novo && this.seatNaArea(novo, ch.directoryName)) this.reassignSeat(ch.id, novo);
+    }
+  }
+
+  /** O lugar está numa das áreas atribuídas a esta pasta/agente? (sem área atribuída, qualquer lugar serve) */
+  private seatNaArea(seatId: string, directoryName?: string): boolean {
+    const areas = directoryName ? this.areaMappings[directoryName] : undefined;
+    if (!areas || areas.length === 0) return true;
+    const zona = this.seatZone(seatId);
+    return zona !== null && areas.includes(zona);
   }
 
   constructor(layout?: OfficeLayout) {
@@ -530,7 +545,8 @@ export class OfficeState {
     const anchor = nearAgentId !== undefined ? this.characters.get(nearAgentId) : undefined;
     const anchorAt = anchorTile(anchor, this.seats);
     let seatId: string | null = null;
-    if (preferredSeatId && this.seats.has(preferredSeatId)) {
+    // Ciello: o lugar salvo só vale se ainda estiver na área atribuída ao agente (senão a área manda)
+    if (preferredSeatId && this.seats.has(preferredSeatId) && this.seatNaArea(preferredSeatId, directoryName)) {
       const seat = this.seats.get(preferredSeatId)!;
       if (!seat.assigned) {
         seatId = preferredSeatId;
@@ -647,6 +663,11 @@ export class OfficeState {
   /** The agent that owns `id`'s terminal: a sub-agent's parent, else itself. */
   terminalOwnerOf(id: number): number {
     return this.subagentMeta.get(id)?.parentAgentId ?? id;
+  }
+
+  /** Ciello: ids dos agentes de topo (sem sub-agentes, sem o apresentador) */
+  agentIds(): number[] {
+    return [...this.characters.values()].filter((c) => !c.isSubagent && !c.isGreeter).map((c) => c.id);
   }
 
   removeAgent(id: number): void {

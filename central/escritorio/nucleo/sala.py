@@ -37,6 +37,7 @@ class Sala:
         self.residentes = Residentes(self.loja, self.vigia.rel)
         self.residentes.carregar(projeto)
         self.vigia.leitor.residentes = self.vigia.sombra.residentes = self.ganchos.residentes = self.residentes
+        self.vigia.residentes = self.residentes
         self.token_gancho = secrets.token_urlsafe(24)
 
     # ---------------------------------------------------------- ciclo de vida
@@ -46,6 +47,8 @@ class Sala:
         self.vigia.ver_todas = bool(cfg["preferencias"]["watchAllSessions"])
         self._anotar_servidor()
         pasta = pasta_de_sessoes(self.projeto, self.vigia.raiz_sessoes)
+        # volta com as sessões acompanhadas antes de começar a procurar novas (senão a mesma sessão ganhava 2 ids)
+        self.vigia.restaurar(P.estado()["agentes"])
         self.vigia.acompanhar(pasta)
         self.vigia.iniciar()
         self.laco.iniciar()
@@ -160,6 +163,17 @@ class Sala:
             args = ["echo", "Claude Code não encontrado neste PC. Para instalar, veja claude.com/claude-code"]
         subprocess.Popen(["cmd.exe", "/k", *args], cwd=self.projeto, creationflags=subprocess.CREATE_NEW_CONSOLE)
 
+    def _areas(self, cfg):
+        """Áreas atribuídas. A área inicial de cada agente entra uma vez só; depois vale o que você mudar no editor
+        (inclusive tirar alguém de uma área)."""
+        vistos = set(cfg.get("areasVistas") or [])
+        novos = {k: v for k, v in self.residentes.areas().items() if k not in vistos}
+        if novos:
+            cfg["areas"] = {**novos, **cfg["areas"]}
+            cfg["areasVistas"] = sorted(vistos | set(novos))
+            P.gravar_config(cfg)
+        return cfg["areas"]
+
     def _hooks(self, ligar, enviar):
         try:
             if ligar:
@@ -203,7 +217,7 @@ class Sala:
         prefs = self._preferencias()
         enviar(prefs)
         instalado = G.instalados()
-        enviar({"type": "areaMappingsLoaded", "mappings": {**self.residentes.areas(), **cfg["areas"]}})
+        enviar({"type": "areaMappingsLoaded", "mappings": self._areas(cfg)})
         self.vigia.ver_todas = prefs["watchAllSessions"]
         self.vigia.ganchos_ligados = cfg["hooks"] is True and instalado
         self.vigia.restaurar(P.estado()["agentes"])

@@ -40,6 +40,9 @@ export interface ExistingAgentsOffice {
     directoryName?: string,
   ) => void;
   setHeadless: (id: number, headless: boolean) => void;
+  /** Ciello: para tirar quem não está mais no retrato do servidor */
+  removeAgent?: (id: number) => void;
+  agentIds?: () => number[];
 }
 
 /**
@@ -59,6 +62,12 @@ export function reconcileExistingAgents(
   headlessAgents: Record<number, boolean> = {},
 ): boolean {
   let addedDirectly = false;
+  // Ciello: a lista é o retrato completo do servidor. Depois de reconectar (servidor reiniciado, ids novos),
+  // personagens que não estão mais nela saem; senão a mesma sessão aparecia duas vezes.
+  if (layoutReady && os.removeAgent && os.agentIds) {
+    const vivos = new Set(incoming);
+    for (const id of os.agentIds()) if (!vivos.has(id)) os.removeAgent(id);
+  }
   for (const id of incoming) {
     const m = meta[id];
     const p: PendingAgent = {

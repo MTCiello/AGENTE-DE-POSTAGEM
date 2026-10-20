@@ -433,16 +433,8 @@ export function useExtensionMessages(
         ) {
           saveAgentSeats(os);
         }
-        setAgents((prev) => {
-          const ids = new Set(prev);
-          const merged = [...prev];
-          for (const id of incoming) {
-            if (!ids.has(id)) {
-              merged.push(id);
-            }
-          }
-          return merged.sort((a, b) => a - b);
-        });
+        // Ciello: o retrato do servidor substitui a lista (quem sumiu depois de reconectar não fica duplicado)
+        setAgents([...incoming].sort((a, b) => a - b));
       } else if (msg.type === 'agentToolStart') {
         const id = msg.id as number;
         const toolId = msg.toolId as string;

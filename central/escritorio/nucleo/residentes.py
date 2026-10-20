@@ -56,7 +56,7 @@ class Residentes:
         for i, nome in enumerate(equipe(raiz)):
             rid = ID_BASE + i
             a = Agente(id=rid, sessao="", pasta_projeto=str(raiz), jsonl="", externo=False, residente=True,
-                       esperando=True, nome=NOMES.get(nome, nome), pasta_nome=AREAS.get(nome),
+                       esperando=True, nome=NOMES.get(nome, nome), pasta_nome=NOMES.get(nome, nome),
                        paleta=i % PALETAS, matiz=MATIZES[(i // PALETAS) % len(MATIZES)])
             self.loja.por(rid, a)
             self.ids[nome] = rid
@@ -64,10 +64,20 @@ class Residentes:
             self.loja.transmitir({"type": "agentStatus", "id": rid, "status": "waiting", "silencioso": True})
 
     def areas(self) -> dict[str, list[str]]:
-        """Mapeamento pasta -> área que faz cada residente sentar na área dele."""
-        return {area: [area] for area in sorted({AREAS[n] for n in self.ids if n in AREAS})}
+        """Área inicial de cada residente (a chave é o nome dele, que aparece no editor de áreas para você mudar)."""
+        return {NOMES.get(n, n): [AREAS[n]] for n in self.ids if n in AREAS}
 
     # ---------------------------------------------------------- quem é chamado
+    def por_nome(self, nome) -> int | None:
+        """Id do residente com este nome ("sdr", "SDR", "pesquisador mercado"...), ou None."""
+        if not isinstance(nome, str):
+            return None
+        n = nome.strip().lower()
+        for chave, rid in self.ids.items():
+            if n in (chave, chave.replace("-", " "), NOMES.get(chave, "").lower()):
+                return rid
+        return None
+
     def para(self, entrada) -> int | None:
         """Id do residente que esta chamada de Task/Agent aciona, ou None."""
         if not isinstance(entrada, dict):
