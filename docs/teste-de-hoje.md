@@ -2,7 +2,7 @@
 
 Roteiro para baixar o assistente no seu PC (Windows) e testar tudo, com foco no **Ciello OS e no escritório novo** (em Python, sem Node). Marque o que deu certo. Se algo falhar, me mande o `estado\verificacao.txt` ou um print da mensagem de erro.
 
-**Tempo:** uns 50 minutos para o essencial (passos 1 a 6). O resto é opcional.
+**Tempo:** pouco mais de 1 hora para o essencial (passos 1 a 7). O resto é opcional.
 
 **Antes de começar:** o Claude Code instalado e com login feito (é ele que faz os agentes trabalharem; o passo 6 mostra o que funciona mesmo sem ele). Para conferir, abra o PowerShell e rode `claude --version`. Se não tiver: `irm https://claude.ai/install.ps1 | iex` e depois `claude` para entrar na conta.
 
@@ -128,14 +128,32 @@ O Ciello OS não depende do Claude: os números e o dia a dia rodam direto no se
 
 O que precisa do Claude: os agentes (pesquisa, roteiro, vídeo, legendas, análise escrita, puxar números do Metricool). O resto é do OS.
 
-## 7. Ver o que já foi produzido (5 min)
+## 7. Objetivos, esteiras e Estúdio de Voz (novo, ~15 min)
+
+**Menu Iniciar:** agora separado em **Criar, Vender, Gerir**, com a caixa "O que você quer fazer?" no alto.
+- [ ] Escreva um objetivo na caixa do menu (ex.: "crie 3 vídeos das novidades da semana, faça a capa, a descrição e programe a postagem") e aperte **Enter**. Abre o **Claude Code · Objetivo** com o pedido para o coordenador.
+- [ ] O coordenador mostra um plano curto, chama os agentes (cada um vai para o PC no escritório) e **pede a sua aprovação** antes de agendar ou publicar.
+- [ ] Digitar só o nome de um app (ex.: "financeiro") e Enter abre o app.
+
+**Objetivos e esteiras** (menu Iniciar → "O que você quer fazer?"):
+- [ ] As esteiras prontas mostram a cadeia de agentes (quem trabalha agora fica verde): Semana de conteúdo, Um vídeo sobre um tema, Prospecção do dia, Bom dia, Campanha de anúncio, Fechamento da semana.
+- [ ] Rode **Um vídeo sobre um tema** com um tema seu. O roteiro vem para você aprovar.
+
+**Estúdio de Voz** (menu Iniciar → Criar):
+- [ ] Se aparecer "A voz ainda não está instalada", clique **Instalar agora** (uns 3 GB; se falhar, rode o `instalar.cmd` e responda **S** na voz).
+- [ ] **Gravar**: permita o microfone, leia o texto em voz alta (10 a 20 s) e clique **Parar**. A gravação aparece com o player para ouvir.
+- [ ] **Testar**: motor **Sua voz (Chatterbox)** → **Ouvir**. A 1ª vez baixa o modelo (uns minutos). Nota de 0 a 10 para a semelhança com a sua voz: ____
+- [ ] Compare com a **Voz pronta (Kokoro)**. Se gostar da sua, **Usar esta voz nos vídeos**: os vídeos novos saem com ela.
+- [ ] Opcional, **VoiceStudio**: baixe o instalador do Windows em github.com/debpalash/VoiceStudio/releases, abra o app e volte ao Estúdio de Voz. O cartão fica verde: **Clonar a minha gravação no VoiceStudio**, depois teste com o motor VoiceStudio. Nota comparando com o Chatterbox: ____
+
+## 8. Ver o que já foi produzido (5 min)
 
 - [ ] `midia\final\2026-10-27-crm-plano.mp4`: o plano-sequência do CRM. Nota de 0 a 10 comparando com o reel de referência: ____
 - [ ] `midia\capas\`: as capas da semana.
 - [ ] `radar\2026-10-19.md`: a pauta sugerida para a semana de 26/10.
 - [ ] `metricas\relatorio-2026-10-19.md`: o primeiro relatório do perfil.
 
-## 8. SDR de verdade (opcional, ~15 min)
+## 9. SDR de verdade (opcional, ~15 min)
 
 Pelo Ciello OS: Comercial → aba **Buscar leads** (passo 6). Ou, pela linha de comando:
 
@@ -152,7 +170,7 @@ python central\sdr.py abordar --top 10
 - [ ] Abriu `comercial\abordagens\AAAA-MM-DD.md` com mensagens e links do WhatsApp.
 - [ ] As empresas do topo são bons clientes para o CRM? Anote 2 que estão fora do lugar.
 
-## 9. Chefe de gabinete, financeiro, vigia e pós-venda (opcional, ~15 min)
+## 10. Chefe de gabinete, financeiro, vigia e pós-venda (opcional, ~15 min)
 
 O financeiro e o pós-venda também ficam todos na janela Financeiro (passo 6). Pela linha de comando:
 
@@ -170,7 +188,7 @@ python central\financeiro.py resumo
 - [ ] As despesas do extrato caíram na categoria certa? Quantas ficaram "a classificar": ____
 - [ ] Opcional: `agendar.cmd` para o briefing sair sozinho às 7h.
 
-## 10. Clone no Kaggle e voz (opcionais, para outro dia se faltar tempo)
+## 11. Clone no Kaggle e voz (opcionais, para outro dia se faltar tempo)
 
 **Clone (~1 h, quase tudo esperando download):** kaggle.com → conta com telefone verificado → *Create → New Notebook → File → Import Notebook* → `central\clone\ciello_clone_kaggle.ipynb` → **GPU T4 x2** e **Internet On** → *Run All* → abra o link `gradio.live` e siga o "Teste desta noite" no fim do notebook. **Desligue a sessão (Stop session) no fim.**
 - [ ] Boca acompanha o português? 0 a 10: ____ · Parece real? 0 a 10: ____
@@ -197,6 +215,6 @@ python central\voz.py roteiros\2026-10-27-crm-plano.json --saida audio\crm --nom
 
 ## O que eu preciso de volta
 1. O `estado\verificacao.txt`.
-2. Os itens dos passos 5 e 6 que não funcionaram (com print, se der).
+2. Os itens dos passos 5, 6 e 7 que não funcionaram (com print, se der), e as notas das vozes.
 3. Sua nota para o vídeo do CRM e o que mudaria.
 4. Preço e planos do CRM e o cabeçalho da planilha de importação.

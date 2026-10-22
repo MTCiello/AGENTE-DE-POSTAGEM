@@ -22,12 +22,16 @@ const SVG = {
   engrenagem: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   pino: '<path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/>',
   play: '<path d="M7 5v14l11-7z"/>',
+  alvo: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
+  microfone: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/>',
   min: '<path d="M2 6h8"/>', max: '<rect x="2" y="2" width="8" height="8"/>', rest: '<rect x="2" y="4" width="6" height="6"/><path d="M4 4V2h6v6H8"/>', fechar: '<path d="M2 2l8 8M10 2l-8 8"/>',
 };
 const icone = (n, vb = 24) => `<svg viewBox="0 0 ${vb} ${vb}">${SVG[n] || SVG.agente}</svg>`;
 
 // ------------------------------------------------------------------ apps
 const APPS = {
+  objetivos: { titulo: 'Objetivos e esteiras', icone: 'alvo', cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', w: 900, h: 700, render: renderObjetivos, cada: 3000 },
+  voz: { titulo: 'Estúdio de Voz', icone: 'microfone', cor: 'linear-gradient(135deg,#E9826C,#B5442F)', w: 780, h: 700, render: renderVoz, estatico: true },
   briefing: { titulo: 'Bom dia', icone: 'sol', cor: 'linear-gradient(135deg,#F7A35C,#E0722F)', w: 640, h: 660, render: renderBriefing },
   financeiro: { titulo: 'Financeiro', icone: 'financeiro', cor: 'linear-gradient(135deg,#3CC285,#1F8A4C)', w: 900, h: 680, render: renderFinanceiro },
   comercial: { titulo: 'Comercial', icone: 'comercial', cor: 'linear-gradient(135deg,#5E92E6,#2F5BA8)', w: 880, h: 660, render: renderComercial },
@@ -39,7 +43,9 @@ const APPS = {
   atividade: { titulo: 'Atividade', icone: 'atividade', cor: 'linear-gradient(135deg,#7E8AA1,#4B566B)', w: 520, h: 580, render: renderAtividade, cada: 3000 },
   verificar: { titulo: 'Verificação', icone: 'verificar', cor: 'linear-gradient(135deg,#5BC0A0,#2D8C70)', acao: 'verificar' },
 };
-const MENU = ['briefing', 'financeiro', 'comercial', 'conteudo', 'tendencias', 'concorrentes', 'anuncios', 'equipe', 'atividade', 'verificar'];
+// menu Iniciar por objetivo: o que você quer fazer agora
+const GRUPOS = [['Criar', ['conteudo', 'voz', 'tendencias', 'concorrentes']], ['Vender', ['comercial', 'anuncios']],
+  ['Gerir', ['briefing', 'financeiro']], ['Equipe e sistema', ['equipe', 'atividade', 'verificar']]];
 
 const NOMES = { 'chefe-gabinete': 'Chefe de Gabinete', 'pesquisador-mercado': 'Pesquisador de Mercado', roteirista: 'Roteirista', 'produtor-video': 'Produtor de Vídeo',
   'produtor-imagem': 'Produtor de Imagem', postagem: 'Postagem', analista: 'Analista', 'gestor-anuncios': 'Gestor de Anúncios', sdr: 'SDR', closer: 'Closer',
@@ -360,16 +366,28 @@ function enviarControles() { const f = $('#escritorio'); if (f && f.contentWindo
 window.addEventListener('wheel', (e) => { if (e.ctrlKey || e.metaKey) e.preventDefault(); }, { passive: false });
 
 function desenharMenu(filtro = '') {
-  const f = filtro.toLowerCase();
-  $('#menu-apps').innerHTML = MENU.filter((k) => APPS[k].titulo.toLowerCase().includes(f)).map((k) =>
-    `<button class="item-app" data-chave="${k}">${tile(APPS[k])}<span>${esc(APPS[k].titulo)}</span></button>`).join('');
+  const f = filtro.trim().toLowerCase();
+  const casa = (k) => !f || APPS[k].titulo.toLowerCase().includes(f);
+  const item = (k) => `<button class="item-app" data-chave="${k}">${tile(APPS[k])}<span>${esc(APPS[k].titulo)}</span></button>`;
+  const grupos = GRUPOS.map(([g, ks]) => [g, ks.filter(casa)]).filter(([, ks]) => ks.length);
+  const pedir = f.length >= 3 ? `<button class="pedir-equipe" data-pedir="1">${sprite('chefe-gabinete', 24)}<span><b>Pedir à equipe</b><small>“${esc(filtro.trim())}”</small></span><kbd>Enter</kbd></button>` : '';
+  $('#menu-apps').innerHTML = pedir
+    + (!f ? `<button class="destaque-objetivo" data-chave="objetivos">${tile(APPS.objetivos)}<span><b>O que você quer fazer?</b><small>Escreva um objetivo ou rode uma esteira pronta: a equipe se organiza sozinha.</small></span></button>` : '')
+    + grupos.map(([g, ks]) => `<h4>${g}</h4><div class="grupo-apps">${ks.map(item).join('')}</div>`).join('');
   $('#menu-equipe').innerHTML = equipeCache.filter((a) => nome(a.nome).toLowerCase().includes(f)).map((a) =>
     `<button class="item-agente" data-chave="agente:${esc(a.nome)}">${sprite(a.nome, 22)}<div><b>${esc(nome(a.nome))}</b><small>${esc(ROTULO_ESTADO[estadoAgente(a.nome).estado] || 'livre')}</small></div></button>`).join('');
 }
 function fecharMenus() { $('#menu').hidden = true; $('#central').hidden = true; $('#iniciar').classList.remove('on'); }
 $('#iniciar').onclick = (e) => { e.stopPropagation(); const abrirMenu = $('#menu').hidden; fecharMenus(); if (abrirMenu) { desenharMenu(); $('#menu').hidden = false; $('#iniciar').classList.add('on'); $('#busca').value = ''; $('#busca').focus(); } };
 $('#busca').oninput = (e) => desenharMenu(e.target.value);
-$('#menu').addEventListener('click', (e) => { const b = e.target.closest('[data-chave]'); if (b) abrir(b.dataset.chave); });
+// Enter na busca: abre o app se o texto é o nome dele; frase é objetivo e vai para a equipe
+$('#busca').onkeydown = (e) => {
+  if (e.key !== 'Enter') return;
+  const t = e.target.value.trim(); if (!t) return;
+  const app = Object.keys(APPS).find((k) => APPS[k].titulo.toLowerCase().includes(t.toLowerCase()) && !APPS[k].acao);
+  if (app && t.split(/\s+/).length <= 2) abrir(app); else pedirEquipe(t);
+};
+$('#menu').addEventListener('click', (e) => { if (e.target.closest('[data-pedir]')) return pedirEquipe($('#busca').value.trim()); const b = e.target.closest('[data-chave]'); if (b) abrir(b.dataset.chave); });
 $('#auto').checked = SALVO.auto; $('#auto').onchange = (e) => { SALVO.auto = e.target.checked; salvar(); };
 $('#organizar').onclick = () => { fecharMenus(); organizar(); };
 $('#centralizar').onclick = () => { fecharMenus(); const f = $('#escritorio'); if (f) f.contentWindow.postMessage({ ciello: 'centralizar' }, location.origin); };
@@ -853,6 +871,161 @@ async function renderAnuncios(j) {
   <h2>Campanhas</h2><table class="tab"><tr><th>Campanha</th><th>Período</th><th>Gasto</th><th>Conversas</th><th>Demos</th><th>Clientes</th><th></th></tr>${d.campanhas.map((c) => `<tr><td><b>${esc(c.nome)}</b><br><small class="neutro">${esc(c.publico || '')}</small></td><td>${ddmm(c.inicio)}–${ddmm(c.fim)}</td><td>${brl(c.gasto)}</td><td>${num(c.conversas)}</td><td>${num(c.demos)}</td><td>${num(c.clientes)}</td><td><button class="bt mini" data-fn="editar" data-nome="${esc(c.nome)}">Atualizar</button></td></tr>`).join('')}</table>`
     : '<div class="vazio">Nenhuma campanha registrada ainda. Clique em <b>+ Campanha</b> e copie os números do Gerenciador de Anúncios.</div>'}
   <div class="acoes"><button class="bt pri" data-abrir="agente:gestor-anuncios">Gestor de anúncios</button></div></div>`;
+}
+
+// ------------------------------------------------------------------ apps: objetivos e esteiras
+// Você diz o objetivo; o Claude Code abre aqui dentro como coordenador e distribui o trabalho entre os agentes
+// (cada um aparece trabalhando no escritório). Nada sai do PC sem a sua aprovação.
+function promptObjetivo(objetivo) {
+  return `Objetivo do Mateus: ${objetivo}
+
+Você coordena a equipe da Ciello (agentes em .claude/agents). Faça assim:
+1. Monte um plano curto: quem faz o quê e em que ordem (o que não depende de outra etapa roda em paralelo). Mostre o plano em poucas linhas e siga.
+2. Delegue cada etapa ao agente certo com a ferramenta Task: subagent_type com o nome do agente e a descrição começando pelo nome (ex.: "roteirista: 3 roteiros da semana"), para ele aparecer trabalhando no escritório.
+3. Use as ferramentas de central/ e as regras do AGENTE.md e de docs/equipe.md. A narração usa a voz escolhida no Estúdio de Voz (python central/voz.py sem --motor).
+4. Pare e peça minha aprovação antes de qualquer coisa que sai do PC: publicar ou agendar post, enviar mensagem ou e-mail, subir anúncio, gastar dinheiro.
+5. No fim: um resumo curto do que ficou pronto e onde está cada arquivo.`;
+}
+function pedirEquipe(objetivo, titulo = 'Objetivo') {
+  objetivo = String(objetivo || '').trim(); if (!objetivo) return;
+  fecharMenus();
+  SALVO.objetivos = [objetivo, ...(SALVO.objetivos || []).filter((o) => o !== objetivo)].slice(0, 6); salvar();
+  abrirTerminal({ prompt: promptObjetivo(objetivo), titulo });
+}
+const ESTEIRAS = [
+  { id: 'semana', titulo: 'Semana de conteúdo', desc: 'Pesquisa as novidades, escreve os roteiros, narra, monta os vídeos, faz capa e legenda e agenda no Metricool.',
+    agentes: ['pesquisador-mercado', 'roteirista', 'produtor-video', 'produtor-imagem', 'postagem'],
+    campos: [['n', 'Vídeos', '3'], ['tema', 'Assunto', 'novidades de IA da semana para pequenos negócios']],
+    pedido: (v) => `Crie ${v.n || 3} vídeos sobre ${v.tema || 'as novidades de IA da semana'} para o @ciellotec seguindo a rotina /semana: pesquisa e checagem de fatos, roteiros, narração, vídeo, capa, legenda e agendamento no Metricool nos próximos horários (seg, qua e sex às 10h). Me mostre os temas e os roteiros para eu aprovar antes de produzir, e peça minha confirmação antes de agendar.` },
+  { id: 'video', titulo: 'Um vídeo sobre um tema', desc: 'Roteiro para você aprovar, narração, vídeo, capa e legenda. Fica pronto em midia/final/ sem agendar.',
+    agentes: ['roteirista', 'produtor-video', 'produtor-imagem'], campos: [['tema', 'Tema', '']],
+    pedido: (v) => `Faça 1 reel sobre: ${v.tema || '(me pergunte o tema)'}. Roteiro (me mostre para aprovar), narração, vídeo, capa e legenda. Não agende: deixe o vídeo final em midia/final/ e me diga onde está.` },
+  { id: 'comercial', titulo: 'Prospecção do dia', desc: 'Follow-ups, abordagens novas e respostas para os quentes, prontos na janela Comercial. Nada é enviado.',
+    agentes: ['sdr', 'closer'], campos: [['n', 'Abordagens novas', '15']],
+    pedido: (v) => `Rode /comercial: follow-ups do dia, ${v.n || 15} abordagens novas e respostas para os leads quentes. Deixe as mensagens prontas na janela Comercial do Ciello OS; não envie nada.` },
+  { id: 'bomdia', titulo: 'Bom dia', desc: 'Caixa de entrada, financeiro, pós-venda e comercial numa tela com as 3 prioridades do dia.',
+    agentes: ['chefe-gabinete', 'caixa-entrada', 'financeiro', 'sucesso-cliente'], campos: [], pedido: () => 'Rode /bom-dia e me entregue as 3 prioridades do dia.' },
+  { id: 'anuncio', titulo: 'Campanha de anúncio', desc: 'Público, 3 criativos (roteiro e imagem), orçamento e o que medir. Nada sobe no Meta sem você.',
+    agentes: ['gestor-anuncios', 'roteirista', 'produtor-imagem'], campos: [['objetivo', 'Para quê', 'conversas no WhatsApp de imobiliárias da região'], ['verba', 'Verba (R$)', '100']],
+    pedido: (v) => `Planeje uma campanha de Meta Ads para ${v.objetivo || 'gerar conversas no WhatsApp'} com verba de R$ ${v.verba || 100}: público, 3 criativos (roteiro e imagem), orçamento e o que medir. Não suba nada no Meta: me entregue o plano e os criativos para eu aprovar.` },
+  { id: 'sexta', titulo: 'Fechamento da semana', desc: 'Placar, resumo financeiro, vigia dos concorrentes e uma decisão para a próxima semana.',
+    agentes: ['chefe-gabinete', 'financeiro', 'pesquisador-mercado', 'analista'], campos: [], pedido: () => 'Rode /sexta e termine com uma decisão para a próxima semana.' },
+];
+const EXEMPLOS = ['Crie 3 vídeos das novidades da semana, faça as capas, as legendas e programe as postagens',
+  'Encontre 20 imobiliárias em Chapecó e prepare a 1ª mensagem', 'Monte um carrossel explicando o CIELLO CRM', 'Como está a empresa esta semana?'];
+
+async function renderObjetivos(j) {
+  if (!equipeCache.length) await puxarEquipe();
+  j.params = j.params || {};
+  const valor = (e, c) => (j.params[`${e.id}.${c[0]}`] ?? c[2]);
+  j.fns = {
+    mandar: () => { const t = $('.objetivo-texto', j.corpo); if (t.value.trim()) { pedirEquipe(t.value); t.value = ''; } else t.focus(); },
+    exemplo: ({ i }) => { const t = $('.objetivo-texto', j.corpo); t.value = EXEMPLOS[+i]; t.focus(); },
+    recente: ({ i }) => pedirEquipe(SALVO.objetivos[+i]),
+    esteira: ({ id }) => {
+      const e = ESTEIRAS.find((x) => x.id === id);
+      const v = Object.fromEntries(e.campos.map((c) => [c[0], String(valor(e, c)).trim()]));
+      if (id === 'video' && !v.tema) { aviso({ titulo: 'Falta o tema', texto: 'Escreva o tema do vídeo na esteira.', cor: '#C8442F' }); return; }
+      pedirEquipe(e.pedido(v), e.titulo);
+    },
+    param: (d, el) => { j.params[el.name] = el.value; },
+  };
+  const texto = $('.objetivo-texto', j.corpo)?.value || '';
+  const trabalhando = Object.entries(estadoCache.agentes).filter(([, a]) => a.estado === 'trabalhando' || a.estado === 'esperando');
+  const elo = (a) => { const s = estadoAgente(a).estado; return `<span class="elo ${s}" title="${esc(nome(a))}: ${esc(ROTULO_ESTADO[s] || s)}">${sprite(a, 22)}<small>${esc(nome(a))}</small></span>`; };
+  j.corpo.innerHTML = `<div class="pagina"><h1>O que você quer fazer?</h1><p class="sub">Diga o objetivo com as suas palavras. O coordenador monta o plano, chama os agentes certos (você vê cada um trabalhando no escritório) e pede a sua aprovação antes de publicar, enviar ou gastar.</p>
+  <div class="objetivo"><textarea class="objetivo-texto" rows="3" placeholder="Ex.: crie 3 vídeos das novidades da semana, faça a capa, a descrição e programe a postagem">${esc(texto)}</textarea>
+    <div class="acoes-linha"><button class="bt pri" data-fn="mandar">${icone('play')} Mandar para a equipe</button>${EXEMPLOS.map((x, i) => `<button class="chip-ex" data-fn="exemplo" data-i="${i}">${esc(x.length > 46 ? x.slice(0, 44) + '…' : x)}</button>`).join('')}</div></div>
+  ${(SALVO.objetivos || []).length ? `<h2>Pedidos recentes</h2><div class="lista">${SALVO.objetivos.map((o, i) => `<div class="linha-item"><div class="cresce">${esc(o.length > 140 ? o.slice(0, 138) + '…' : o)}</div><button class="bt mini" data-fn="recente" data-i="${i}">Pedir de novo</button></div>`).join('')}</div>` : ''}
+  ${trabalhando.length ? `<h2>Trabalhando agora</h2><div class="lista">${trabalhando.map(([a, x]) => `<div class="linha-item" data-abrir="agente:${esc(a)}" style="cursor:pointer">${sprite(a, 20)}<div class="cresce"><b>${esc(nome(a))}</b><small>${esc(x.tarefa || '')}</small></div>${chipEstado(x.estado)}</div>`).join('')}</div>` : ''}
+  <h2>Esteiras prontas</h2><div class="esteiras">${ESTEIRAS.map((e) => `<div class="cartao esteira"><b>${esc(e.titulo)}</b><p class="sub">${esc(e.desc)}</p>
+    <div class="cadeia">${e.agentes.map(elo).join('<i>→</i>')}</div>
+    ${e.campos.length ? `<div class="campos-esteira">${e.campos.map((c) => `<label>${esc(c[1])}<input name="${e.id}.${c[0]}" value="${esc(valor(e, c))}" data-mudar="param" ${c[0] === 'n' || c[0] === 'verba' ? 'inputmode="numeric"' : ''}></label>`).join('')}</div>` : ''}
+    <button class="bt pri" data-fn="esteira" data-id="${e.id}">${icone('play')} Rodar esteira</button></div>`).join('')}</div>
+  <p class="sub" style="margin-top:14px">As esteiras usam o Claude Code (abre a janela do terminal aqui dentro). Sem o Claude, o Financeiro, o Comercial, o Conteúdo e o Estúdio de Voz continuam funcionando.</p></div>`;
+}
+
+// ------------------------------------------------------------------ apps: estúdio de voz
+const TEXTO_GRAVAR = 'Oi! Aqui é o Mateus, da Ciello, de Chapecó. Eu ajudo pequenas empresas a vender mais pelo WhatsApp, com organização, '
+  + 'resposta rápida e um pouco de inteligência artificial. Hoje eu vou te mostrar como isso funciona na prática, passo a passo. Bora?';
+const MOTOR_ROTULO = { kokoro: 'Voz pronta (Kokoro)', chatterbox: 'Sua voz (Chatterbox)', voicestudio: 'VoiceStudio', teste: 'Teste' };
+async function acompanhar(id, aoTerminar) {
+  for (let i = 0; i < 1800; i++) {
+    await new Promise((r) => setTimeout(r, 1000));
+    let ex; try { ex = await api(`/api/execucao/${encodeURIComponent(id)}`); } catch { continue; }
+    if (ex.terminou) return aoTerminar(ex);
+  }
+  return null;
+}
+async function renderVoz(j) {
+  const d = await api('/api/app/voz'); const p = d.preferencia; const m = d.motores;
+  j.teste = j.teste || { motor: p.motor === 'teste' ? 'kokoro' : p.motor, voz: p.voz, perfil: p.perfil, texto: d.texto_padrao };
+  const t = j.teste;
+  const audio = (arq) => `<audio controls preload="none" src="/api/voz/arquivo/${encodeURIComponent(arq)}?t=${Date.now()}"></audio>`;
+  const escolhida = { kokoro: `voz pronta ${(d.vozes_kokoro.find((v) => v[0] === p.voz) || [p.voz, p.voz])[1]}`, chatterbox: 'a sua voz (Chatterbox)', voicestudio: `VoiceStudio${p.perfil ? ` · voz ${p.perfil}` : ''}` }[p.motor] || p.motor;
+  j.fns = {
+    gravar: async (_, el) => {
+      if (j.gravador) { j.gravador.stop(); return; }
+      let fluxo; try { fluxo = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true } }); }
+      catch { aviso({ titulo: 'Microfone bloqueado', texto: 'Permita o microfone para o Ciello OS (ícone de cadeado na barra do navegador).', cor: '#C8442F' }); return; }
+      const partes = []; const g = new MediaRecorder(fluxo); j.gravador = g; const inicio = Date.now();
+      g.ondataavailable = (e) => partes.push(e.data);
+      el.innerHTML = '■ Parar'; el.classList.add('gravando');
+      const relogioGravacao = setInterval(() => { $('.tempo-gravacao', j.corpo).textContent = `${Math.round((Date.now() - inicio) / 1000)} s`; }, 250);
+      g.onstop = async () => {
+        clearInterval(relogioGravacao); fluxo.getTracks().forEach((x) => x.stop()); j.gravador = null;
+        const blob = new Blob(partes, { type: g.mimeType || 'audio/webm' });
+        const ext = (g.mimeType || '').includes('ogg') ? 'ogg' : 'webm';
+        const r = await enviarArquivo('voz', new File([blob], `gravacao.${ext}`));
+        aviso({ titulo: r.ok ? 'Voz gravada' : 'Não salvou', texto: r.saida, cor: r.ok ? '#1F8A4C' : '#C8442F' });
+        desenhar(j, true);
+      };
+      g.start();
+    },
+    enviar: async (_, el) => { const f = el.files[0]; if (!f) return; const r = await enviarArquivo('voz', f); aviso({ titulo: r.ok ? 'Voz salva' : 'Não salvou', texto: r.saida, cor: r.ok ? '#1F8A4C' : '#C8442F' }); desenhar(j, true); },
+    campo: (_, el) => { t[el.name] = el.value; if (el.name === 'motor') { el.blur(); desenhar(j, true); } },
+    ouvir: async () => {
+      t.texto = $('[name=texto]', j.corpo).value;
+      const r = await operar('voz_testar', t);
+      if (!r.ok) return aviso({ titulo: 'Não deu', texto: r.saida, cor: '#C8442F' });
+      j.gerando = true; desenhar(j, true);
+      acompanhar(r.execucao, (ex) => {
+        j.gerando = false;
+        if (ex.codigo !== 0) aviso({ titulo: 'A voz não saiu', texto: ex.saida.trim().split('\n').slice(-2).join(' '), cor: '#C8442F' });
+        j.ultimo = ex.codigo === 0 ? r.arquivo : null; desenhar(j, true);
+      });
+    },
+    usar: async () => { const r = await operar('voz_preferir', t); aviso({ titulo: r.ok ? 'Voz dos vídeos escolhida' : 'Não deu', texto: r.saida, cor: r.ok ? '#1F8A4C' : '#C8442F' }); desenhar(j, true); },
+    clonarVS: async () => {
+      const r = await operar('voz_clonar_vs', {}); j.clonando = true; desenhar(j, true);
+      acompanhar(r.execucao, (ex) => { j.clonando = false; aviso({ titulo: ex.codigo === 0 ? 'Voz clonada no VoiceStudio' : 'Não clonou', texto: ex.saida.trim().split('\n').slice(-1)[0], cor: ex.codigo === 0 ? '#1F8A4C' : '#C8442F' }); j.teste = null; desenhar(j, true); });
+    },
+    vozesVS: async () => { const r = await operar('voz_vozes_vs', {}); if (!r.ok) return aviso({ titulo: 'VoiceStudio', texto: r.saida, cor: '#C8442F' }); j.vozesVS = r.vozes; desenhar(j, true); },
+  };
+  const falta = !m.kokoro || !m.chatterbox;
+  j.corpo.innerHTML = `<div class="pagina"><h1>Estúdio de Voz</h1><p class="sub">Grave a sua voz, ouça como ela fica e escolha a voz dos vídeos. Hoje os vídeos saem com <b>${esc(escolhida)}</b>.</p>${SEM_CLAUDE}
+  ${falta ? `<div class="faixa">${!m.kokoro && !m.chatterbox ? 'A voz ainda não está instalada neste PC.' : `Falta instalar ${!m.kokoro ? 'o Kokoro' : 'o Chatterbox'}.`} Baixa uns 3 GB e precisa do Python 3.12. <button class="bt pri mini" data-acao="voz_instalar">Instalar agora</button></div>` : ''}
+  <h2>1. Sua voz</h2><div class="cartao">
+    ${d.amostra.existe ? `<p><b>Gravação salva</b> · ${d.amostra.duracao ?? '?'} s · ${esc(d.amostra.quando)}</p>${audio('amostra.wav')}` : '<p>Ainda não tem gravação. Leia o texto abaixo em voz alta, num lugar silencioso, no seu ritmo normal (de 10 a 20 segundos).</p>'}
+    <blockquote class="ler">${esc(TEXTO_GRAVAR)}</blockquote>
+    <div class="acoes-linha"><button class="bt pri" data-fn="gravar">● ${d.amostra.existe ? 'Gravar de novo' : 'Gravar'}</button><span class="tempo-gravacao neutro"></span>
+      <label class="bt">Enviar um áudio<input type="file" accept="audio/*" data-mudar="enviar" hidden></label></div>
+    <small class="neutro">A gravação fica só no seu PC (marca/voz-mateus.wav, fora do GitHub).</small></div>
+  <h2>2. Testar</h2><div class="cartao">
+    <div class="campos-voz"><label>Motor<select name="motor" data-mudar="campo">${['kokoro', 'chatterbox', 'voicestudio'].map((k) => `<option value="${k}" ${t.motor === k ? 'selected' : ''}>${MOTOR_ROTULO[k]}${k !== 'kokoro' && !m[k] ? ' (indisponível)' : ''}</option>`).join('')}</select></label>
+      ${t.motor === 'kokoro' ? `<label>Voz<select name="voz" data-mudar="campo">${d.vozes_kokoro.map(([v, r]) => `<option value="${v}" ${t.voz === v ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></label>` : ''}
+      ${t.motor === 'voicestudio' ? `<label>Voz no VoiceStudio${j.vozesVS ? `<select name="perfil" data-mudar="campo"><option value="">a padrão do app</option>${j.vozesVS.map((v) => `<option value="${esc(v.id)}" ${t.perfil === v.id ? 'selected' : ''}>${esc(v.nome || v.id)}</option>`).join('')}</select>` : `<button class="bt mini" data-fn="vozesVS" ${m.voicestudio ? '' : 'disabled'}>Carregar vozes</button>`}</label>` : ''}</div>
+    ${t.motor === 'chatterbox' && !d.amostra.existe ? '<p class="ruim">O Chatterbox clona a partir da sua gravação: grave primeiro (passo 1).</p>' : ''}
+    ${t.motor === 'chatterbox' ? '<p class="sub">No processador, a 1ª vez baixa o modelo (uns minutos) e cada frase leva de 20 s a 1 min.</p>' : ''}
+    <textarea name="texto" rows="2">${esc(t.texto)}</textarea>
+    <div class="acoes-linha"><button class="bt pri" data-fn="ouvir" ${j.gerando ? 'disabled' : ''}>${j.gerando ? '<span class="girando"></span> Gerando…' : `${icone('play')} Ouvir`}</button>
+      ${j.ultimo ? audio(j.ultimo) : ''}<button class="bt" data-fn="usar" title="Todos os vídeos novos saem com esta voz">Usar esta voz nos vídeos</button></div>
+    ${d.testes.length ? `<h3>Testes anteriores</h3><div class="lista">${d.testes.map((x) => `<div class="linha-item"><div class="cresce"><b>${esc(MOTOR_ROTULO[x.motor] || x.motor)}</b><small>${esc(x.quando)} · ${x.duracao ?? '?'} s</small></div>${audio(x.arquivo)}</div>`).join('')}</div>` : ''}</div>
+  <h2>VoiceStudio</h2><div class="cartao">
+    <p><span class="chip ${m.voicestudio ? 'pronto' : 'parado'}"><i></i>${m.voicestudio ? 'aberto neste PC' : 'fechado ou não instalado'}</span></p>
+    <p class="sub">Alternativa local ao ElevenLabs (clonagem, mais de 600 idiomas). Roda como programa separado (licença AGPL-3.0): o Ciello só usa o áudio que ele gera, pela API local dele.</p>
+    ${m.voicestudio ? `<div class="acoes-linha"><button class="bt pri" data-fn="clonarVS" ${d.amostra.existe && !j.clonando ? '' : 'disabled'}>${j.clonando ? '<span class="girando"></span> Clonando…' : 'Clonar a minha gravação no VoiceStudio'}</button><small class="neutro">Na 1ª vez ele baixa o modelo (uns 2 GB).</small></div>`
+      : `<ol class="passos-vs"><li>Baixe o instalador para Windows em <a href="https://github.com/debpalash/VoiceStudio/releases" target="_blank" rel="noopener">github.com/debpalash/VoiceStudio/releases</a> e instale.</li><li>Abra o VoiceStudio e deixe aberto.</li><li>Volte aqui: este cartão fica verde e libera a clonagem.</li></ol>`}</div></div>`;
 }
 
 // ------------------------------------------------------------------ apps: equipe, agente e atividade

@@ -48,6 +48,7 @@ import briefing  # noqa: E402
 import financeiro  # noqa: E402
 import atexit  # noqa: E402
 
+import estudio_voz  # noqa: E402
 import operacao  # noqa: E402
 import sdr  # noqa: E402
 import terminal  # noqa: E402
@@ -61,7 +62,7 @@ TOKEN = secrets.token_urlsafe(24)
 TELA = WEB / "escritorio"  # build da tela do escritório (escritorio/webview-ui: npx vite build)
 TIPOS = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8",
          ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".mp4": "video/mp4",
-         ".ttf": "font/ttf", ".ico": "image/x-icon", ".json": "application/json", ".webmanifest": "application/manifest+json"}
+         ".ttf": "font/ttf", ".wav": "audio/wav", ".ico": "image/x-icon", ".json": "application/json", ".webmanifest": "application/manifest+json"}
 sala = None  # o escritório (nucleo.sala.Sala), criado no main
 terminais = terminal.Terminais(RAIZ)  # terminais do Claude dentro do OS (janela "Claude Code")
 atexit.register(terminais.fechar_todos)
@@ -84,6 +85,7 @@ ACOES = {
     "ganchos": ("Ranking de ganchos", "pesquisador-mercado", ["central/ganchos.py", "ranking"]),
     "relatorio": ("Relatório semanal", "analista", ["central/relatorio.py"]),
     "verificar": ("Verificação do assistente", "sistema", ["central/verificar.py", "--rapido"]),
+    "voz_instalar": ("Instalar a voz (Kokoro e Chatterbox, uns 3 GB)", "produtor-video", ["-m", "pip", "install", "-r", "central/requirements-voz.txt"]),
 }
 execucoes = {}
 trava = threading.Lock()
@@ -264,7 +266,7 @@ def app_tendencias():
     return {"relatorio": ultimo_md("20??-??-??*.md")}
 
 
-APPS = {"escritorio": app_escritorio, "briefing": app_briefing, "financeiro": app_financeiro, "comercial": app_comercial,
+APPS = {"escritorio": app_escritorio, "voz": estudio_voz.estado, "briefing": app_briefing, "financeiro": app_financeiro, "comercial": app_comercial,
         "conteudo": app_conteudo, "concorrentes": app_concorrentes, "tendencias": app_tendencias,
         "anuncios": lambda: {"campanhas": campanhas(), "resumo": kpis()["anuncios"]}}
 
@@ -273,6 +275,11 @@ APPS = {"escritorio": app_escritorio, "briefing": app_briefing, "financeiro": ap
 
 def rodar(acao):
     rotulo, agente, args = ACOES[acao]
+    return executar(rotulo, agente, args, acao)
+
+
+def executar(rotulo, agente, args, acao="tarefa"):
+    """Roda `python <args>` na pasta do assistente em segundo plano; a janela acompanha por /api/execucao/<id>."""
     eid = f"{int(time.time() * 1000)}-{acao}"
     ex = {"id": eid, "acao": acao, "rotulo": rotulo, "agente": agente, "saida": "", "terminou": False, "codigo": None,
           "inicio": time.strftime("%H:%M:%S")}
@@ -289,6 +296,7 @@ def rodar(acao):
                 with trava:
                     ex["saida"] = (ex["saida"] + linha)[-60000:]
             ex["codigo"] = proc.wait()
+            proc.stdout.close()
         except OSError as e:
             ex["saida"] += f"\nNão consegui rodar: {e}"
             ex["codigo"] = -1
@@ -302,6 +310,23 @@ def rodar(acao):
 # ---------------------------------------------------------------- operação sem o Claude (janelas Financeiro, Comercial, Conteúdo, Anúncios)
 
 def operar(op, dados):
+    if op == "voz_testar":
+        try:
+            args, nome = estudio_voz.args_teste(dados)
+        except ValueError as e:
+            return {"ok": False, "saida": str(e)}
+        ex = executar("Teste de voz", "produtor-video", args, "voz")
+        return {"ok": True, "saida": "Gerando a voz…", "execucao": ex["id"], "arquivo": nome}
+    if op == "voz_preferir":
+        return estudio_voz.preferir(dados)
+    if op == "voz_clonar_vs":
+        ex = executar("Clonar a sua voz no VoiceStudio", "produtor-video", ["central/voz.py", "--clonar-voicestudio=Mateus (Ciello)"], "voz")
+        return {"ok": True, "saida": "Clonando no VoiceStudio…", "execucao": ex["id"]}
+    if op == "voz_vozes_vs":
+        try:
+            return {"ok": True, "saida": "", "vozes": estudio_voz.voz.VoiceStudio(espera=30).vozes()}
+        except (OSError, RuntimeError, ValueError) as e:
+            return {"ok": False, "saida": f"Não consegui falar com o VoiceStudio: {e}"}
     if op == "ig_retrato":
         return operacao.salvar_retrato(dados)
     if op == "anuncio":
@@ -416,6 +441,9 @@ class Painel(BaseHTTPRequestHandler):
             return self._arquivo(WEB, caminho[5:])
         if caminho.startswith("/midia/"):
             return self._arquivo(RAIZ / "midia", urllib.request.unquote(caminho[7:]))
+        if caminho.startswith("/api/voz/arquivo/"):
+            alvo = estudio_voz.arquivo(urllib.request.unquote(caminho[17:]))
+            return self._enviar(alvo.read_bytes(), TIPOS[".wav"]) if alvo else self._json({"erro": "não encontrado"}, 404)
         if caminho == "/api/terminais":
             return self._json({"ids": [tid for tid, t in terminais.todos.items() if t.fim is None]})
         if caminho == "/api/estado":
@@ -468,6 +496,8 @@ class Painel(BaseHTTPRequestHandler):
             return self._json({"ok": False, "saida": "arquivo vazio ou maior que 25 MB"}, 413)
         dados = self.rfile.read(tam)
         q = {k: v[0] for k, v in urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).items()}
+        if q.get("tipo") == "voz":
+            return self._json(estudio_voz.salvar_amostra(q.get("nome"), dados))
         return self._json(operacao.importar_arquivo(q.get("tipo"), q.get("nome"), dados, q))
 
     def _gancho(self):

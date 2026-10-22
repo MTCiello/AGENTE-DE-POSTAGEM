@@ -108,7 +108,9 @@ button { font: inherit; cursor: pointer; }
 .menu-busca input:focus { border-color: var(--ouro); }
 .menu-corpo { display: grid; grid-template-columns: 1.25fr 1fr; gap: 14px; padding: 6px 18px 12px; }
 .menu h3, .central h3 { margin: 8px 0; font: 600 11px Oswald, sans-serif; letter-spacing: 3px; text-transform: uppercase; color: var(--cinza); }
-.menu-apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.menu-apps { display: block; max-height: 460px; overflow: auto; }
+.menu-apps h4 { margin: 10px 0 2px; font: 600 10.5px Oswald, sans-serif; letter-spacing: 2.5px; text-transform: uppercase; color: var(--cinza); }
+.grupo-apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
 .item-app { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px; border: 0; border-radius: 8px; background: none; font-size: 11.5px; color: var(--tinta); text-align: center; }
 .item-app:hover, .item-agente:hover { background: rgba(38, 58, 89, .08); }
 .item-app .tile { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; }
@@ -286,3 +288,35 @@ select.etapa, .linha-item select { height: 28px; padding: 0 6px; font-size: 12px
 .reels-form td, .reels-form th { padding: 3px; } .reels-form input { width: 64px; height: 28px; padding: 0 6px; }
 .reels-form td:first-child input { width: 190px; } .reels-form td:nth-child(2) input { width: 128px; }
 .acoes.topo + .kpis, .acoes.topo + .vazio { margin-top: 12px; }
+
+/* ------------------------------------------------------------ menu por objetivo, objetivos e esteiras */
+.pedir-equipe, .destaque-objetivo { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin: 4px 0 6px; border: 1px solid var(--linha); border-radius: 10px; background: #fff; text-align: left; color: var(--tinta); }
+.pedir-equipe { border-color: var(--ouro); background: #FFFBEF; }
+.pedir-equipe:hover, .destaque-objetivo:hover { border-color: var(--ouro); background: #FFF6DC; }
+.pedir-equipe span, .destaque-objetivo span { flex: 1; min-width: 0; } .pedir-equipe b, .destaque-objetivo b { display: block; font-size: 13px; }
+.pedir-equipe small, .destaque-objetivo small { display: block; color: var(--cinza); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.destaque-objetivo .tile { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; flex: none; }
+.destaque-objetivo .tile svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 1.9; }
+.pedir-equipe kbd { font: 600 10px Inter, sans-serif; padding: 2px 6px; border: 1px solid var(--linha); border-radius: 4px; color: var(--cinza); background: #fff; }
+.objetivo { margin-top: 12px; padding: 14px; border: 1px solid var(--linha); border-radius: 12px; background: #fff; }
+.objetivo textarea { width: 100%; border: 1px solid var(--linha); border-radius: 8px; padding: 10px 12px; font: 14px/1.45 Inter, sans-serif; resize: vertical; margin-bottom: 10px; }
+.objetivo textarea:focus, .cartao textarea:focus { outline: 2px solid rgba(224, 168, 28, .5); border-color: var(--ouro); }
+.chip-ex { height: 26px; padding: 0 10px; border-radius: 13px; border: 1px dashed var(--linha); background: none; font-size: 11.5px; color: var(--cinza); }
+.chip-ex:hover { border-color: var(--ouro); color: var(--tinta); }
+.esteiras { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.esteira { display: flex; flex-direction: column; gap: 8px; } .esteira .sub { margin: 0; font-size: 12px; } .esteira > .bt { align-self: flex-start; margin-top: auto; }
+.cadeia { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; } .cadeia i { font-style: normal; color: var(--cinza); }
+.elo { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; padding: 3px 4px; border-radius: 8px; }
+.elo small { font-size: 9.5px; color: var(--cinza); max-width: 70px; text-align: center; line-height: 1.15; }
+.elo.trabalhando { background: #E3F5EA; } .elo.trabalhando small { color: var(--verde); font-weight: 600; }
+.elo.esperando { background: #FDF1D6; }
+.campos-esteira, .campos-voz { display: flex; flex-wrap: wrap; gap: 8px; }
+.campos-esteira label, .campos-voz label { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; font-weight: 600; flex: 1; min-width: 120px; }
+.campos-esteira input, .campos-voz select, .cartao textarea { height: 30px; border: 1px solid var(--linha); border-radius: 7px; padding: 0 8px; font: inherit; background: #fff; }
+.cartao textarea { height: auto; width: 100%; padding: 8px 10px; margin: 10px 0; resize: vertical; }
+.ler { margin: 10px 0; padding: 10px 14px; border-left: 3px solid var(--ouro); background: #F6F1E4; border-radius: 0 8px 8px 0; font-size: 14px; line-height: 1.6; }
+.bt.gravando { background: var(--vermelho); border-color: var(--vermelho); color: #fff; }
+.cartao audio { height: 32px; max-width: 280px; }
+.cartao h3 { margin: 14px 0 6px; font: 600 11px Oswald, sans-serif; letter-spacing: 2px; text-transform: uppercase; color: var(--azul); }
+.passos-vs { margin: 6px 0 0; padding-left: 20px; } .passos-vs li { margin: 4px 0; } .passos-vs a { color: var(--azul-claro); }
+label.bt { cursor: pointer; }
