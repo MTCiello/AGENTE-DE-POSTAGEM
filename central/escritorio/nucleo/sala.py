@@ -223,6 +223,7 @@ class Sala:
         self.vigia.ganchos_ligados = cfg["hooks"] is True and instalado
         self.vigia.restaurar(P.estado()["agentes"])
         lugares = P.estado()["lugares"]
+        fixos = (layout or {}).get("lugaresFixos") or {}  # a poltrona do Gerente já nasce dele (gerar_layout.py)
         ids, meta, nomes, externos = [], {}, {}, {}
         for aid, a in self.loja:
             ids.append(aid)
@@ -230,7 +231,8 @@ class Sala:
                 nomes[aid] = a.pasta_nome
             if a.externo:
                 externos[aid] = True
-            meta[aid] = limpar({"palette": a.paleta, "hueShift": a.matiz, "seatId": (lugares.get(str(aid)) or {}).get("seatId")})
+            lugar = (lugares.get(str(aid)) or {}).get("seatId") or (fixos.get(a.pasta_nome) if a.residente else None)
+            meta[aid] = limpar({"palette": a.paleta, "hueShift": a.matiz, "seatId": lugar})
         enviar({"type": "existingAgents", "agents": ids, "agentMeta": meta, "directoryNames": nomes, "externalAgents": externos})
         enviar({"type": "layoutLoaded", "layout": layout})
         self._reenviar_atividade(enviar)

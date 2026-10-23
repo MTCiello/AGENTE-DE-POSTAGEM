@@ -25,7 +25,15 @@ export interface LoadedAssetData {
 }
 
 export type FurnitureCategory =
-  'desks' | 'chairs' | 'storage' | 'decor' | 'electronics' | 'wall' | 'misc';
+  | 'desks'
+  | 'chairs'
+  | 'storage'
+  | 'decor'
+  | 'electronics'
+  | 'kitchen'
+  | 'outdoor'
+  | 'wall'
+  | 'misc';
 
 /** @internal */
 export interface CatalogEntryWithCategory extends FurnitureCatalogEntry {
@@ -337,9 +345,20 @@ export const FURNITURE_CATEGORIES: Array<{ id: FurnitureCategory; label: string 
   { id: 'storage', label: 'Armários' },
   { id: 'electronics', label: 'Eletrônicos' },
   { id: 'decor', label: 'Decoração' },
+  { id: 'kitchen', label: 'Copa' },
+  { id: 'outdoor', label: 'Varanda' },
   { id: 'wall', label: 'Parede' },
   { id: 'misc', label: 'Diversos' },
 ];
+
+/**
+ * Blocos que o móvel ocupa no chão (as linhas de fundo não contam: ficam na parede ou atrás do móvel).
+ * Itens de parede contam os blocos de parede que cobrem.
+ */
+export function getFloorBlocks(entry: FurnitureCatalogEntry): number {
+  if (entry.canPlaceOnWalls) return entry.footprintW;
+  return entry.footprintW * Math.max(1, entry.footprintH - (entry.backgroundTiles ?? 0));
+}
 
 // ── Rotation helpers ─────────────────────────────────────────────
 

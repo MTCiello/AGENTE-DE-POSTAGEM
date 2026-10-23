@@ -363,15 +363,27 @@ class TesteAtivos(unittest.TestCase):
                 if a and b and a != b:
                     abertas.add(frozenset((a, b)))
         self.assertEqual(abertas, {frozenset(("Copa", "Área de lazer"))})
-        # móvel alto encostado na parede de cima cobre a face da parede (linha de fundo na linha da parede):
-        # nenhum pode começar logo abaixo da parede, que é o que o deixa "solto no meio da sala"
+        # perspectiva 3/4: a parede (2 blocos de altura na tela) cobre o bloco de cima, então nenhum bloco de sala fica
+        # logo acima de uma parede (escondido atrás dela, com agente sumindo); e móvel alto de frente só encostado na
+        # parede do fundo, com a última linha de fundo na linha da parede, senão parece boiar no meio da sala
+        for i, v in enumerate(lay["tiles"]):
+            c, r = i % C, i // C
+            if lay["areaTiles"][i] and r + 1 < lay["rows"]:
+                self.assertNotEqual(lay["tiles"][i + C], 0, f"bloco {(c, r)} de {lay['areaTiles'][i]} fica atrás da parede")
+        soltos = {"TRIPE_CAMERA", "GUARDA_SOL_MESA"}  # na vida real ficam soltos mesmo
         for m in lay["furniture"]:
-            item = cat[m["type"].split(":")[0]]
-            if not item.get("backgroundTiles") or item.get("canPlaceOnSurfaces") or item.get("canPlaceOnWalls"):
+            tipo = m["type"].split(":")[0]
+            item = cat[tipo]
+            bg = item.get("backgroundTiles") or 0
+            if not bg or item.get("canPlaceOnSurfaces") or item.get("canPlaceOnWalls") or item.get("category") in ("desks", "chairs") or tipo in soltos:
                 continue
-            acima = [lay["tiles"][(m["row"] - 1) * C + m["col"] + dc] for dc in range(item["footprintW"])]
-            self.assertFalse(all(v == 0 for v in acima), f"{m['type']} em {(m['col'], m['row'])} está solto da parede")
-        self.assertEqual(lay["cielloLayout"], 5)
+            fundo = [lay["tiles"][(m["row"] + bg - 1) * C + m["col"] + dc] for dc in range(item["footprintW"])]
+            self.assertTrue(all(v == 0 for v in fundo), f"{m['type']} em {(m['col'], m['row'])} está solto da parede do fundo")
+        # a poltrona atrás da mesa de mogno é do Gerente
+        poltrona = next(m for m in lay["furniture"] if m["uid"] == lay["lugaresFixos"]["Gerente"])
+        self.assertEqual(poltrona["type"], "POLTRONA_COURO_FRONT")
+        self.assertEqual(lay["areaTiles"][(poltrona["row"] + 1) * C + poltrona["col"]], "Gerente")
+        self.assertEqual(lay["cielloLayout"], 6)
 
     def test_layout_novo_da_ciello_substitui_o_antigo(self):
         from nucleo import persistencia as P
@@ -379,11 +391,11 @@ class TesteAtivos(unittest.TestCase):
             P._gravar(Path(d) / "layout.json", {"version": 1, "cols": 37, "rows": 14})
             P._gravar(Path(d) / "config.json", {"areas": {"SDR": ["Comercial"]}, "areasVistas": ["SDR"]})
             novo = P.ler_layout()
-            self.assertEqual((novo["cols"], novo["cielloLayout"]), (28, 5))
+            self.assertEqual((novo["cols"], novo["cielloLayout"]), (27, 6))
             self.assertTrue((Path(d) / "layout-antigo-v0.json").exists())  # cópia do antigo
             self.assertEqual((P.config()["areas"], P.config()["areasVistas"]), ({}, []))  # as áreas refazem com as salas novas
             P.gravar_layout({**novo, "cielloLayout": None})  # o editor salva sem a versão
-            self.assertEqual(P.ler_layout()["cielloLayout"], 5)  # e não troca de novo
+            self.assertEqual(P.ler_layout()["cielloLayout"], 6)  # e não troca de novo
 
     def test_png_paleta_com_transparencia(self):
         import struct

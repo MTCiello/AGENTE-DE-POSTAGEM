@@ -1,7 +1,7 @@
 {
   "id": "GUARDA_CORPO",
   "name": "Guarda-corpo",
-  "category": "decor",
+  "category": "outdoor",
   "type": "asset",
   "canPlaceOnWalls": false,
   "canPlaceOnSurfaces": false,

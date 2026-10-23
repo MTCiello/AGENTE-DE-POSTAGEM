@@ -1,0 +1,13 @@
+{
+  "id": "MESA_EXECUTIVA",
+  "name": "Mesa executiva de mogno",
+  "category": "desks",
+  "type": "asset",
+  "canPlaceOnWalls": false,
+  "canPlaceOnSurfaces": false,
+  "backgroundTiles": 1,
+  "width": 48,
+  "height": 32,
+  "footprintW": 3,
+  "footprintH": 2
+}

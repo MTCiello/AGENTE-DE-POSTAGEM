@@ -21,6 +21,7 @@ import {
   buildDynamicCatalog,
   getActiveCategories,
   getCatalogByCategory,
+  getFloorBlocks,
 } from '../layout/furnitureCatalog.js';
 import {
   getCarpetJunctionSprite,
@@ -612,7 +613,7 @@ export function EditorToolbar({
                   height={thumbSize}
                   selected={selectedFurnitureType === entry.type}
                   onClick={() => onFurnitureTypeChange(entry.type)}
-                  title={entry.label}
+                  title={`${entry.label} · ${getFloorBlocks(entry)} ${getFloorBlocks(entry) === 1 ? 'bloco' : 'blocos'}${entry.canPlaceOnWalls ? ' de parede' : ''}`}
                   deps={[entry.type, entry.sprite, pickedFurnitureColor]}
                   draw={(ctx, w, h) => {
                     const sprite = pickedFurnitureColor
