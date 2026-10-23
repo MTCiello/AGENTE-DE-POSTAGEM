@@ -41,7 +41,7 @@ Você diz o que quer ("crie 3 vídeos das novidades da semana e programe a posta
 | **Conteúdo** | Pauta a partir do que está viralizando, roteiro, narração, vídeo, capa e legenda, até o agendamento | `Conteúdo e Instagram` |
 | **Rede social** | Piloto automático (ou aprovação post a post) para Instagram, TikTok e YouTube Shorts, calendário do mês e caixa de comentários | `Rede social`, `Conexões` |
 | **Estúdio de Voz** | Grava a sua voz, testa vozes prontas (Kokoro) ou clonadas (Chatterbox, VoiceStudio) e escolhe a voz dos vídeos | `Estúdio de Voz` |
-| **Estúdio de Vídeo** | Roteiro → narração → vídeo com a marca, legenda karaokê e trilha, feito no próprio PC | `Estúdio de Vídeo` |
+| **Estúdio de Vídeo** | Roteiro → narração → vídeo com a marca, legenda karaokê e trilha, feito no próprio PC. Na **Galeria de estilos** você escolhe um dos 157 estilos (os 98 do OPUSCAR 98 e a biblioteca do lemo-opuscar) e o Claude produz o vídeo nele | `Estúdio de Vídeo` |
 | **Comercial** | Leads do Google Maps, qualificação, 1ª mensagem por WhatsApp, cadência de follow-up, agenda de demos e exportação para o CRM | `Comercial` |
 | **Financeiro** | Assinaturas, faturas, cobrança, extrato bancário, caixa e previsão, MRR, churn, CAC e LTV, plano do ano e metas | `Financeiro` |
 | **Atendimento** | Acha no FAQ a resposta para a pergunta do cliente, pronta para o WhatsApp | `Atendimento` |
@@ -62,6 +62,9 @@ As janelas de Financeiro, Comercial, Conteúdo, Anúncios e os dois Estúdios **
   <tr>
     <td><img src="docs/img/estudio-de-voz.png" alt="Estúdio de Voz"><br><sub><b>Estúdio de Voz.</b> A sua voz ou uma voz pronta em todos os vídeos.</sub></td>
     <td><img src="docs/img/estudio-de-video.png" alt="Estúdio de Vídeo"><br><sub><b>Estúdio de Vídeo.</b> Modelos na identidade da empresa e a fila de roteiros.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/img/galeria-de-estilos.png" alt="Galeria de estilos do Estúdio de Vídeo"><br><sub><b>Galeria de estilos.</b> Escolha um estilo do Opus 98 ou da biblioteca e o Claude produz o reel nele.</sub></td>
   </tr>
 </table>
 
@@ -211,6 +214,7 @@ cd escritorio/webview-ui && npm install && npm test # tela do escritório
 - Escritório: fork do [pixel-agents](https://github.com/pablodelucca/pixel-agents) v1.5.0, MIT, © Pablo De Lucca ([`escritorio/LICENSE`](escritorio/LICENSE)).
 - Skills `founder-*`: [founder-skill](https://github.com/Jakeschincariol/founder-skill), MIT ([`.claude/skills/FOUNDER-LICENSE.txt`](.claude/skills/FOUNDER-LICENSE.txt)).
 - Fontes Inter e Oswald: SIL Open Font License ([`central/escritorio/web/fontes/LICENCA.txt`](central/escritorio/web/fontes/LICENCA.txt)).
+- Galeria de estilos: [lemo-opuscar](https://github.com/lemomo-ai/lemo-opuscar) da LemoLab, guias MIT e quadros CC BY 4.0 ([`reels/estilos/LICENCA.md`](reels/estilos/LICENCA.md)).
 - Voz: [Kokoro](https://github.com/hexgrad/kokoro), [Chatterbox](https://github.com/resemble-ai/chatterbox) e [faster-whisper](https://github.com/SYSTRAN/faster-whisper); o VoiceStudio (AGPL-3.0) roda como programa separado.
 
 ---

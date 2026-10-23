@@ -56,6 +56,7 @@ import dados_iniciais  # noqa: E402
 import decisoes  # noqa: E402
 import empresa  # noqa: E402
 from empresa import responsavel  # noqa: E402
+import estilos  # noqa: E402
 import estudio_video  # noqa: E402
 import financeiro  # noqa: E402
 import gastos  # noqa: E402
@@ -304,11 +305,16 @@ def app_conteudo():
 def app_video():
     """Estúdio de Vídeo: os roteiros da agenda, o que já tem narração, rascunho e final, e os modelos."""
     posts = []
+    escolhidos = estilos.escolhas()
     for q in conteudo.quadro(dias_passados=30):
         rasc = {m: estudio_video.rascunho(q["post"], m).exists() for m in estudio_video.MODELOS}
+        estilo = estilos.achar(escolhidos.get(q["post"], ""))
+        if estilo:  # o estilo da galeria escolhido para este roteiro (o Claude produz o rascunho dele)
+            rasc[estilo["id"]] = estudio_video.rascunho(q["post"], estilo["id"]).exists()
         posts.append({**{k: q[k] for k in ("post", "slug", "data", "dias", "titulo", "etapas")}, "rascunhos": rasc,
+                      "estilo": {"id": estilo["id"], "nome": estilo["nome"]} if estilo else None,
                       "narracao": (RAIZ / "audio" / q["slug"] / "narracao.wav").exists()})
-    return {"posts": posts[::-1], "modelos": {k: {"nome": v["nome"], "descricao": v["descricao"], "fundo": v["fundo"], "ouro": v["ouro"], "texto": v["texto"]}
+    return {"posts": posts[::-1], "estilos": estilos.galeria(), "modelos": {k: {"nome": v["nome"], "descricao": v["descricao"], "fundo": v["fundo"], "ouro": v["ouro"], "texto": v["texto"]}
                                               for k, v in estudio_video.MODELOS.items()},
             "hyperframes": (RAIZ / "reels" / "node_modules" / ".bin" / ("hyperframes.cmd" if os.name == "nt" else "hyperframes")).exists(),
             "voz": estudio_voz.voz.preferencia()["motor"], "proximos": conteudo.proximos_horarios()}
@@ -457,9 +463,18 @@ def operar(op, dados):
         itens = dados.get("itens")
         itens = itens if isinstance(itens, list) else str(itens or "").split("\n")
         return conteudo.novo_roteiro(dados.get("data"), dados.get("gancho"), itens, dados.get("cta"), str(dados.get("pilar") or "")[:40])
+    if op == "video_estilo":
+        post, estilo, tema = str(dados.get("post") or ""), str(dados.get("estilo") or ""), str(dados.get("tema") or "").strip()[:300]
+        if not estilos.achar(estilo) or not (tema or (re.fullmatch(r"20\d\d-\d\d-\d\d-[\w\-]{1,80}", post) and (RAIZ / "roteiros" / f"{post}.json").exists())):
+            return {"ok": False, "saida": "escolha um estilo e um roteiro (ou escreva o tema)"}
+        if not tema:
+            estilos.escolher(post, estilo)
+        prompt = estilos.pedido(estilo, "" if tema else post, tema, empresa.perfil().get("nome") or "empresa", str(dados.get("data") or "")[:10])
+        return {"ok": True, "saida": "", "prompt": prompt}
     if op in ("video_gerar", "video_usar"):
         post, modelo = str(dados.get("post") or ""), dados.get("modelo") or "escuro"
-        if not re.fullmatch(r"20\d\d-\d\d-\d\d-[\w\-]{1,80}", post) or modelo not in estudio_video.MODELOS or not (RAIZ / "roteiros" / f"{post}.json").exists():
+        valido = modelo in estudio_video.MODELOS or (op == "video_usar" and estilos.achar(modelo))
+        if not re.fullmatch(r"20\d\d-\d\d-\d\d-[\w\-]{1,80}", post) or not valido or not (RAIZ / "roteiros" / f"{post}.json").exists():
             return {"ok": False, "saida": "roteiro ou modelo inválido"}
         if op == "video_usar":
             try:
