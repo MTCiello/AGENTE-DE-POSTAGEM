@@ -46,6 +46,7 @@ sys.path.insert(0, str(AQUI.parent))
 import status  # noqa: E402
 import briefing  # noqa: E402
 import conteudo  # noqa: E402
+import estudio_video  # noqa: E402
 import financeiro  # noqa: E402
 import atexit  # noqa: E402
 
@@ -278,6 +279,19 @@ def app_conteudo():
             "relatorio": ultimo_relatorio_instagram()}
 
 
+def app_video():
+    """Estúdio de Vídeo: os roteiros da agenda, o que já tem narração, rascunho e final, e os modelos."""
+    posts = []
+    for q in conteudo.quadro(dias_passados=30):
+        rasc = {m: estudio_video.rascunho(q["post"], m).exists() for m in estudio_video.MODELOS}
+        posts.append({**{k: q[k] for k in ("post", "slug", "data", "dias", "titulo", "etapas")}, "rascunhos": rasc,
+                      "narracao": (RAIZ / "audio" / q["slug"] / "narracao.wav").exists()})
+    return {"posts": posts[::-1], "modelos": {k: {"nome": v["nome"], "descricao": v["descricao"], "fundo": v["fundo"], "ouro": v["ouro"], "texto": v["texto"]}
+                                              for k, v in estudio_video.MODELOS.items()},
+            "hyperframes": (RAIZ / "reels" / "node_modules" / ".bin" / ("hyperframes.cmd" if os.name == "nt" else "hyperframes")).exists(),
+            "voz": estudio_voz.voz.preferencia()["motor"], "proximos": conteudo.proximos_horarios()}
+
+
 def ultimo_relatorio_instagram():
     arqs = sorted((RAIZ / "metricas").glob("relatorio-20??-??-??.md"))
     return {"arquivo": arqs[-1].relative_to(RAIZ).as_posix(), "texto": arqs[-1].read_text(encoding="utf-8")} if arqs else None
@@ -300,7 +314,7 @@ def app_tendencias():
     return {"relatorio": ultimo_md("20??-??-??*.md")}
 
 
-APPS = {"escritorio": app_escritorio, "voz": estudio_voz.estado, "plano": plano.para_janela, "briefing": app_briefing, "financeiro": app_financeiro, "comercial": app_comercial,
+APPS = {"escritorio": app_escritorio, "voz": estudio_voz.estado, "video": app_video, "plano": plano.para_janela, "briefing": app_briefing, "financeiro": app_financeiro, "comercial": app_comercial,
         "conteudo": app_conteudo, "concorrentes": app_concorrentes, "tendencias": app_tendencias,
         "anuncios": lambda: {"campanhas": campanhas(), "resumo": kpis()["anuncios"]}}
 
@@ -361,6 +375,23 @@ def operar(op, dados):
             return {"ok": True, "saida": "", "vozes": estudio_voz.voz.VoiceStudio(espera=30).vozes()}
         except (OSError, RuntimeError, ValueError) as e:
             return {"ok": False, "saida": f"Não consegui falar com o VoiceStudio: {e}"}
+    if op == "video_roteiro":
+        itens = dados.get("itens")
+        itens = itens if isinstance(itens, list) else str(itens or "").split("\n")
+        return conteudo.novo_roteiro(dados.get("data"), dados.get("gancho"), itens, dados.get("cta"), str(dados.get("pilar") or "")[:40])
+    if op in ("video_gerar", "video_usar"):
+        post, modelo = str(dados.get("post") or ""), dados.get("modelo") or "escuro"
+        if not re.fullmatch(r"20\d\d-\d\d-\d\d-[\w\-]{1,80}", post) or modelo not in estudio_video.MODELOS or not (RAIZ / "roteiros" / f"{post}.json").exists():
+            return {"ok": False, "saida": "roteiro ou modelo inválido"}
+        if op == "video_usar":
+            try:
+                destino = estudio_video.usar(post, modelo)
+            except SystemExit as e:
+                return {"ok": False, "saida": str(e)}
+            return {"ok": True, "saida": f"vídeo final salvo em {destino.relative_to(RAIZ).as_posix()}"}
+        args = ["central/estudio_video.py", "gerar", post, f"--modelo={modelo}"] + (["--rascunho"] if dados.get("rascunho") else [])
+        ex = executar(f"Vídeo · {post[11:]}", "produtor-video", args, "video")
+        return {"ok": True, "saida": "Gerando o vídeo…", "execucao": ex["id"]}
     if op in ("cont_legenda", "cont_legenda_salvar", "cont_agendado"):
         post = str(dados.get("post") or "")
         if not re.fullmatch(r"20\d\d-\d\d-\d\d-[\w\-]{1,80}", post):

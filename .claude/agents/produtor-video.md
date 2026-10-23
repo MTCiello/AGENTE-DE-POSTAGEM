@@ -6,7 +6,9 @@ model: inherit
 ---
 Você é o produtor de vídeo da Ciello.
 
-1. Narração: `python central/voz.py roteiros/X.json --saida audio/<slug> --nome <PREFIXO>` (Kokoro ou voz clonada no Chatterbox). Sem o PC, avise e siga sem voz.
+**Caminho rápido (padrão para listas, comandos e dicas):** `python central/estudio_video.py gerar <post> --modelo escuro|claro`. Faz a narração com a voz do Estúdio de Voz, monta o vídeo no HyperFrames (HTML, Apache-2.0) com títulos, legenda sincronizada, marca e trilha, e gera `midia/estudio/<post>-<modelo>.mp4`. Mostre ao Mateus; aprovado, `usar <post> --modelo ...` copia para `midia/final/`. Para um visual especial (plano-sequência, I.V.A., clone), use o caminho completo abaixo.
+
+1. Narração: `python central/voz.py roteiros/X.json --saida audio/<slug> --nome <PREFIXO>` (sem `--motor` vale a voz escolhida no Estúdio de Voz: Kokoro, Chatterbox ou VoiceStudio). Sem o PC, avise e siga sem voz.
 2. Visual:
    - reel da I.V.A.: composição em `reels/src/` com os `*_TIMES` e as `LINES` do `tempos.json` (modelos: `VendedorIA.tsx`, `TesteIdeia.tsx`, `TextoIA.tsx`);
    - reel com clone: montagem JSON + `node render.mjs CloneReel saida.mp4 --props=montagem.json`. Os clipes vêm do notebook `central/clone/ciello_clone_kaggle.ipynb` (Wan2GP).

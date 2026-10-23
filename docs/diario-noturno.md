@@ -107,3 +107,31 @@ Cada passo tem **Fazer agora**, que abre a janela na aba certa já com o formul�
 - **Radar e vigia sem internet** não gravam mais nada: avisam "o último continua valendo" e mantêm o relatório bom na tela.
 - **Tendências → Pauta sugerida:** cada assunto do radar vira um item com nota e ângulo, e com o botão **Virar roteiro** (o roteirista confere os fatos antes e salva no próximo horário livre). Também há **Fazer os 3 reels da semana com esta pauta** e **Montar com o Claude**, que monta o radar ou a vigia com busca web quando a rede do PC falhar.
 - **Conteúdo → Análise:** o relatório semanal do Instagram (retenção, salvamentos, compartilhamentos, horário, o que mudar) dentro do OS, com **Gerar o relatório da semana**, **Anotar números novos** e **Discutir com o Analista**.
+
+### Volta 7 · 23/10 · Estúdio de Vídeo com HyperFrames
+
+**Simulação:** tentei "criar um vídeo" como você contou que tentou. Não havia caminho: cada reel exigia código novo e 6 comandos.
+
+**Pesquisa:** HyperFrames (HeyGen, Apache-2.0, versão 0.8.186). O vídeo é um HTML com tempos nos atributos e animação GSAP; o CLI renderiza no Chrome sem janela com ffmpeg e já mistura o áudio. Testei aqui: instala pelo npm em segundos e baixa o próprio Chrome.
+
+**Feito:**
+- `central/estudio_video.py`: **roteiro → narração → vídeo**, sem escrever código.
+  - Cada cena vira título animado (tirado do roteiro ou da fala: "Segundo: transforme esta conversa…" vira o rótulo "Segundo" e o título "transforme esta conversa em um orçamento"), mais lista numerada quando o roteiro tem itens e legenda sincronizada com a fala (tempos reais do `voz.py`).
+  - Leva também a marca, a barra de progresso, a trilha baixinha e o selo no final.
+  - Sai em 1080x1920 com áudio, em `midia/estudio/` (rascunho); **usar** copia para `midia/final/`.
+- **Dois modelos:** Ciello escuro (azul, marfim e ouro) e Ciello claro (marfim, carvão e ouro).
+- **Janela Estúdio de Vídeo** (menu Iniciar → Criar):
+  - **+ Novo roteiro** sem o Claude: data no próximo horário livre, gancho, itens e chamada;
+  - escolha do modelo e **Gerar vídeo** (ou **Rascunho rápido**), com o andamento ao vivo;
+  - prévia do vídeo na própria janela e **Usar como vídeo final**.
+  - O quadro de produção do Conteúdo ganhou **Gerar no Estúdio** em cada post sem vídeo.
+- **GSAP e HyperFrames locais** em `reels/` (versões fixas); o `instalar.cmd` também baixa o navegador do HyperFrames. O vídeo sai mesmo sem internet. O `testar.cmd` ganhou a verificação "Estúdio de Vídeo (HyperFrames)", que renderiza um vídeo de teste.
+- O agente Produtor de Vídeo e o AGENTE.md usam o Estúdio como caminho rápido; o Remotion fica para o visual especial (plano-sequência, I.V.A., clone).
+- `audio/` (a sua voz) e `midia/estudio/` (rascunhos) ficam fora do GitHub.
+
+**Bugs achados na simulação e corrigidos:**
+- O GSAP vinha de um CDN: sem internet, o vídeo não saía.
+- Títulos terminavam em preposição ("…orçamento com") ou viravam só "PRIMEIRO".
+- Gerar um vídeo abria a janela do Produtor de Vídeo por cima e repetia o aviso de "terminou".
+
+**Testes:** 5 testes novos (títulos, legendas, projeto HTML, tempos reais, roteiro escrito à mão). Também gerei 2 vídeos de verdade, pelo terminal e pela janela, nos dois modelos.

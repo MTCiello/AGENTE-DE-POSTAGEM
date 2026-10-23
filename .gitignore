@@ -24,3 +24,7 @@ financeiro/*
 
 # escritório (fork do pixel-agents): dependências de build ficam fora; o build compilado vai para o git
 escritorio/webview-ui/node_modules/
+
+# narrações (a sua voz) e rascunhos do Estúdio de Vídeo ficam no PC
+audio/
+midia/estudio/

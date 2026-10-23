@@ -185,6 +185,36 @@ def marcar_agendado(stem: str, quando: str = "", status: str = "Agendado") -> di
     return {"ok": True, "saida": f"{stem}: {status.lower()} para {quando} (registrado no historico.md)"}
 
 
+def slug(t: str) -> str:
+    t = t.lower().translate(str.maketrans("áàâãéêíóôõúüç", "aaaaeeiooouuc"))
+    return re.sub(r"[^a-z0-9]+", "-", t).strip("-")[:40] or "post"
+
+
+def novo_roteiro(data: str, gancho: str, itens: list[str], cta: str = "", pilar: str = "") -> dict:
+    """Roteiro escrito à mão no Estúdio de Vídeo (sem o Claude): gancho, 2 a 4 itens e a chamada."""
+    try:
+        dia = dt.date.fromisoformat(str(data))
+    except ValueError:
+        return {"ok": False, "saida": "data inválida (use AAAA-MM-DD)"}
+    gancho = re.sub(r"\s+", " ", str(gancho or "")).strip()[:160]
+    itens = [re.sub(r"\s+", " ", str(i)).strip()[:240] for i in (itens or []) if str(i).strip()][:4]
+    if not gancho or not itens:
+        return {"ok": False, "saida": "escreva o gancho e pelo menos 1 item"}
+    cta = re.sub(r"\s+", " ", str(cta or "")).strip()[:200] or "Salva pra testar depois e me chama no direct."
+    nome = f"{dia.isoformat()}-{slug(gancho)}"
+    arq = ROTEIROS / f"{nome}.json"
+    if arq.exists():
+        return {"ok": False, "saida": f"já existe um roteiro {nome}"}
+    p = gancho.rstrip(".!?").split()
+    meio = max(1, len(p) - 2)
+    roteiro = {"_origem": "Estúdio de Vídeo do Ciello OS (escrito à mão)", "pilar": pilar,
+               "capa": {"tag": "IA pro seu negócio", "linhas": [[" ".join(p[:meio]), "marfim"], [" ".join(p[meio:]), "ouro"]], "apoio": "Salva pra usar depois"},
+               "scenes": [{"type": "hook", "say": gancho}] + [{"type": "item", "say": i} for i in itens] + [{"type": "cta", "say": cta}]}
+    ROTEIROS.mkdir(parents=True, exist_ok=True)
+    arq.write_text(json.dumps(roteiro, ensure_ascii=False, indent=1), encoding="utf-8")
+    return {"ok": True, "saida": f"roteiro {nome} criado", "post": nome}
+
+
 def main():
     try:
         sys.stdout.reconfigure(encoding="utf-8")

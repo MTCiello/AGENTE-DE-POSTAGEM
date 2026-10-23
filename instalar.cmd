@@ -31,9 +31,11 @@ echo.
 echo Baixando o buscador do Google Maps do SDR (gosom/google-maps-scraper, MIT)...
 python central\sdr.py instalar-scraper || echo Nao deu para baixar agora: o SDR funciona com CSV, e o instalar.cmd tenta de novo na proxima vez.
 echo.
-echo Instalando o gerador de video (Remotion)...
+echo Instalando o gerador de video (Remotion e HyperFrames do Estudio de Video)...
 pushd reels
 call npm install --no-audit --no-fund
+set HYPERFRAMES_SKIP_SKILLS=1
+call npx hyperframes browser ensure || echo O navegador do HyperFrames baixa na primeira vez que gerar um video.
 popd
 echo.
 choice /m "Instalar tambem a voz (Kokoro, Chatterbox, Whisper)? Baixa uns 3 GB"

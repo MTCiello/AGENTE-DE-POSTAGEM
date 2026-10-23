@@ -268,6 +268,29 @@ def capa():
     return OK, "capa renderizada no Remotion (na 1ª vez ele baixa o navegador dele)"
 
 
+def estudio_video():
+    """Monta um projeto do Estúdio de Vídeo e renderiza 1 s no HyperFrames (sem narração)."""
+    hf = RAIZ / "reels" / "node_modules" / ".bin" / ("hyperframes.cmd" if os.name == "nt" else "hyperframes")
+    if not hf.exists():
+        return AVISO, "pulei: falta npm install em reels (o instalar.cmd faz)"
+    os.environ.setdefault("HYPERFRAMES_SKIP_SKILLS", "1")
+    sys.path.insert(0, str(RAIZ / "central"))
+    import estudio_video as ev
+    with tempfile.TemporaryDirectory() as tmp:
+        pasta = Path(tmp) / "projeto"
+        (pasta / "fontes").mkdir(parents=True)
+        cenas = ev.normalizar({"scenes": [{"type": "hook", "say": "Teste do Estúdio de Vídeo da Ciello."}]})
+        if ev.GSAP.exists():
+            shutil.copy(ev.GSAP, pasta / "gsap.min.js")
+        shutil.copy(RAIZ / "marca" / "logo-simbolo-marfim.svg", pasta / "logo.svg")
+        (pasta / "index.html").write_text(ev.html_projeto(cenas, [(0, 0.8)], 1.0, "escuro", False, False), encoding="utf-8")
+        saida = Path(tmp) / "teste.mp4"
+        cod, out = rodar([str(hf), "render", str(pasta), "-o", str(saida), "-q", "draft", "--quiet"], cwd=pasta, timeout=600)
+        if cod or not saida.exists():
+            return FALHA, ultima(out)
+    return OK, "vídeo de teste renderizado no HyperFrames (Estúdio de Vídeo pronto)"
+
+
 def escritorio():
     """O escritório roda em Python dentro do Ciello OS: confere a tela compilada e se os sprites carregam."""
     tela = RAIZ / "central" / "escritorio" / "web" / "escritorio"
@@ -305,7 +328,7 @@ def main():
              ("Financeiro (mês simulado)", financeiro), ("Briefing do dia", briefing), ("Ciello OS (porta 3200)", painel),
              ("Equipe de agentes e comandos", equipe), ("Escritório de agentes", escritorio), ("Voz (opcional)", voz)]
     if not a.rapido:
-        lista += [("Radar (internet)", radar), ("Vigia de concorrentes (internet)", vigia), ("Capa (Remotion)", capa)]
+        lista += [("Radar (internet)", radar), ("Vigia de concorrentes (internet)", vigia), ("Capa (Remotion)", capa), ("Estúdio de Vídeo (HyperFrames)", estudio_video)]
     for nome, f in lista:
         checar(nome, f)
     n = {e: sum(1 for _, s, _, _ in resultados if s == e) for e in (OK, AVISO, FALHA)}

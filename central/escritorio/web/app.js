@@ -23,6 +23,7 @@ const SVG = {
   pino: '<path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/>',
   play: '<path d="M7 5v14l11-7z"/>',
   alvo: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
+  video: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/>',
   microfone: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/>',
   min: '<path d="M2 6h8"/>', max: '<rect x="2" y="2" width="8" height="8"/>', rest: '<rect x="2" y="4" width="6" height="6"/><path d="M4 4V2h6v6H8"/>', fechar: '<path d="M2 2l8 8M10 2l-8 8"/>',
 };
@@ -31,6 +32,7 @@ const icone = (n, vb = 24) => `<svg viewBox="0 0 ${vb} ${vb}">${SVG[n] || SVG.ag
 // ------------------------------------------------------------------ apps
 const APPS = {
   objetivos: { titulo: 'Objetivos e esteiras', icone: 'alvo', cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', w: 900, h: 700, render: renderObjetivos, cada: 3000 },
+  video: { titulo: 'Estúdio de Vídeo', icone: 'video', cor: 'linear-gradient(135deg,#8E6BD8,#4B2F99)', w: 900, h: 720, render: renderVideo, estatico: true },
   voz: { titulo: 'Estúdio de Voz', icone: 'microfone', cor: 'linear-gradient(135deg,#E9826C,#B5442F)', w: 780, h: 700, render: renderVoz, estatico: true },
   briefing: { titulo: 'Bom dia', icone: 'sol', cor: 'linear-gradient(135deg,#F7A35C,#E0722F)', w: 640, h: 660, render: renderBriefing },
   financeiro: { titulo: 'Financeiro', icone: 'financeiro', cor: 'linear-gradient(135deg,#3CC285,#1F8A4C)', w: 900, h: 680, render: renderFinanceiro },
@@ -44,7 +46,7 @@ const APPS = {
   verificar: { titulo: 'Verificação', icone: 'verificar', cor: 'linear-gradient(135deg,#5BC0A0,#2D8C70)', acao: 'verificar' },
 };
 // menu Iniciar por objetivo: o que você quer fazer agora
-const GRUPOS = [['Criar', ['conteudo', 'voz', 'tendencias', 'concorrentes']], ['Vender', ['comercial', 'anuncios']],
+const GRUPOS = [['Criar', ['video', 'conteudo', 'voz', 'tendencias', 'concorrentes']], ['Vender', ['comercial', 'anuncios']],
   ['Gerir', ['briefing', 'financeiro']], ['Equipe e sistema', ['equipe', 'atividade', 'verificar']]];
 
 const NOMES = { 'chefe-gabinete': 'Chefe de Gabinete', 'pesquisador-mercado': 'Pesquisador de Mercado', roteirista: 'Roteirista', 'produtor-video': 'Produtor de Vídeo',
@@ -618,7 +620,7 @@ async function abrirAcao(chave, aba, fn) {
   await desenhar(w, true);
   if (fn && w.fns && w.fns[fn]) w.fns[fn]({});
 }
-const ATALHOS = [['financeiro', 'cobranca', 'Cobrança e pós-venda'], ['comercial', 'hoje', 'Comercial de hoje'], ['conteudo', 'producao', 'Produção de conteúdo'],
+const ATALHOS = [['financeiro', 'cobranca', 'Cobrança e pós-venda'], ['comercial', 'hoje', 'Comercial de hoje'], ['conteudo', 'producao', 'Produção de conteúdo'], ['video', '', 'Estúdio de Vídeo'],
   ['financeiro', 'plano', 'Plano do ano'], ['voz', '', 'Estúdio de Voz'], ['objetivos', '', 'Esteiras da equipe']];
 async function renderBriefing(j) {
   const d = await api('/api/app/briefing');
@@ -987,6 +989,7 @@ async function renderConteudo(j) {
     <div class="acoes-linha">${q.pronto ? '<span class="chip pronto">pronto e agendado</span>' : `<small class="neutro">Próximo: <b>${esc((d.etapas.find((x) => x[0] === q.proximo) || ['', ''])[1])}</b> com ${esc(nome(q.dono))}</small>`}
       <button class="bt mini" data-fn="legenda" data-post="${esc(q.post)}">${q.etapas.legenda ? 'Ver legenda' : 'Gerar legenda'}</button>
       ${!q.etapas.agendado ? `<button class="bt mini" data-fn="agendei" data-post="${esc(q.post)}">${q.dias < 0 ? 'Foi publicado?' : 'Já agendei'}</button>` : ''}
+      ${!q.etapas.final && q.dias >= 0 ? `<button class="bt mini" data-abrir="video" title="Gera o vídeo no seu PC, sem o Claude">Gerar no Estúdio</button>` : ''}
       ${!q.pronto && q.dias >= 0 ? `<button class="bt mini pri" data-fn="produzir" data-post="${esc(q.post)}" title="Abre o Claude com a equipe de conteúdo">Terminar com a equipe</button>` : ''}</div></div>`; }
   const rodapeProducao = `<p class="sub">Próximos horários livres (seg, qua e sex às 10h): ${d.horarios.map((h) => ddmm(h)).join(', ')}. Para criar posts novos: <a data-abrir="objetivos" style="cursor:pointer;color:var(--azul-claro)">Objetivos → Semana de conteúdo</a>.</p>`;
   const analise = `<div class="acoes" style="margin-top:12px"><button class="bt pri" data-acao="relatorio">${icone('play')} Gerar o relatório da semana</button><button class="bt" data-fn="retrato">Anotar números novos</button>
@@ -1045,6 +1048,57 @@ async function renderAnuncios(j) {
   <h2>Campanhas</h2><table class="tab"><tr><th>Campanha</th><th>Período</th><th>Gasto</th><th>Conversas</th><th>Demos</th><th>Clientes</th><th></th></tr>${d.campanhas.map((c) => `<tr><td><b>${esc(c.nome)}</b><br><small class="neutro">${esc(c.publico || '')}</small></td><td>${ddmm(c.inicio)}–${ddmm(c.fim)}</td><td>${brl(c.gasto)}</td><td>${num(c.conversas)}</td><td>${num(c.demos)}</td><td>${num(c.clientes)}</td><td><button class="bt mini" data-fn="editar" data-nome="${esc(c.nome)}">Atualizar</button></td></tr>`).join('')}</table>`
     : '<div class="vazio">Nenhuma campanha registrada ainda. Clique em <b>+ Campanha</b> e copie os números do Gerenciador de Anúncios.</div>'}
   <div class="acoes"><button class="bt pri" data-abrir="agente:gestor-anuncios">Gestor de anúncios</button></div></div>`;
+}
+
+// ------------------------------------------------------------------ apps: estúdio de vídeo (central/estudio_video.py, HyperFrames)
+async function renderVideo(j) {
+  const d = await api('/api/app/video');
+  j.modelo = j.modelo || 'escuro';
+  j.gerando = j.gerando || {};
+  const m = d.modelos;
+  j.fns = {
+    modelo: ({ m: k }) => { j.modelo = k; desenhar(j, true); },
+    novo: () => dialogo(j, { titulo: 'Novo roteiro', texto: 'Escreva como você falaria. Cada linha vira uma cena com título e legenda. Sem o Claude: o vídeo sai com a voz escolhida no Estúdio de Voz.',
+      campos: [{ nome: 'data', rotulo: 'Data do post', tipo: 'escolha', opcoes: d.proximos.map((x) => [x, `${ddmm(x)} (próximo horário livre)`]), meia: true },
+        { nome: 'pilar', rotulo: 'Pilar', tipo: 'escolha', opcoes: [['comandos', 'Comandos'], ['lancamentos', 'Lançamentos'], ['repositorios', 'Repositórios'], ['economizar', 'Economizar'], ['negocio', 'Negócio / CRM']], meia: true },
+        { nome: 'gancho', rotulo: 'Gancho (a 1ª frase, até 9 palavras)', obrigatorio: true, exemplo: 'Três comandos do ChatGPT que respondem cliente por você' },
+        { nome: 'itens', rotulo: 'Itens (um por linha, 2 a 4)', tipo: 'area', obrigatorio: true, exemplo: 'Primeiro: responda como atendente da minha loja…\nSegundo: transforme a conversa em orçamento…' },
+        { nome: 'cta', rotulo: 'Chamada final', valor: 'Salva pra testar depois e me chama no direct.' }],
+      botao: 'Criar roteiro', enviar: async (x) => { const r = await operar('video_roteiro', x); if (r.ok) desenhar(j, true); return r; } }),
+    gerar: async ({ post, rascunho }) => {
+      silenciar('produtor-video', true);
+      const r = await operar('video_gerar', { post, modelo: j.modelo, rascunho: rascunho === '1' });
+      if (!r.ok) { silenciar('produtor-video', false); return aviso({ titulo: 'Não deu', texto: r.saida, cor: '#C8442F' }); }
+      j.gerando[post] = { linha: 'começando…' }; desenhar(j, true);
+      const timer = setInterval(async () => {
+        let ex; try { ex = await api(`/api/execucao/${encodeURIComponent(r.execucao)}`); } catch { return; }
+        const linhas = (ex.saida || '').trim().split('\n').filter((l) => !/^\s|^\[(init|Browser|INFO|HyperFrames)/.test(l));
+        j.gerando[post] = { linha: linhas.slice(-1)[0] || 'trabalhando…' };
+        if (ex.terminou) {
+          clearInterval(timer); delete j.gerando[post]; silenciar('produtor-video', false);
+          aviso(ex.codigo === 0 ? { titulo: 'Vídeo pronto', texto: 'Confira a prévia e clique em Usar como vídeo final.', cor: '#1F8A4C' } : { titulo: 'O vídeo não saiu', texto: linhas.slice(-1)[0] || '', cor: '#C8442F' });
+        }
+        const lin = $(`[data-progresso="${post}"]`, j.corpo); if (lin && !ex.terminou) lin.textContent = j.gerando[post].linha; else desenhar(j, true);
+      }, 1500);
+    },
+    usar: async ({ post }) => { const r = await rapido('video_usar', { post, modelo: j.modelo }, 'Vídeo final atualizado'); if (r.ok) desenhar(j, true); },
+  };
+  const cartao = (p) => {
+    const tem = p.rascunhos[j.modelo]; const g = j.gerando[p.post];
+    const chip = (ok, r) => `<span class="etapa-post ${ok ? 'feita' : ''}">${ok ? '✓ ' : ''}${r}</span>`;
+    return `<div class="cartao post-video"><div class="post-cab"><b>${ddmm(p.data)}</b> <span>${esc(p.titulo)}</span></div>
+      <div class="etapas-post">${chip(p.etapas.roteiro, 'Roteiro')}<i>›</i>${chip(p.narracao, 'Narração')}<i>›</i>${chip(tem, `Rascunho ${esc(m[j.modelo].nome.split(' ')[1])}`)}<i>›</i>${chip(p.etapas.final, 'Vídeo final')}</div>
+      ${tem ? `<video class="previa" controls preload="metadata" src="/midia/estudio/${encodeURIComponent(p.post)}-${j.modelo}.mp4?v=${Date.now()}"></video>` : ''}
+      <div class="acoes-linha">${g ? `<span class="girando"></span><small class="neutro" data-progresso="${esc(p.post)}">${esc(g.linha)}</small>`
+        : `<button class="bt pri" data-fn="gerar" data-post="${esc(p.post)}" ${d.hyperframes ? '' : 'disabled'}>${icone('play')} ${tem ? 'Gerar de novo' : 'Gerar vídeo'}</button>
+           <button class="bt" data-fn="gerar" data-post="${esc(p.post)}" data-rascunho="1" ${d.hyperframes ? '' : 'disabled'} title="Qualidade menor, sai mais rápido">Rascunho rápido</button>
+           ${tem ? `<button class="bt" data-fn="usar" data-post="${esc(p.post)}" title="Copia para midia/final/ (o que vai para o Instagram)">Usar como vídeo final</button>` : ''}`}</div></div>`;
+  };
+  j.corpo.innerHTML = `<div class="pagina"><h1>Estúdio de Vídeo</h1><p class="sub">Roteiro → narração com a voz do Estúdio de Voz (agora: <b>${esc(d.voz)}</b>) → vídeo com a marca da Ciello, legenda e trilha. Feito no seu PC com o HyperFrames.</p>${SEM_CLAUDE}
+    ${d.hyperframes ? '' : '<div class="faixa">O motor de vídeo (HyperFrames) ainda não está instalado. Rode o <b>instalar.cmd</b> de novo: ele instala em reels/.</div>'}
+    <div class="acoes topo"><button class="bt pri" data-fn="novo">+ Novo roteiro</button><button class="bt" data-abrir="voz">Estúdio de Voz</button><button class="bt" data-abrir="objetivos" title="Os agentes escrevem os roteiros">Pedir roteiros à equipe</button></div>
+    <h2>Modelo</h2><div class="modelos">${Object.entries(m).map(([k, x]) => `<button class="modelo ${j.modelo === k ? 'on' : ''}" data-fn="modelo" data-m="${k}"><span class="amostra" style="background:${x.fundo}"><i style="color:${x.texto}">Título</i><i style="color:${x.ouro}">em destaque</i></span><b>${esc(x.nome)}</b><small>${esc(x.descricao)}</small></button>`).join('')}</div>
+    <h2>Roteiros</h2><div class="quadro-posts">${d.posts.map(cartao).join('') || '<div class="vazio">Nenhum roteiro. Clique em <b>+ Novo roteiro</b>.</div>'}</div></div>`;
 }
 
 // ------------------------------------------------------------------ apps: objetivos e esteiras
@@ -1123,6 +1177,8 @@ async function renderObjetivos(j) {
 const TEXTO_GRAVAR = 'Oi! Aqui é o Mateus, da Ciello, de Chapecó. Eu ajudo pequenas empresas a vender mais pelo WhatsApp, com organização, '
   + 'resposta rápida e um pouco de inteligência artificial. Hoje eu vou te mostrar como isso funciona na prática, passo a passo. Bora?';
 const MOTOR_ROTULO = { kokoro: 'Voz pronta (Kokoro)', chatterbox: 'Sua voz (Chatterbox)', voicestudio: 'VoiceStudio', teste: 'Teste' };
+// tarefa que você mesmo começou numa janela: o agente não abre outra janela nem repete o aviso de "terminou"
+function silenciar(agente, ligado) { suprimir[agente] = ligado ? Infinity : Date.now(); }
 async function acompanhar(id, aoTerminar) {
   for (let i = 0; i < 1800; i++) {
     await new Promise((r) => setTimeout(r, 1000));
@@ -1160,11 +1216,12 @@ async function renderVoz(j) {
     campo: (_, el) => { t[el.name] = el.value; if (el.name === 'motor') { el.blur(); desenhar(j, true); } },
     ouvir: async () => {
       t.texto = $('[name=texto]', j.corpo).value;
+      silenciar('produtor-video', true);
       const r = await operar('voz_testar', t);
       if (!r.ok) return aviso({ titulo: 'Não deu', texto: r.saida, cor: '#C8442F' });
       j.gerando = true; desenhar(j, true);
       acompanhar(r.execucao, (ex) => {
-        j.gerando = false;
+        j.gerando = false; silenciar('produtor-video', false);
         if (ex.codigo !== 0) aviso({ titulo: 'A voz não saiu', texto: ex.saida.trim().split('\n').slice(-2).join(' '), cor: '#C8442F' });
         j.ultimo = ex.codigo === 0 ? r.arquivo : null; desenhar(j, true);
       });
