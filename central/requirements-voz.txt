@@ -1,0 +1,5 @@
+# voz e legendas (opcional, pesado: baixa PyTorch e modelos na primeira vez)
+-r requirements.txt
+kokoro>=0.9.4
+chatterbox-tts
+faster-whisper

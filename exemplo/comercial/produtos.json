@@ -1,0 +1,11 @@
+{
+ "_sobre": "Produtos e preços de lista (EXEMPLO FICTÍCIO). Lidos pelo financeiro.py, pelo sdr.py, pelo Ciello OS e pelos agentes. Mude aqui e tudo acompanha.",
+ "produtos": [
+  {"id": "crm", "nome": "Lumi CRM", "tipo": "assinatura", "mensal": 249.0, "teste_dias": 14,
+   "inclui": "até 5 atendentes no mesmo WhatsApp", "chamada": "14 dias grátis para testar"},
+  {"id": "site", "nome": "Criação de site", "tipo": "projeto", "avista": 1800.0, "parcelas": 10, "parcela": 199.0,
+   "inclui": "site de uma página com o WhatsApp em destaque", "recorrente": "hospedagem"},
+  {"id": "hospedagem", "nome": "Hospedagem do site", "tipo": "assinatura", "mensal": 79.0, "teste_dias": 0,
+   "inclui": "site no ar, com manutenção básica"}
+ ]
+}

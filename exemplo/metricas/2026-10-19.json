@@ -1,0 +1,47 @@
+{
+ "data": "2026-10-19",
+ "fonte": "EXEMPLO FICTÍCIO",
+ "periodo": {
+  "de": "2026-09-19",
+  "ate": "2026-10-19"
+ },
+ "perfil": {
+  "seguidores": 412,
+  "seguidores_inicio": 380,
+  "alcance": 5210,
+  "contas_engajadas": 140,
+  "posts": 6
+ },
+ "reels": [
+  {
+   "data": "2026-10-14",
+   "gancho": "Seu cliente mandou mensagem e ninguém respondeu?",
+   "views": 1240,
+   "alcance": 980,
+   "salvamentos": 18,
+   "compartilhamentos": 9,
+   "comentarios": 4,
+   "tempo_medio_s": 6.2
+  },
+  {
+   "data": "2026-10-08",
+   "gancho": "3 comandos de IA que respondem cliente por você",
+   "views": 860,
+   "alcance": 700,
+   "salvamentos": 25,
+   "compartilhamentos": 6,
+   "comentarios": 2,
+   "tempo_medio_s": 7.4
+  },
+  {
+   "data": "2026-10-01",
+   "gancho": "Quanto custa um cliente sem resposta?",
+   "views": 430,
+   "alcance": 390,
+   "salvamentos": 3,
+   "compartilhamentos": 1,
+   "comentarios": 0,
+   "tempo_medio_s": 4.1
+  }
+ ]
+}

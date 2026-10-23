@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ciello OS</title>
+<link rel="icon" href="/web/logo-marfim.svg">
+<link rel="stylesheet" href="/web/app.css">
+<link rel="stylesheet" href="/web/vendor/xterm/xterm.css">
+</head>
+<body>
+<main id="mesa" aria-label="Área de trabalho">
+  <div id="fundo" class="fundo"></div>
+  <div id="janelas"></div>
+  <div id="encaixe" class="encaixe" hidden></div>
+  <div id="avisos" class="avisos" aria-live="polite"></div>
+</main>
+
+<div id="menu" class="menu" hidden>
+  <div class="menu-busca"><input id="busca" type="search" placeholder="O que você quer fazer? Escreva um objetivo ou procure um app" autocomplete="off"></div>
+  <div class="menu-corpo">
+    <section><div id="menu-apps" class="menu-apps"></div></section>
+    <section><h3>Equipe</h3><div id="menu-equipe" class="menu-equipe"></div></section>
+  </div>
+  <div class="menu-rodape">
+    <div class="usuario"><span class="avatar-m">C</span><div><b>Você</b><small>Ciello OS</small></div></div>
+    <label class="chave"><input id="auto" type="checkbox" checked> Abrir a janela do agente quando ele começar</label>
+    <div class="menu-botoes"><button class="bt" id="ver-escritorio" title="Modo foco: esconde o escritório e deixa só a logo">Esconder escritório</button><button class="bt" id="minimizar-tudo" title="Minimiza as janelas (de novo: volta com elas)">Minimizar janelas</button><button class="bt" id="centralizar">Centralizar escritório</button><button class="bt" id="organizar">Organizar janelas</button><button class="bt" id="tela-cheia">Tela cheia</button></div>
+  </div>
+</div>
+
+<div id="central" class="central" hidden><h3>Notificações</h3><div id="central-lista"></div></div>
+
+<footer class="barra-tarefas">
+  <button id="iniciar" class="iniciar" title="Iniciar"><img src="/web/logo-marfim.svg" alt="Iniciar"></button>
+  <div id="fixados" class="fixados"></div>
+  <div id="abertas" class="abertas"></div>
+  <div class="bandeja">
+    <button id="trabalhando" class="trabalhando" title="Agentes trabalhando agora"><i></i><span>0</span></button>
+    <button id="sino" class="sino" title="Notificações">
+      <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><em hidden></em>
+    </button>
+    <div id="relogio" class="relogio"><b></b><small></small></div>
+  </div>
+</footer>
+<script>window.CIELLO_TOKEN = "__CIELLO_TOKEN__";</script>
+<script src="/web/vendor/xterm/xterm.js"></script>
+<script src="/web/vendor/xterm/addon-fit.js"></script>
+<script src="/web/app.js"></script>
+</body>
+</html>

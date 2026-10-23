@@ -1,0 +1,71 @@
+{
+ "scenes": [
+  {
+   "type": "hook",
+   "kicker": "Salva esse vídeo",
+   "lines": [
+    [
+     "Seu cliente",
+     "marfim"
+    ],
+    [
+     "ficou sem",
+     "cinza"
+    ],
+    [
+     "resposta?",
+     "ouro"
+    ]
+   ],
+   "say": "Seu cliente mandou mensagem e ninguém respondeu? Isso custa caro."
+  },
+  {
+   "type": "item",
+   "kicker": "Dica 1",
+   "title": [
+    [
+     "Um dono para",
+     "marfim"
+    ],
+    [
+     "cada conversa",
+     "ouro"
+    ]
+   ],
+   "say": "Primeiro: cada conversa precisa ter um responsável, senão todo mundo acha que o outro respondeu."
+  },
+  {
+   "type": "item",
+   "kicker": "Dica 2",
+   "title": [
+    [
+     "Lembrete de",
+     "marfim"
+    ],
+    [
+     "retorno",
+     "ouro"
+    ]
+   ],
+   "say": "Segundo: anote quando voltar a falar com o cliente, e cumpra."
+  },
+  {
+   "type": "cta",
+   "kicker": "Exemplo",
+   "title": [
+    [
+     "Salva pra",
+     "marfim"
+    ],
+    [
+     "testar depois",
+     "ouro"
+    ]
+   ],
+   "say": "Salva pra testar depois e me chama no direct."
+  }
+ ],
+ "pilar": "negocio",
+ "titulo": "Cliente sem resposta (exemplo)",
+ "_sobre": "Roteiro FICTÍCIO de exemplo."
+}

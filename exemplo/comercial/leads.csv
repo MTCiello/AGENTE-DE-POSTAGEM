@@ -1,0 +1,7 @@
+id,empresa,segmento,cidade,telefone,whatsapp,site,email,nota_google,avaliacoes,pontos,dor_citada,maps,etapa,ultimo_contato,proximo_contato,tentativas,origem,obs,oferta,agenda
+1,Imobiliária Horizonte (exemplo),imobiliaria,Vila Serena PR,5500900000001,sim,https://example.com/horizonte,,4.2,38,86,demora no retorno,,contatado,2026-10-20,2026-10-22,1,maps,,crm,
+2,Clínica Sorriso Claro (exemplo),odontologia,Vila Serena PR,5500900000002,sim,,,4.7,112,81,,,novo,,,0,maps,,site,
+3,Estética Bela Pele (exemplo),estetica,Campo do Sol PR,5500900000003,sim,https://instagram.com/belapele.exemplo,,4.5,54,74,,,respondeu,2026-10-21,2026-10-23,1,maps,quer ver o CRM funcionando,crm,
+4,Móveis Bom Lar (exemplo),moveis,Vila Serena PR,5500900000004,sim,https://example.com/bomlar,,4.0,21,69,orçamento sem retorno,,demo,2026-10-21,,1,maps,,crm,2026-10-24T10:00
+5,Academia Movimento (exemplo),academia,Campo do Sol PR,5500900000005,sim,,,4.4,87,62,,,novo,,,0,maps,,site,
+6,Pet Shop Amigo Fiel (exemplo),pet,Vila Serena PR,5500900000006,sim,,,4.8,140,55,,,frio,2026-10-05,,3,maps,,site,

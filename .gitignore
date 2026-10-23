@@ -1,0 +1,35 @@
+__pycache__/
+*.wav
+frames/
+reels/node_modules/
+reels/public/clone/*.mp4
+
+# DADOS DO USUÁRIO: nunca vão para o git (o repositório é público). O Ciello OS chega com a empresa fictícia
+# de exemplo/ (central/dados_iniciais.py copia na primeira abertura) e cada um importa os seus dados.
+/comercial/
+/financeiro/*
+!/financeiro/categorias.json
+/founder/
+/conhecimento/
+/metricas/
+/radar/
+/roteiros/
+/midia/
+/marca/
+/anuncios/*
+!/anuncios/README.md
+/historico.md
+/estado/
+/.venv/
+
+# escritório (fork do pixel-agents): dependências de build ficam fora; o build compilado vai para o git
+escritorio/webview-ui/node_modules/
+
+# narrações (a sua voz) ficam no PC
+/audio/
+
+# resultados dos testes da tela (allure) são gerados a cada rodada
+escritorio/allure-results/
+
+# saída do instalador (instalador/ciello.iss)
+build/

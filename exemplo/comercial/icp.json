@@ -1,0 +1,12 @@
+{
+ "_sobre": "Perfil de cliente ideal (EXEMPLO FICTÍCIO). prioridade 1-5 (5 = vende pelo WhatsApp com equipe e perde lead fácil). termos = como o negócio aparece no Google Maps.",
+ "cidades": ["Vila Serena PR", "Campo do Sol PR"],
+ "segmentos": {
+  "imobiliaria":   {"prioridade": 5, "termos": ["imobiliária"], "dor": "corretor demora pra responder e o cliente fecha com outra imobiliária", "valor": "cada visita agendada vale uma comissão"},
+  "odontologia":   {"prioridade": 5, "termos": ["clínica odontológica"], "dor": "paciente pede orçamento no WhatsApp e ninguém faz o retorno", "valor": "um tratamento fechado a mais por mês"},
+  "estetica":      {"prioridade": 4, "termos": ["clínica de estética"], "dor": "agenda cheia de mensagem e horário vago que ninguém oferece", "valor": "encaixe de horários vagos"},
+  "moveis":        {"prioridade": 4, "termos": ["loja de móveis planejados"], "dor": "orçamento enviado e esquecido, sem follow-up", "valor": "projeto de planejados tem ticket alto"},
+  "academia":      {"prioridade": 3, "termos": ["academia"], "dor": "interessado pergunta preço e não recebe retorno", "valor": "matrícula de quem só perguntou o preço"},
+  "pet":           {"prioridade": 2, "termos": ["pet shop"], "dor": "agendamento de banho e tosa perdido no WhatsApp", "valor": "agenda cheia"}
+ }
+}

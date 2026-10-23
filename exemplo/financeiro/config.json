@@ -1,0 +1,7 @@
+{
+ "saldo_inicial": 4200.0,
+ "data_saldo": "2026-09-30",
+ "alerta_saldo": 1000.0,
+ "link_avaliacao": "https://example.com/avaliar",
+ "assinatura": "Ana"
+}

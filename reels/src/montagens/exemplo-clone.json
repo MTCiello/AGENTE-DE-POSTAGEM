@@ -1,0 +1,81 @@
+{
+ "total": 24.2,
+ "cenas": [
+  {
+   "de": 0,
+   "ate": 5.2,
+   "video": "clone/cena1-fala.mp4",
+   "rotulo": [
+    "SEU",
+    "CRM"
+   ],
+   "zoom": [
+    1.04,
+    1.1
+   ],
+   "nota": "Você no escritório, plano médio, falando para a câmera (InfiniteTalk: foto + narração)"
+  },
+  {
+   "de": 5.2,
+   "ate": 10.4,
+   "video": "clone/cena2-andando.mp4",
+   "zoom": [
+    1.0,
+    1.04
+   ],
+   "nota": "Você andando numa rua comercial da sua cidade, câmera acompanhando (Wan 2.2 imagem → vídeo)"
+  },
+  {
+   "de": 10.4,
+   "ate": 16.0,
+   "video": "clone/cena3-loja.mp4",
+   "rotulo": [
+    "3 NÚMEROS",
+    "1 TELA"
+   ],
+   "nota": "Dentro de uma loja, celular na mão mostrando o WhatsApp (Wan 2.2 ou Wan-Animate com vídeo de referência)"
+  },
+  {
+   "de": 16.0,
+   "ate": 21.4,
+   "video": "clone/cena4-cta.mp4",
+   "zoom": [
+    1.08,
+    1.0
+   ],
+   "nota": "Volta ao escritório, close, fala o CTA (InfiniteTalk)"
+  }
+ ],
+ "falas": [
+  {
+   "from": 0.1,
+   "to": 5.2,
+   "text": "Sua equipe perde *venda* no WhatsApp e você nem fica sabendo."
+  },
+  {
+   "from": 5.2,
+   "to": 10.4,
+   "text": "Conversa esquecida, orçamento sem resposta, cliente indo pro *concorrente*."
+  },
+  {
+   "from": 10.4,
+   "to": 16.0,
+   "text": "No nosso CRM todo mundo atende na *mesma* *tela*, com o funil de cada cliente."
+  },
+  {
+   "from": 16.0,
+   "to": 21.4,
+   "text": "Comenta *CRM* que eu te libero o teste grátis."
+  }
+ ],
+ "fim": {
+  "inicio": 21.4,
+  "produto": "CRM",
+  "palavra": "CRM",
+  "sub": "e eu te libero o teste grátis",
+  "rodape": [
+   "Vende pelo WhatsApp?",
+   "Chama a gente."
+  ]
+ }
+}

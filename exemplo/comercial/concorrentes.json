@@ -1,0 +1,7 @@
+{
+ "_sobre": "Concorrentes que a vigia (central/vigia.py) acompanha (EXEMPLO FICTÍCIO: troque pelos seus). Cada URL é baixada, vira texto e é comparada com a versão anterior. 'inicio'/'fim' (opcionais) recortam só o trecho que interessa. 'conferir': true = endereço ainda não testado no seu PC.",
+ "concorrentes": [
+  {"nome": "Concorrente Exemplo", "instagram": "", "anuncios": "",
+   "urls": [{"rotulo": "página de exemplo", "url": "https://example.com/", "conferir": true}]}
+ ]
+}

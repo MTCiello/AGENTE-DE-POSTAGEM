@@ -1,0 +1,44 @@
+{
+  "id": "POLTRONA_COURO",
+  "name": "Poltrona de couro",
+  "category": "chairs",
+  "type": "group",
+  "canPlaceOnWalls": false,
+  "canPlaceOnSurfaces": false,
+  "backgroundTiles": 1,
+  "groupType": "rotation",
+  "rotationScheme": "3-way-mirror",
+  "members": [
+    {
+      "type": "asset",
+      "id": "POLTRONA_COURO_FRONT",
+      "file": "POLTRONA_COURO_FRONT.png",
+      "width": 16,
+      "height": 32,
+      "footprintW": 1,
+      "footprintH": 2,
+      "orientation": "front"
+    },
+    {
+      "type": "asset",
+      "id": "POLTRONA_COURO_BACK",
+      "file": "POLTRONA_COURO_BACK.png",
+      "width": 16,
+      "height": 32,
+      "footprintW": 1,
+      "footprintH": 2,
+      "orientation": "back"
+    },
+    {
+      "type": "asset",
+      "id": "POLTRONA_COURO_SIDE",
+      "file": "POLTRONA_COURO_SIDE.png",
+      "width": 16,
+      "height": 32,
+      "footprintW": 1,
+      "footprintH": 2,
+      "orientation": "side",
+      "mirrorSide": true
+    }
+  ]
+}

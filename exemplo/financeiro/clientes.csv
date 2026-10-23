@@ -1,0 +1,6 @@
+id,empresa,contato,whatsapp,plano,valor_mensal,dia_vencimento,inicio,status,cancelado_em,motivo,lead_id,nps,posvenda,obs,teste_ate,ultimo_contato
+1,Imobiliária Horizonte (exemplo),Carlos,5500900000101,crm,249.00,10,2026-08-10,ativo,,,,9,,,,2026-10-23
+2,Ótica Visão (exemplo),Marina,5500900000102,crm,249.00,5,2026-09-05,ativo,,,,,,,,
+3,Clínica Vida (exemplo),Paulo,5500900000103,crm,249.00,15,2026-10-01,ativo,,,,,,,,
+4,Móveis Bom Lar (exemplo),Rita,5500900000104,crm,249.00,10,2026-10-15,teste,,,,,,,2026-10-29,
+5,Padaria Trigo Bom (exemplo),João,5500900000105,hospedagem,79.00,10,2026-10-23,ativo,,,,,,,,
