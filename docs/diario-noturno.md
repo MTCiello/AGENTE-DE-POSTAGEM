@@ -28,3 +28,20 @@ _(atualizado no fim da noite)_
 **Bug achado na simulação e corrigido:** o formulário "Nova assinatura" abria com o produto "Outro" marcado e o cadastro falhava por falta de valor.
 
 **Testes:** 3 testes novos (teste grátis, site parcelado com hospedagem, site à vista); todos passam.
+
+### Volta 2 · 23/10 00h–01h · Plano do ano, auditoria e preço
+
+**Simulação:** levei a sua planilha "NEGÓCIOS CIELLO" (aba da "CONTROLE PESSOAL") para o Ciello OS para ver se ele acharia os furos. Os números ficam só no seu PC e na conversa, nunca aqui. O financeiro não tinha onde guardar um plano de ano nem como discutir regras: só olhava o passado (extrato e faturas).
+
+**Feito:**
+- `central/plano.py` + **Financeiro → Plano do ano**: negócios (fechado, negociando ou talvez, com a chance de cada um), custos (mensal, anual ou único), regime de imposto (MEI, Simples Anexo III ou V), cancelamentos e taxas. A projeção de 12 meses mostra receita certa, provável e "se tudo fechar", impostos, resultado e quanto sobra para você.
+- **Auditoria "O que olhar"**: aponta meses sem receita, imposto fora do plano, teto do MEI, negócio sem status, receita concentrada num cliente ou produto, nenhum cancelamento previsto, custo de entrega (servidor, domínio, API) fora do plano, custo anual que pesa num mês só, sem contador, fator R, e em quantos meses a empresa já te paga. Também calcula quantos clientes de CRM faltam para isso.
+- **Ideias de preço** a partir dos preços reais: juros embutidos no site parcelado (10% a mais, 1,5% ao mês), plano anual do CRM (12 por 10), taxa de implantação, hospedagem como receita que fica.
+- **Discutir com o Financeiro**: abre o Claude com o plano e pede 2 caminhos com números para cada ponto, uma recomendação, 3 regras e um plano de 90 dias. **Puxar da planilha** pede ao agente para ler a aba do Google Drive e montar o plano, mostrando antes de gravar.
+- O agente Financeiro conhece os produtos, o teste grátis, a venda de site e o plano.
+
+**Bugs achados na simulação e corrigidos:**
+- Um campo chamado "item" quebrava o formulário (no navegador, `form.elements.item` é uma função). Agora todo formulário lê os campos com `namedItem`.
+- A participação de um produto passava de 100% ("118% da receita vem do CRM") porque os cancelamentos entravam num lado da conta e não no outro.
+
+**Testes:** 6 testes novos do plano; todos passam.

@@ -320,3 +320,13 @@ select.etapa, .linha-item select { height: 28px; padding: 0 6px; font-size: 12px
 .cartao h3 { margin: 14px 0 6px; font: 600 11px Oswald, sans-serif; letter-spacing: 2px; text-transform: uppercase; color: var(--azul); }
 .passos-vs { margin: 6px 0 0; padding-left: 20px; } .passos-vs li { margin: 4px 0; } .passos-vs a { color: var(--azul-claro); }
 label.bt { cursor: pointer; }
+
+/* ------------------------------------------------------------ plano do ano */
+.faixa-plano { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0 12px; padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px solid var(--linha); }
+.achado.alto { border-left: 4px solid var(--vermelho); } .achado.medio { border-left: 4px solid var(--ouro); } .achado.dica { border-left: 4px solid var(--azul-claro); }
+.barras-plano { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; height: 170px; align-items: end; }
+.barras-plano > div { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; font-size: 10.5px; color: var(--cinza); }
+.barras-plano b { font-size: 10px; color: var(--tinta); white-space: nowrap; }
+.barras-plano i { width: 70%; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #F1C95A, #D99A0B); }
+.barras-plano i.falta { background: linear-gradient(180deg, #E9826C, #C8442F); } .barras-plano i.ok { background: linear-gradient(180deg, #5BC08A, #1F8A4C); }
+.barras-plano u { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--azul); text-decoration: none; }

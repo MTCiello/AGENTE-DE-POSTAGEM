@@ -574,6 +574,7 @@ function dialogo(j, { titulo, texto = '', campos = [], botao = 'Salvar', enviar,
     <footer><button type="button" class="bt cancelar">Cancelar</button><button type="submit" class="bt pri">${esc(botao)}</button></footer></form>`;
   j.el.appendChild(el);
   const form = $('form', el); const res = $('.resultado', el);
+  const campoForm = (nome) => form.elements.namedItem(nome); // namedItem: um campo chamado "item" não vira o método item()
   const sair = () => el.remove();
   $('.x', el).onclick = sair; $('.cancelar', el).onclick = sair;
   el.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); sair(); } });
@@ -582,10 +583,10 @@ function dialogo(j, { titulo, texto = '', campos = [], botao = 'Salvar', enviar,
     const dados = {};
     for (const c of campos) {
       if (c.tipo === 'marcar') dados[c.nome] = [...form.querySelectorAll(`[name="${c.nome}"]:checked`)].map((x) => x.value);
-      else if (c.tipo === 'sim') dados[c.nome] = form.elements[c.nome].checked;
-      else if (c.tipo === 'arquivo') dados[c.nome] = form.elements[c.nome].files[0] || null;
-      else dados[c.nome] = form.elements[c.nome].value.trim();
-      if (c.obrigatorio && !dados[c.nome]) { res.hidden = false; res.className = 'resultado erro'; res.textContent = `Preencha: ${c.rotulo}`; form.elements[c.nome]?.focus?.(); return; }
+      else if (c.tipo === 'sim') dados[c.nome] = campoForm(c.nome).checked;
+      else if (c.tipo === 'arquivo') dados[c.nome] = campoForm(c.nome).files[0] || null;
+      else dados[c.nome] = campoForm(c.nome).value.trim();
+      if (c.obrigatorio && !dados[c.nome]) { res.hidden = false; res.className = 'resultado erro'; res.textContent = `Preencha: ${c.rotulo}`; campoForm(c.nome)?.focus?.(); return; }
     }
     const b = $('[type=submit]', el); b.disabled = true; b.textContent = 'Salvando…';
     const r = await enviar(dados, form);
@@ -626,7 +627,7 @@ function barras(itens, fmt = brlCurto) {
   return `<div class="barras">${itens.map((i) => `<div><b>${fmt(i.v)}</b><i style="height:${Math.max(3, 100 * Math.abs(i.v) / max) * 0.8}%;${i.cor ? `background:${i.cor}` : ''}"></i>${esc(i.r)}</div>`).join('')}</div>`;
 }
 async function renderFinanceiro(j) {
-  const d = await api('/api/app/financeiro'); const s = d.situacao;
+  const [d, pl] = await Promise.all([api('/api/app/financeiro'), j.aba === 'plano' ? api('/api/app/plano') : null]); const s = d.situacao;
   const nomeMes = (m) => ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][+m.slice(5) - 1];
   const kpi = (r, v, e = '', c = 'neutro') => `<div class="kpi"><small>${r}</small><strong>${v}</strong><em class="${c}">${e}</em></div>`;
   const ativos = d.clientes.filter((c) => c.status === 'ativo');
@@ -716,7 +717,9 @@ async function renderFinanceiro(j) {
     return `<span class="chip erro" title="${esc(c.motivo)}">cancelado</span>`;
   };
   let corpo = '';
-  if (j.aba === 'clientes') {
+  if (j.aba === 'plano' && pl) {
+    corpo = planoCorpo(j, pl);
+  } else if (j.aba === 'clientes') {
     corpo = `<table class="tab"><tr><th>Empresa</th><th>Contato</th><th>Mensalidade</th><th>Vence</th><th>Desde</th><th>NPS</th><th>Situação</th><th></th></tr>${d.clientes.map((c) => `<tr>
       <td><b>${esc(c.empresa)}</b>${c.plano ? ` <small class="neutro">${esc(ROT_PLANO[c.plano] || c.plano)}</small>` : ''}${c.obs ? `<br><small class="neutro">${esc(c.obs)}</small>` : ''}</td><td>${esc(c.contato)}${c.whatsapp ? `<br><a href="${esc(zap(c.whatsapp))}" target="_blank" rel="noopener"><small>${esc(c.whatsapp)}</small></a>` : ''}</td>
       <td>${brl(+c.valor_mensal)}</td><td>dia ${esc(c.dia_vencimento)}</td><td>${ddmm(c.inicio)}</td><td>${esc(c.nps || '—')}</td>
@@ -747,7 +750,60 @@ async function renderFinanceiro(j) {
     <div class="acoes"><button class="bt" data-acao="fin_resumo">Resumo completo</button><button class="bt" data-abrir="agente:financeiro">Agente Financeiro</button></div>`;
   }
   j.corpo.innerHTML = `<div class="pagina"><h1>Financeiro</h1><p class="sub">${num(s.clientes_ativos)} clientes ativos · despesa média ${brl(s.despesa_media)}/mês</p>${SEM_CLAUDE}${barra}
-  ${abas(j, [['geral', 'Visão geral'], ['clientes', 'Clientes', d.clientes.length], ['cobranca', 'Cobrança e pós-venda', fila], ['lancamentos', 'Lançamentos', d.a_classificar.length || '']])}${corpo}</div>`;
+  ${abas(j, [['geral', 'Visão geral'], ['clientes', 'Clientes', d.clientes.length], ['cobranca', 'Cobrança e pós-venda', fila], ['lancamentos', 'Lançamentos', d.a_classificar.length || ''], ['plano', 'Plano do ano']])}${corpo}</div>`;
+}
+
+// ------------------------------------------------------------------ financeiro: plano do ano (central/plano.py)
+const NIVEL = { alto: ['erro', 'importante'], medio: ['esperando', 'atenção'], dica: ['pronto', 'dica'] };
+const PRODUTO_PLANO = [['crm', 'CIELLO CRM'], ['site', 'Site'], ['hospedagem', 'Hospedagem'], ['instagram', 'Instagram / conteúdo'], ['sistema', 'Sistema sob medida'], ['outro', 'Outro']];
+function planoCorpo(j, pl) {
+  const p = pl.plano; const proj = pl.projecao; const eq = pl.equilibrio;
+  const soma = (k) => proj.reduce((t, m) => t + m[k], 0);
+  const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const pagam = proj.filter((m) => m.sobra_para_voce >= 0).length;
+  const pct = (v) => String(Math.round((+v || 0) * 1000) / 10).replace('.', ',');
+  const camposNegocio = (n = {}) => [{ nome: 'cliente', rotulo: 'Cliente', valor: n.cliente, obrigatorio: true }, { nome: 'produto', rotulo: 'Produto', tipo: 'escolha', opcoes: PRODUTO_PLANO, valor: n.produto || 'crm', meia: true },
+    { nome: 'tipo', rotulo: 'Cobrança', tipo: 'escolha', opcoes: [['mensal', 'Mensal (recorrente)'], ['parcelas', 'Parcelas'], ['unico', 'Pagamento único']], valor: n.tipo || 'mensal', meia: true },
+    { nome: 'valor', rotulo: 'Valor (R$, mês ou parcela)', tipo: 'numero', valor: n.valor != null ? String(n.valor).replace('.', ',') : '', obrigatorio: true, meia: true }, { nome: 'parcelas', rotulo: 'Nº de parcelas', valor: n.parcelas || '', meia: true },
+    { nome: 'inicio', rotulo: 'Começa em', tipo: 'mes', valor: n.inicio || `${p.ano}-01`, meia: true }, { nome: 'fim', rotulo: 'Termina em (se termina)', tipo: 'mes', valor: n.fim || '', meia: true },
+    { nome: 'status', rotulo: 'Situação', tipo: 'escolha', opcoes: [['fechado', 'Fechado'], ['negociando', 'Negociando (50%)'], ['talvez', 'Talvez (25%)']], valor: n.status || 'fechado', meia: true },
+    { nome: 'chance', rotulo: 'Chance de fechar (%, se diferente)', valor: n.chance != null ? Math.round(n.chance * 100) : '', meia: true }];
+  const camposCusto = (c = {}) => [{ nome: 'item', rotulo: 'Custo', valor: c.item, obrigatorio: true, exemplo: 'Servidor, Claude, contador…' }, { nome: 'valor', rotulo: 'Valor (R$)', tipo: 'numero', valor: c.valor != null ? String(c.valor).replace('.', ',') : '', obrigatorio: true, meia: true },
+    { nome: 'frequencia', rotulo: 'Frequência', tipo: 'escolha', opcoes: [['mensal', 'Todo mês'], ['anual', 'Uma vez por ano'], ['unico', 'Só uma vez']], valor: c.frequencia || 'mensal', meia: true },
+    { nome: 'mes', rotulo: 'Mês (anual ou único)', tipo: 'mes', valor: c.mes || '', meia: true }, { nome: 'categoria', rotulo: 'Categoria', tipo: 'escolha', opcoes: pl.categorias, valor: c.categoria || 'ferramentas', meia: true }];
+  Object.assign(j.fns, {
+    planoConfig: () => dialogo(j, { titulo: 'Regras do plano', texto: 'Quanto mais perto da realidade, mais útil a auditoria. Imposto e taxas são aproximações para planejar: confirme com o contador.',
+      campos: [{ nome: 'ano', rotulo: 'Ano', valor: p.ano, meia: true }, { nome: 'regime', rotulo: 'Regime de imposto', tipo: 'escolha', opcoes: [['', 'Ainda não sei'], ...Object.entries(pl.regimes).map(([k, r]) => [k, r.nome])], valor: p.regime, meia: true },
+        { nome: 'pro_labore', rotulo: 'Quanto você precisa tirar por mês (R$)', tipo: 'numero', valor: p.pro_labore ? String(p.pro_labore).replace('.', ',') : '' },
+        { nome: 'churn_mensal', rotulo: 'Cancelamentos por mês (%)', valor: pct(p.churn_mensal), meia: true, dica: '3% é um bom começo para SaaS pequeno' }, { nome: 'taxa_recebimento', rotulo: 'Taxas de recebimento (%)', valor: pct(p.taxa_recebimento), meia: true, dica: '0 se recebe por Pix' }],
+      extra: `<div class="lista">${Object.values(pl.regimes).map((r) => `<div class="linha-item"><div class="cresce"><b>${esc(r.nome)}</b><small style="white-space:normal">${esc(r.nota)}</small></div></div>`).join('')}</div>`,
+      enviar: (x) => operar('plano_config', x) }),
+    negocio: ({ i }) => dialogo(j, { titulo: i != null ? 'Editar negócio' : 'Novo negócio', texto: 'Cliente atual ou negociação. "Talvez" conta 25% do valor na receita provável.', campos: camposNegocio(i != null ? p.negocios[+i] : {}), enviar: (x) => operar('plano_item', { ...x, lista: 'negocios', i }) }),
+    custo: ({ i }) => dialogo(j, { titulo: i != null ? 'Editar custo' : 'Novo custo', campos: camposCusto(i != null ? p.custos[+i] : {}), enviar: (x) => operar('plano_item', { ...x, lista: 'custos', i }) }),
+    remover: ({ lista, i }) => { const it = p[lista][+i]; if (confirm(`Tirar "${it.cliente || it.item}" do plano?`)) rapido('plano_remover', { lista, i }, 'Removido do plano'); },
+    trazerClientes: () => rapido('plano_importar', {}, 'Plano atualizado'),
+    discutir: () => pedirEquipe(`Discuta comigo o plano ${p.ano} da Ciello como o agente financeiro. Rode \`python central/plano.py\`, leia o resultado (financeiro/relatorios/plano-${p.ano}.md e financeiro/plano.json) e comece pelos pontos marcados como importantes. Para cada um: o que significa na prática, 2 caminhos possíveis com os números, e a sua recomendação. Depois proponha 3 regras simples para a empresa seguir (ex.: quando cobrar implantação, quanto separar por mês, quando contratar) e um plano de implantação em etapas para os próximos 90 dias. Use /founder-cfo e /founder-pricing se ajudar. Não mude o plano nem os preços sem a minha aprovação.`, 'Financeiro · plano'),
+    planilha: () => pedirEquipe(`Use o agente financeiro: leia no Google Drive a aba "NEGÓCIOS CIELLO" da planilha "CONTROLE PESSOAL" (só os números da empresa; nada pessoal, CPF ou conta). Monte financeiro/plano.json no formato do central/plano.py (negocios: cliente, produto, tipo mensal|parcelas|unico, valor, parcelas, inicio AAAA-MM, fim, status fechado|negociando|talvez; custos: item, valor, frequencia mensal|anual|unico, mes, categoria). Me mostre a lista antes de gravar, junte com o que já está no plano sem duplicar, e aponte o que na planilha parece errado ou faltando.`, 'Financeiro · planilha'),
+  });
+  return `<div class="faixa-plano"><div><b>Plano ${esc(p.ano)}</b> · ${esc((pl.regimes[p.regime] || {}).nome || 'regime de imposto não informado')} · você precisa de ${brl(p.pro_labore)}/mês</div>
+    <div class="acoes-linha"><button class="bt mini" data-fn="planoConfig">Regras do plano</button><button class="bt mini" data-fn="planilha" title="Usa o Claude para ler a sua planilha do Google Drive">Puxar da planilha</button><button class="bt mini pri" data-fn="discutir">Discutir com o Financeiro</button></div></div>
+  <div class="kpis">${[['Receita provável no ano', brl(soma('receita_provavel')), `se tudo fechar: ${brl(soma('receita_se_tudo_fechar'))}`],
+    ['Resultado do ano', brl(soma('resultado')), `impostos ${brl(soma('imposto'))} · custos ${brl(soma('custos'))}`, soma('resultado') >= 0 ? 'bom' : 'ruim'],
+    ['Te paga em', `${pagam} de 12 meses`, p.pro_labore ? `meta ${brl(p.pro_labore)}/mês` : 'informe quanto precisa tirar', pagam === 12 ? 'bom' : 'ruim'],
+    ['Clientes de CRM para te pagar', eq.clientes_para_te_pagar ?? '—', `${brl(eq.liquido_por_cliente)} líquido cada`]].map(([r, v, e, c]) => `<div class="kpi"><small>${r}</small><strong>${v}</strong><em class="${c || 'neutro'}">${e}</em></div>`).join('')}</div>
+  <h2>O que olhar (${pl.auditoria.length})</h2><div class="lista">${pl.auditoria.map((a) => `<div class="linha-item achado ${a.nivel}"><span class="chip ${NIVEL[a.nivel][0]}">${NIVEL[a.nivel][1]}</span><div class="cresce"><b>${esc(a.titulo)}</b><small style="white-space:normal">${esc(a.detalhe)}</small></div></div>`).join('') || '<p class="sub">Nada a apontar.</p>'}</div>
+  <div class="cartao" style="margin-top:12px"><h2 style="margin-top:0">Resultado mês a mês ${p.pro_labore ? `· a linha é o seu pró-labore (${brl(p.pro_labore)})` : ''}</h2>
+    <div class="barras-plano">${proj.map((m) => { const max = Math.max(1, ...proj.map((x) => Math.abs(x.resultado)), +p.pro_labore || 0); return `<div title="${esc(m.mes)}: receita ${brl(m.receita_provavel)} · resultado ${brl(m.resultado)}"><b>${brlCurto(m.resultado)}</b><i style="height:${Math.max(2, 100 * Math.abs(m.resultado) / max) * 0.8}%" class="${m.sobra_para_voce >= 0 ? 'ok' : 'falta'}"></i>${p.pro_labore ? `<u style="bottom:${(100 * p.pro_labore / max) * 0.8 + 18}px"></u>` : ''}${meses[+m.mes.slice(5) - 1]}</div>`; }).join('')}</div></div>
+  <h2>Negócios (${p.negocios.length})</h2><div class="acoes" style="margin-top:0"><button class="bt pri mini" data-fn="negocio">+ Negócio</button><button class="bt mini" data-fn="trazerClientes" title="As assinaturas ativas e em teste do Financeiro">Trazer os clientes do Financeiro</button></div>
+  <table class="tab"><tr><th>Cliente</th><th>Produto</th><th>Valor</th><th>Período</th><th>Situação</th><th></th></tr>${p.negocios.map((n, i) => `<tr><td><b>${esc(n.cliente)}</b></td><td>${esc((PRODUTO_PLANO.find((x) => x[0] === n.produto) || [0, n.produto])[1])}</td>
+    <td>${brl(n.valor)}${n.tipo === 'mensal' ? '/mês' : n.tipo === 'parcelas' ? ` × ${n.parcelas}` : ' único'}</td><td>${esc(n.inicio || '')}${n.fim ? ` a ${esc(n.fim)}` : ''}</td>
+    <td>${n.status ? `<span class="chip ${n.status === 'fechado' ? 'pronto' : 'esperando'}">${esc(n.status)}${n.chance != null ? ` ${Math.round(n.chance * 100)}%` : ''}</span>` : '<span class="chip erro">sem status</span>'}</td>
+    <td class="acoes-linha"><button class="bt mini" data-fn="negocio" data-i="${i}">Editar</button><button class="bt mini" data-fn="remover" data-lista="negocios" data-i="${i}">Tirar</button></td></tr>`).join('') || '<tr><td colspan="6">Nenhum negócio: traga os clientes do Financeiro ou cadastre.</td></tr>'}</table>
+  <h2>Custos (${p.custos.length})</h2><div class="acoes" style="margin-top:0"><button class="bt pri mini" data-fn="custo">+ Custo</button></div>
+  <table class="tab"><tr><th>Custo</th><th>Valor</th><th>Quando</th><th>Categoria</th><th></th></tr>${p.custos.map((c, i) => `<tr><td><b>${esc(c.item)}</b></td><td>${brl(c.valor)}</td><td>${c.frequencia === 'mensal' ? 'todo mês' : c.frequencia === 'anual' ? `por ano (${esc((c.mes || '').slice(5))})` : `uma vez (${esc(c.mes || '')})`}</td><td>${esc(c.categoria || '')}</td>
+    <td class="acoes-linha"><button class="bt mini" data-fn="custo" data-i="${i}">Editar</button><button class="bt mini" data-fn="remover" data-lista="custos" data-i="${i}">Tirar</button></td></tr>`).join('') || '<tr><td colspan="5">Nenhum custo cadastrado.</td></tr>'}</table>
+  <h2>Ideias de preço</h2><div class="grade2">${pl.precos.map((x) => `<div class="cartao"><b>${esc(x.titulo)}</b><p class="sub" style="margin:4px 0 0">${esc(x.detalhe)}</p></div>`).join('')}</div>
+  <p class="sub" style="margin-top:12px">Para decidir: <b>Discutir com o Financeiro</b> abre o Claude com este plano e pede caminhos, números e uma recomendação. Nada muda sem você aprovar.</p>`;
 }
 
 // ------------------------------------------------------------------ apps: comercial

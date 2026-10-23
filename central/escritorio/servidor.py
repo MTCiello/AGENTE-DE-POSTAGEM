@@ -50,6 +50,7 @@ import atexit  # noqa: E402
 
 import estudio_voz  # noqa: E402
 import operacao  # noqa: E402
+import plano  # noqa: E402
 import sdr  # noqa: E402
 import terminal  # noqa: E402
 from nucleo import persistencia  # noqa: E402
@@ -266,7 +267,7 @@ def app_tendencias():
     return {"relatorio": ultimo_md("20??-??-??*.md")}
 
 
-APPS = {"escritorio": app_escritorio, "voz": estudio_voz.estado, "briefing": app_briefing, "financeiro": app_financeiro, "comercial": app_comercial,
+APPS = {"escritorio": app_escritorio, "voz": estudio_voz.estado, "plano": plano.para_janela, "briefing": app_briefing, "financeiro": app_financeiro, "comercial": app_comercial,
         "conteudo": app_conteudo, "concorrentes": app_concorrentes, "tendencias": app_tendencias,
         "anuncios": lambda: {"campanhas": campanhas(), "resumo": kpis()["anuncios"]}}
 
@@ -327,6 +328,17 @@ def operar(op, dados):
             return {"ok": True, "saida": "", "vozes": estudio_voz.voz.VoiceStudio(espera=30).vozes()}
         except (OSError, RuntimeError, ValueError) as e:
             return {"ok": False, "saida": f"Não consegui falar com o VoiceStudio: {e}"}
+    if op == "plano_config":
+        return plano.configurar(dados)
+    if op == "plano_item":
+        return plano.salvar_item(dados.get("lista"), dados)
+    if op == "plano_remover":
+        return plano.remover_item(dados.get("lista"), dados.get("i", -1))
+    if op == "plano_importar":
+        p = plano.ler()
+        n = plano.importar_clientes(p)
+        plano.gravar(p)
+        return {"ok": True, "saida": f"{n} assinatura(s) do financeiro entraram no plano" if n else "Nenhuma assinatura nova para trazer."}
     if op == "ig_retrato":
         return operacao.salvar_retrato(dados)
     if op == "anuncio":
