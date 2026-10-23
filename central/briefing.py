@@ -1,4 +1,4 @@
-"""Chefe de Gabinete: o resumo do dia do Mateus (caixa, vendas, conteúdo) com as 3 prioridades e quem cobra cada pendência.
+"""Gerente: o resumo do dia do Mateus (caixa, vendas, conteúdo) com as 3 prioridades e quem cobra cada pendência.
 
 Lê só o que as outras ferramentas já gravam no PC: financeiro/, comercial/leads.csv, metricas/, radar/, roteiros/,
 midia/final/ e estado/eventos.jsonl. Não usa internet nem créditos, então pode rodar sozinho às 7h (agendar.cmd).
@@ -290,7 +290,7 @@ def main():
     destino = RAIZ / "estado" / "briefing" / f"{'placar-' if a.semana else ''}{ref.isoformat()}.md"
     destino.parent.mkdir(parents=True, exist_ok=True)
     destino.write_text(texto, encoding="utf-8")
-    status.registrar("chefe-gabinete", "pronto", f"{'placar da semana' if a.semana else 'briefing do dia'} em {destino.name}")
+    status.registrar("gerente", "pronto", f"{'placar da semana' if a.semana else 'briefing do dia'} em {destino.name}")
     print(texto)
     print(f"-> {destino.relative_to(RAIZ)}")
 

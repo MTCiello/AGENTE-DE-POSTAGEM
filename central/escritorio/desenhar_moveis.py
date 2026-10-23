@@ -5,6 +5,8 @@ escritorio/webview-ui/public/assets/furniture/<ID>/ com o PNG e o manifest.json.
   ARQUIVOS G   CAIXAS (pilha de caixas), ESTANTE_ARQUIVO (estante de aço com caixas), SERVIDOR (o cérebro do escritório)
   COPA         BALCAO_CAFE (balcão com pia e máquina de café), GELADEIRA
   VARANDA      GUARDA_CORPO (grade de madeira), ESPREGUICADEIRA
+  DECORAÇÃO    QUADRO_CIELLO e JANELA (parede), LUMINARIA, ARCADE (fliperama), BEBEDOURO, ARQUIVO_ACO,
+               TRIPE_CAMERA e RING_LIGHT (o set de gravação), CAVALETE_METAS (o quadro de metas de vendas)
 
   python central/escritorio/desenhar_moveis.py      (precisa do Pillow)
 Depois: cd escritorio/webview-ui && npx vite build
@@ -167,9 +169,137 @@ def espreguicadeira():
     return t, {"category": "chairs", "footprintW": 1, "footprintH": 2, "backgroundTiles": 0}
 
 
+def quadro_ciello():
+    """A logo da Ciello (contorno de nuvem marfim com o ponto dourado) num quadro azul-marinho, para a parede do Gerente."""
+    t = Tela(32, 32)
+    t.caixa(1, 3, 30, 28, cor("263a59"), cor("3a5582"), cor("13213a"))
+    marfim, ouro = cor("f8f4e8"), cor("e0a81c")
+
+    desenho = [  # a nuvem da logo, traço grosso aberto embaixo à direita, e o ponto dourado
+        ".......#####........",
+        "......##...##.......",
+        ".....##.....##......",
+        "..####.......##.....",
+        ".##...........#.....",
+        "##............##....",
+        "#..............#....",
+        "#..............#....",
+        "##.............#....",
+        ".#############.#.oo.",
+        "...............#.oo.",
+    ]
+    for y, linha in enumerate(desenho):
+        for x, ch in enumerate(linha):
+            if ch == "#":
+                t.p(x + 6, y + 9, marfim)
+            elif ch == "o":
+                t.p(x + 6, y + 9, ouro)
+    t.ret(13, 1, 18, 2, CONTORNO)  # gancho
+    return t, {"category": "wall", "footprintW": 2, "footprintH": 2, "backgroundTiles": 0, "parede": True}
+
+
+def janela():
+    t = Tela(32, 32)
+    t.caixa(2, 4, 29, 27, cor("cfe8f5"), cor("eaf6fb"), cor("9fc9de"))
+    t.ret(15, 5, 16, 26, cor("f4ecd8"))  # caixilho
+    t.ret(3, 15, 28, 16, cor("f4ecd8"))
+    for x, y in ((6, 8), (7, 8), (8, 9), (21, 10), (22, 10), (23, 9)):  # nuvenzinhas
+        t.p(x, y, cor("ffffff"))
+    t.ret(3, 24, 28, 26, cor("7fbf6a"))  # copa de árvore lá fora
+    t.ret(1, 27, 30, 29, CONTORNO)
+    t.ret(2, 28, 29, 28, cor("e8e4dc"))  # parapeito
+    return t, {"category": "wall", "footprintW": 2, "footprintH": 2, "backgroundTiles": 0, "parede": True}
+
+
+def tripe_camera():
+    t = Tela(16, 32)
+    t.caixa(3, 4, 12, 11, cor("2b2f3a"), cor("4a5161"))
+    t.ret(12, 6, 14, 9, CONTORNO)  # lente
+    t.ret(13, 7, 13, 8, cor("5ec8ff"))
+    t.p(5, 6, cor("d9533b"))  # luz de gravando
+    t.ret(7, 12, 8, 24, CONTORNO)
+    for i in range(7):  # pernas do tripé
+        t.p(7 - i, 24 + i, CONTORNO)
+        t.p(8 + i, 24 + i, CONTORNO)
+        t.p(7, 24 + i, CONTORNO)
+    return t, {"category": "electronics", "footprintW": 1, "footprintH": 2, "backgroundTiles": 1}
+
+
+def ring_light():
+    t = Tela(16, 32)
+    for x in range(16):
+        for y in range(14):
+            d = (x - 7.5) ** 2 + (y - 7) ** 2
+            if 30 <= d <= 49:
+                t.p(x, y, cor("fff6cf") if d < 42 else CONTORNO)
+    t.ret(7, 14, 8, 28, CONTORNO)
+    t.ret(4, 29, 11, 31, CONTORNO)
+    return t, {"category": "electronics", "footprintW": 1, "footprintH": 2, "backgroundTiles": 1}
+
+
+def bebedouro():
+    t = Tela(16, 32)
+    t.caixa(4, 1, 11, 12, cor("8fd3f4"), cor("c8ecfb"), cor("5aa9d6"))  # galão
+    t.caixa(2, 12, 13, 31, cor("e6ebf0"), cor("ffffff"), cor("b8c1cc"))
+    t.ret(5, 17, 6, 18, cor("5ec8ff"))
+    t.ret(9, 17, 10, 18, cor("d9533b"))
+    t.ret(4, 22, 11, 23, cor("9aa4b2"))
+    return t, {"category": "kitchen", "footprintW": 1, "footprintH": 2, "backgroundTiles": 1}
+
+
+def arcade():
+    t = Tela(16, 32)
+    t.caixa(1, 0, 14, 31, cor("6b4fbb"), cor("8e6bd8"), cor("4b2f99"))
+    t.caixa(3, 4, 12, 13, cor("1c1f27"))
+    t.ret(5, 7, 6, 8, cor("3ddc84"))
+    t.ret(9, 9, 10, 10, cor("e0a81c"))
+    t.ret(2, 16, 13, 18, cor("2b2f3a"))
+    t.p(5, 17, cor("d9533b"))
+    t.p(8, 17, cor("5ec8ff"))
+    t.p(10, 17, cor("e0a81c"))
+    t.ret(5, 22, 10, 22, cor("e0a81c"))
+    return t, {"category": "decor", "footprintW": 1, "footprintH": 2, "backgroundTiles": 1}
+
+
+def luminaria():
+    t = Tela(16, 32)
+    t.caixa(3, 2, 12, 9, cor("f1c95a"), cor("fff0b5"), cor("d99a0b"))  # cúpula
+    t.ret(7, 10, 8, 28, CONTORNO)
+    t.ret(4, 29, 11, 31, CONTORNO)
+    t.ret(5, 30, 10, 30, cor("5d6675"))
+    return t, {"category": "decor", "footprintW": 1, "footprintH": 2, "backgroundTiles": 1}
+
+
+def cavalete_metas():
+    t = Tela(16, 32)
+    t.caixa(1, 2, 14, 18, cor("f8f8f4"), cor("ffffff"))
+    for i, h in enumerate((3, 5, 4, 7, 9)):  # gráfico de barras subindo
+        t.ret(3 + i * 2, 16 - h, 3 + i * 2, 15, cor("3dbe6e") if i == 4 else cor("5e92e6"))
+    t.ret(3, 4, 9, 4, cor("d9533b"))  # "META"
+    for x in (3, 12):
+        t.ret(x, 19, x + 1, 31, CONTORNO)
+    t.ret(7, 19, 8, 29, MADEIRA_SOMBRA)
+    return t, {"category": "decor", "footprintW": 1, "footprintH": 2, "backgroundTiles": 1}
+
+
+def arquivo_aco():
+    t = Tela(16, 32)
+    t.caixa(1, 4, 14, 31, ACO, ACO_LUZ, ACO_SOMBRA)
+    for y in (6, 14, 22):
+        t.ret(2, y + 7, 13, y + 7, CONTORNO)
+        t.ret(6, y + 2, 9, y + 3, ACO_SOMBRA)
+        t.ret(5, y + 5, 10, y + 5, cor("f4ecd8"))
+    t.ret(4, 1, 11, 4, PAPELAO)  # caixa de documentos em cima
+    t.ret(4, 1, 11, 1, CONTORNO)
+    return t, {"category": "storage", "footprintW": 1, "footprintH": 2, "backgroundTiles": 1}
+
+
 MOVEIS = {"CAIXAS": ("Caixas", caixas), "ESTANTE_ARQUIVO": ("Estante de arquivos", estante_arquivo), "SERVIDOR": ("Servidor", servidor),
           "BALCAO_CAFE": ("Balcão com café", balcao_cafe), "GELADEIRA": ("Geladeira", geladeira),
-          "GUARDA_CORPO": ("Guarda-corpo", guarda_corpo), "ESPREGUICADEIRA": ("Espreguiçadeira", espreguicadeira)}
+          "GUARDA_CORPO": ("Guarda-corpo", guarda_corpo), "ESPREGUICADEIRA": ("Espreguiçadeira", espreguicadeira),
+          "QUADRO_CIELLO": ("Quadro da Ciello", quadro_ciello), "JANELA": ("Janela", janela), "TRIPE_CAMERA": ("Câmera no tripé", tripe_camera),
+          "RING_LIGHT": ("Ring light", ring_light), "BEBEDOURO": ("Bebedouro", bebedouro), "ARCADE": ("Fliperama", arcade),
+          "LUMINARIA": ("Luminária", luminaria), "CAVALETE_METAS": ("Cavalete de metas", cavalete_metas), "ARQUIVO_ACO": ("Arquivo de aço", arquivo_aco)}
 
 
 def main():
@@ -178,7 +308,7 @@ def main():
         pasta = DESTINO / ident
         pasta.mkdir(parents=True, exist_ok=True)
         tela.im.save(pasta / f"{ident}.png")
-        manifest = {"id": ident, "name": nome, "category": extra["category"], "type": "asset", "canPlaceOnWalls": False,
+        manifest = {"id": ident, "name": nome, "category": extra["category"], "type": "asset", "canPlaceOnWalls": extra.get("parede", False),
                     "canPlaceOnSurfaces": False, "backgroundTiles": extra["backgroundTiles"], "width": tela.w, "height": tela.h,
                     "footprintW": extra["footprintW"], "footprintH": extra["footprintH"]}
         (pasta / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

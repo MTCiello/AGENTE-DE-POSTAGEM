@@ -13,8 +13,7 @@ Treze agentes especialistas em `.claude/agents/`, coordenados por cinco comandos
 | **sdr** | azul | Leads, qualificação, 1ª mensagem, follow-up | `central/sdr.py`, Google Maps (gosom), Vibe Prospecting (custo aprovado) |
 | **closer** | amarelo | Objeções, demonstração, proposta, agenda | Gamma, Gmail (rascunho), Google Agenda |
 | **gestor-anuncios** | rosa | Plano e leitura de anúncios Meta | relatório do analista, criativos dos produtores |
-| **gerente** | amarelo | Recebe o seu objetivo, monta a esteira e delega (clique nele no escritório ou use Gerente · objetivos e esteiras) | `.claude/agents/gerente.md` |
-| **chefe-gabinete** | laranja | Resumo do dia com as 3 prioridades, delega, cobra pendências, placar de sexta | `central/briefing.py` |
+| **gerente** | amarelo | O único coordenador: recebe o seu objetivo, monta a esteira e delega; resumo do dia, placar de sexta e cobrança de pendências (clique nele no escritório) | `central/briefing.py` |
 | **financeiro** | verde | Assinaturas, faturas, cobrança 3/7/14 dias, extrato OFX, caixa, MRR/churn/CAC/LTV | `central/financeiro.py` |
 | **caixa-entrada** | azul | Triagem do e-mail, rascunhos, horários de demo | conectores Gmail e Google Agenda (só rascunho) |
 | **sucesso-cliente** | rosa | FAQ, onboarding, NPS, pedido de avaliação no Google, risco de cancelamento | `financeiro.py posvenda`, `comercial/faq.md` |
@@ -27,8 +26,8 @@ Origem dos 4 novos: o reel "10 agentes de IA que toda empresa devia ter". Avalia
 |---|---|---|
 | `/semana` | domingo | pesquisador → roteirista (3 em paralelo) → produtor-video + produtor-imagem (em paralelo) → postagem |
 | `/comercial` | todo dia útil | sdr + closer em paralelo → lista única: enviar, responder, agendar |
-| `/bom-dia` | todo dia de manhã | chefe-gabinete → caixa-entrada, financeiro, sucesso-cliente e sdr conforme o briefing → uma tela com as 3 prioridades |
-| `/sexta` | sexta à tarde | placar (chefe-gabinete) + resumo financeiro + vigia de concorrentes (pesquisador) + voz do cliente → uma decisão para a semana |
+| `/bom-dia` | todo dia de manhã | gerente → caixa-entrada, financeiro, sucesso-cliente e sdr conforme o briefing → uma tela com as 3 prioridades |
+| `/sexta` | sexta à tarde | placar (gerente) + resumo financeiro + vigia de concorrentes (pesquisador) + voz do cliente → uma decisão para a semana |
 | `/segunda` | segunda de manhã | analista + pesquisador em paralelo → gestor-anuncios |
 | `/conselho` | decisões de negócio (preço, oferta, onde investir) | Founder skills (conselho, CFO, painel de 100 compradores, marketing…) com os dados reais da Ciello |
 

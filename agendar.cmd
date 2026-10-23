@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 rem Agenda no Agendador de Tarefas do Windows:
-rem   "Ciello Bom Dia"  todo dia as 7h, o briefing do chefe de gabinete (sem Claude e sem internet) -> estado\briefing\
+rem   "Ciello Bom Dia"  todo dia as 7h, o briefing do gerente (sem Claude e sem internet) -> estado\briefing\
 rem   "Ciello Piloto"   de hora em hora, o piloto automatico da rede social (Rede social no Ciello OS)
 rem   agendar.cmd          cria ou atualiza a tarefa
 rem   agendar.cmd remover  apaga a tarefa

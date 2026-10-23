@@ -1,9 +1,9 @@
 ---
-description: Começo do dia com o chefe de gabinete - caixa, vendas, conteúdo, e-mails e as 3 prioridades.
+description: Começo do dia com o gerente - caixa, vendas, conteúdo, e-mails e as 3 prioridades.
 disable-model-invocation: true
 ---
 
-1. **chefe-gabinete**: `python central/briefing.py` e leia o resultado.
+1. **gerente**: `python central/briefing.py` e leia o resultado.
 2. Em paralelo, conforme o briefing:
    - **caixa-entrada**: e-mails não lidos (triagem e rascunhos) e agenda de hoje e amanhã;
    - **financeiro**: se houver fatura atrasada, `python central/financeiro.py cobrar`;

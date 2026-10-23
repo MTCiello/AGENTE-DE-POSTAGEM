@@ -342,7 +342,26 @@ class TesteAtivos(unittest.TestCase):
                     fila.append(v)
         alcancadas = {lay["areaTiles"][r * C + c] for c, r in vistos} - {None}
         self.assertEqual(alcancadas, rotulos)
-        self.assertEqual(lay["cielloLayout"], 2)
+        # as portas são exatamente as do Mateus: um caminho único entre as salas
+        portas = set()
+        for c, r in andavel:
+            if lay["areaTiles"][r * C + c] is None:  # quadrado de porta
+                vizinhas = {lay["areaTiles"][rr * C + cc] for cc, rr in ((c + 1, r), (c - 1, r), (c, r + 1), (c, r - 1))
+                            if (cc, rr) in andavel} - {None}
+                if len(vizinhas) == 2:
+                    portas.add(frozenset(vizinhas))
+        esperadas = {frozenset(x) for x in [("Arquivos G", "Gerente"), ("Gerente", "Comercial"), ("Comercial", "Área de lazer"),
+                                            ("Área de lazer", "Copa"), ("Área de lazer", "Varanda"), ("Área de lazer", "Produtor Social"),
+                                            ("Produtor Social", "Vendas")]}
+        self.assertEqual(portas, esperadas)
+        # e nenhuma sala encosta na outra sem porta: andando só por dentro das salas, cada uma é uma ilha
+        for c, r in andavel:
+            a = lay["areaTiles"][r * C + c]
+            for cc, rr in ((c + 1, r), (c, r + 1)):
+                b = lay["areaTiles"][rr * C + cc] if (cc, rr) in andavel else None
+                if a and b:
+                    self.assertEqual(a, b, f"{a} encosta em {b} sem porta em {(c, r)}")
+        self.assertEqual(lay["cielloLayout"], 3)
 
     def test_layout_novo_da_ciello_substitui_o_antigo(self):
         from nucleo import persistencia as P
@@ -350,11 +369,11 @@ class TesteAtivos(unittest.TestCase):
             P._gravar(Path(d) / "layout.json", {"version": 1, "cols": 37, "rows": 14})
             P._gravar(Path(d) / "config.json", {"areas": {"SDR": ["Comercial"]}, "areasVistas": ["SDR"]})
             novo = P.ler_layout()
-            self.assertEqual((novo["cols"], novo["cielloLayout"]), (33, 2))
+            self.assertEqual((novo["cols"], novo["cielloLayout"]), (28, 3))
             self.assertTrue((Path(d) / "layout-antigo-v0.json").exists())  # cópia do antigo
             self.assertEqual((P.config()["areas"], P.config()["areasVistas"]), ({}, []))  # as áreas refazem com as salas novas
-            P.gravar_layout({**novo, "cielloLayout": None, "cols": 33})  # o editor salva sem a versão
-            self.assertEqual(P.ler_layout()["cielloLayout"], 2)  # e não troca de novo
+            P.gravar_layout({**novo, "cielloLayout": None})  # o editor salva sem a versão
+            self.assertEqual(P.ler_layout()["cielloLayout"], 3)  # e não troca de novo
 
     def test_png_paleta_com_transparencia(self):
         import struct

@@ -82,8 +82,8 @@ atexit.register(terminais.fechar_todos)
 
 # O que os botões das janelas podem rodar: id -> (rótulo, agente, argumentos). Nada fora desta lista roda.
 ACOES = {
-    "briefing": ("Briefing do dia", "chefe-gabinete", ["central/briefing.py"]),
-    "placar": ("Placar da semana", "chefe-gabinete", ["central/briefing.py", "--semana"]),
+    "briefing": ("Briefing do dia", "gerente", ["central/briefing.py"]),
+    "placar": ("Placar da semana", "gerente", ["central/briefing.py", "--semana"]),
     "fin_resumo": ("Resumo financeiro", "financeiro", ["central/financeiro.py", "resumo"]),
     "fin_faturar": ("Faturas do mês", "financeiro", ["central/financeiro.py", "faturar"]),
     "fin_cobrar": ("Cobranças do dia", "financeiro", ["central/financeiro.py", "cobrar"]),

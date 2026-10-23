@@ -55,11 +55,11 @@ const APPS = {
 const GRUPOS = [['Criar', ['redes', 'video', 'conteudo', 'voz', 'tendencias', 'concorrentes']], ['Vender', ['comercial', 'atendimento', 'anuncios']],
   ['Gerir', ['briefing', 'financeiro']], ['Equipe e sistema', ['conexoes', 'equipe', 'atividade', 'verificar']]];
 
-const NOMES = { gerente: 'Gerente', 'chefe-gabinete': 'Chefe de Gabinete', 'pesquisador-mercado': 'Pesquisador de Mercado', roteirista: 'Roteirista', 'produtor-video': 'Produtor de Vídeo',
+const NOMES = { gerente: 'Gerente', 'pesquisador-mercado': 'Pesquisador de Mercado', roteirista: 'Roteirista', 'produtor-video': 'Produtor de Vídeo',
   'produtor-imagem': 'Produtor de Imagem', postagem: 'Postagem', analista: 'Analista', 'gestor-anuncios': 'Gestor de Anúncios', sdr: 'SDR', closer: 'Closer',
   financeiro: 'Financeiro', 'caixa-entrada': 'Caixa de Entrada', 'sucesso-cliente': 'Sucesso do Cliente', sistema: 'Sistema', Mateus: 'Você' };
 const CORES = { cyan: '#2FB7C4', blue: '#3B7BE0', green: '#2FA36B', orange: '#E07B39', pink: '#D9579A', purple: '#8E6BD8', red: '#D9533B', yellow: '#E0A81C' };
-const COMANDOS = { 'chefe-gabinete': ['/bom-dia', '/sexta'], financeiro: ['/bom-dia', '/sexta'], 'caixa-entrada': ['/bom-dia'], 'sucesso-cliente': ['/bom-dia'],
+const COMANDOS = { gerente: ['/bom-dia', '/sexta'], financeiro: ['/bom-dia', '/sexta'], 'caixa-entrada': ['/bom-dia'], 'sucesso-cliente': ['/bom-dia'],
   sdr: ['/comercial'], closer: ['/comercial'], 'pesquisador-mercado': ['/semana', '/segunda', '/sexta'], roteirista: ['/semana'], 'produtor-video': ['/semana'],
   'produtor-imagem': ['/semana'], postagem: ['/semana'], analista: ['/segunda'], 'gestor-anuncios': ['/segunda'] };
 const ROTULO_ESTADO = { trabalhando: 'trabalhando', pensando: 'pensando', esperando: 'precisa de você', pronto: 'pronto', erro: 'erro', parado: 'livre' };
@@ -382,7 +382,7 @@ function desenharMenu(filtro = '') {
   const casa = (k) => !f || APPS[k].titulo.toLowerCase().includes(f);
   const item = (k) => `<button class="item-app" data-chave="${k}">${tile(APPS[k])}<span>${esc(APPS[k].titulo)}</span></button>`;
   const grupos = GRUPOS.map(([g, ks]) => [g, ks.filter(casa)]).filter(([, ks]) => ks.length);
-  const pedir = f.length >= 3 ? `<button class="pedir-equipe" data-pedir="1">${sprite('chefe-gabinete', 24)}<span><b>Pedir à equipe</b><small>“${esc(filtro.trim())}”</small></span><kbd>Enter</kbd></button>` : '';
+  const pedir = f.length >= 3 ? `<button class="pedir-equipe" data-pedir="1">${sprite('gerente', 24)}<span><b>Pedir à equipe</b><small>“${esc(filtro.trim())}”</small></span><kbd>Enter</kbd></button>` : '';
   $('#menu-apps').innerHTML = pedir
     + (!f ? `<button class="destaque-objetivo" data-chave="objetivos">${tile(APPS.objetivos)}<span><b>O que você quer fazer?</b><small>Escreva um objetivo ou rode uma esteira pronta: a equipe se organiza sozinha.</small></span></button>` : '')
     + grupos.map(([g, ks]) => `<h4>${g}</h4><div class="grupo-apps">${ks.map(item).join('')}</div>`).join('');
@@ -972,7 +972,7 @@ function rumoCorpo(j, r) {
         ...Object.entries(m.taxas).map(([k, t]) => ({ nome: `taxa_${k}`, rotulo: `% de ${t.nome}`, valor: t.origem === 'sua' ? String(Math.round(t.valor * 1000) / 10).replace('.', ',') : '', meia: true,
           exemplo: `vazio = ${t.origem === 'seus dados' ? 'seus dados' : 'estimativa'} (${pctBr(t.origem === 'sua' ? r.taxas_padrao[k] : t.valor)})` }))],
       enviar: (x) => operar('meta_config', x) }),
-    crescer: () => pedirEquipe(`Use o chefe-gabinete com o financeiro e o SDR. Meta: ${m.meta} clientes do CIELLO CRM até ${mesAno(m.ate)} (hoje ${m.ativos}, ${m.em_teste} em teste). Pela conta do OS (python central/metas.py), são ${m.por_semana.abordagens} abordagens, ${m.por_semana.demos} demos e ${m.por_semana.testes} testes grátis por semana. Monte comigo um plano de implantação de 90 dias, em etapas semanais, para chegar lá: de onde vêm os leads (Maps, anúncio, Instagram, indicação, venda para quem já é cliente), quanto tempo por dia isso pede, o que automatizar e o que parar de fazer. Leia financeiro/regras.md e respeite as regras da casa. Me pergunte antes de mudar meta, preço ou plano.`, 'Plano de crescimento'),
+    crescer: () => pedirEquipe(`Como Gerente, junto com o financeiro e o SDR. Meta: ${m.meta} clientes do CIELLO CRM até ${mesAno(m.ate)} (hoje ${m.ativos}, ${m.em_teste} em teste). Pela conta do OS (python central/metas.py), são ${m.por_semana.abordagens} abordagens, ${m.por_semana.demos} demos e ${m.por_semana.testes} testes grátis por semana. Monte comigo um plano de implantação de 90 dias, em etapas semanais, para chegar lá: de onde vêm os leads (Maps, anúncio, Instagram, indicação, venda para quem já é cliente), quanto tempo por dia isso pede, o que automatizar e o que parar de fazer. Leia financeiro/regras.md e respeite as regras da casa. Me pergunte antes de mudar meta, preço ou plano.`, 'Plano de crescimento'),
     discutirDecisao: ({ i, lista }) => { const x = (lista === 'abertas' ? r.abertas : r.decisoes)[+i];
       pedirEquipe(`Use o agente financeiro. Quero decidir isto sobre a Ciello: "${x.titulo}". Contexto do OS: ${x.detalhe || '(sem detalhe)'}${x.decisao ? ` Hoje a regra é: ${x.decisao}` : ''} Leia financeiro/plano.json, comercial/produtos.json e financeiro/regras.md. Me dê 2 ou 3 caminhos com os números de cada um (o que ganha, o que arrisca), a sua recomendação e uma regra curta que eu possa adotar (uma frase, para os agentes seguirem). Não decida por mim e não mude nada: quando eu escolher, registro em Financeiro → Metas e decisões.`, `Decisão · ${x.titulo.slice(0, 24)}`); },
     decidir: ({ i, lista }) => { const x = lista ? (lista === 'abertas' ? r.abertas : r.decisoes)[+i] : {};
@@ -1495,12 +1495,12 @@ const ESTEIRAS = [
     agentes: ['sdr', 'closer'], campos: [['n', 'Abordagens novas', '15']],
     pedido: (v) => `Rode /comercial: follow-ups do dia, ${v.n || 15} abordagens novas e respostas para os leads quentes. Deixe as mensagens prontas na janela Comercial do Ciello OS; não envie nada.` },
   { id: 'bomdia', titulo: 'Bom dia', desc: 'Caixa de entrada, financeiro, pós-venda e comercial numa tela com as 3 prioridades do dia.',
-    agentes: ['chefe-gabinete', 'caixa-entrada', 'financeiro', 'sucesso-cliente'], campos: [], pedido: () => 'Rode /bom-dia e me entregue as 3 prioridades do dia.' },
+    agentes: ['gerente', 'caixa-entrada', 'financeiro', 'sucesso-cliente'], campos: [], pedido: () => 'Rode /bom-dia e me entregue as 3 prioridades do dia.' },
   { id: 'anuncio', titulo: 'Campanha de anúncio', desc: 'Público, 3 criativos (roteiro e imagem), orçamento e o que medir. Nada sobe no Meta sem você.',
     agentes: ['gestor-anuncios', 'roteirista', 'produtor-imagem'], campos: [['objetivo', 'Para quê', 'conversas no WhatsApp de imobiliárias da região'], ['verba', 'Verba (R$)', '100']],
     pedido: (v) => `Planeje uma campanha de Meta Ads para ${v.objetivo || 'gerar conversas no WhatsApp'} com verba de R$ ${v.verba || 100}: público, 3 criativos (roteiro e imagem), orçamento e o que medir. Não suba nada no Meta: me entregue o plano e os criativos para eu aprovar.` },
   { id: 'sexta', titulo: 'Fechamento da semana', desc: 'Placar, resumo financeiro, vigia dos concorrentes e uma decisão para a próxima semana.',
-    agentes: ['chefe-gabinete', 'financeiro', 'pesquisador-mercado', 'analista'], campos: [], pedido: () => 'Rode /sexta e termine com uma decisão para a próxima semana.' },
+    agentes: ['gerente', 'financeiro', 'pesquisador-mercado', 'analista'], campos: [], pedido: () => 'Rode /sexta e termine com uma decisão para a próxima semana.' },
 ];
 const EXEMPLOS = ['Crie 3 vídeos das novidades da semana, faça as capas, as legendas e programe as postagens',
   'Encontre 20 imobiliárias em Chapecó e prepare a 1ª mensagem', 'Monte um carrossel explicando o CIELLO CRM', 'Como está a empresa esta semana?'];
@@ -1655,7 +1655,7 @@ const SUGESTOES = {
   roteirista: ['transformar a pauta da semana em 3 roteiros de reel'], 'produtor-video': ['produzir o vídeo do roteiro aprovado'],
   'produtor-imagem': ['fazer as capas dos reels da semana'], postagem: ['agendar os posts prontos no Metricool'],
   analista: ['montar o retrato semanal do Instagram'], 'gestor-anuncios': ['planejar uma campanha de R$ 300 para o CRM'],
-  'chefe-gabinete': ['montar o resumo do dia com as 3 prioridades'], financeiro: ['ver quem está atrasado e preparar as cobranças'],
+  gerente: ['montar o resumo do dia com as 3 prioridades'], financeiro: ['ver quem está atrasado e preparar as cobranças'],
   'caixa-entrada': ['fazer a triagem do e-mail e sugerir horários de demo'], 'sucesso-cliente': ['responder as dúvidas de clientes de hoje'],
 };
 function painelIniciar(agente) {

@@ -19,12 +19,12 @@ AREAS = {  # as salas do layout da Ciello (central/escritorio/gerar_layout.py)
     "pesquisador-mercado": "Produtor Social", "roteirista": "Produtor Social", "produtor-video": "Produtor Social",
     "produtor-imagem": "Produtor Social", "postagem": "Produtor Social", "analista": "Produtor Social",
     "sdr": "Vendas", "closer": "Vendas", "sucesso-cliente": "Vendas",
-    "financeiro": "Comercial", "gestor-anuncios": "Comercial", "caixa-entrada": "Comercial", "chefe-gabinete": "Comercial",
+    "financeiro": "Comercial", "gestor-anuncios": "Comercial", "caixa-entrada": "Comercial",
 }
 SALA_DAS_SESSOES = "Gerente"  # a sessão do Claude Code em que você conversa (os objetivos) senta na sala do Gerente
 # o mesmo nome das janelas do Ciello OS (web/app.js, NOMES): o clique no personagem acha a janela por ele
 NOMES = {
-    "gerente": "Gerente", "chefe-gabinete": "Chefe de Gabinete", "pesquisador-mercado": "Pesquisador de Mercado", "roteirista": "Roteirista",
+    "gerente": "Gerente", "pesquisador-mercado": "Pesquisador de Mercado", "roteirista": "Roteirista",
     "produtor-video": "Produtor de Vídeo", "produtor-imagem": "Produtor de Imagem", "postagem": "Postagem",
     "analista": "Analista", "gestor-anuncios": "Gestor de Anúncios", "sdr": "SDR", "closer": "Closer",
     "financeiro": "Financeiro", "caixa-entrada": "Caixa de Entrada", "sucesso-cliente": "Sucesso do Cliente",
