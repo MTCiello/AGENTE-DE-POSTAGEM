@@ -13,6 +13,7 @@ Treze agentes especialistas em `.claude/agents/`, coordenados por cinco comandos
 | **sdr** | azul | Leads, qualificação, 1ª mensagem, follow-up | `central/sdr.py`, Google Maps (gosom), Vibe Prospecting (custo aprovado) |
 | **closer** | amarelo | Objeções, demonstração, proposta, agenda | Gamma, Gmail (rascunho), Google Agenda |
 | **gestor-anuncios** | rosa | Plano e leitura de anúncios Meta | relatório do analista, criativos dos produtores |
+| **gerente** | amarelo | Recebe o seu objetivo, monta a esteira e delega (clique nele no escritório ou use Gerente · objetivos e esteiras) | `.claude/agents/gerente.md` |
 | **chefe-gabinete** | laranja | Resumo do dia com as 3 prioridades, delega, cobra pendências, placar de sexta | `central/briefing.py` |
 | **financeiro** | verde | Assinaturas, faturas, cobrança 3/7/14 dias, extrato OFX, caixa, MRR/churn/CAC/LTV | `central/financeiro.py` |
 | **caixa-entrada** | azul | Triagem do e-mail, rascunhos, horários de demo | conectores Gmail e Google Agenda (só rascunho) |

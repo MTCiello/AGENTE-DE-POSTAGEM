@@ -6,6 +6,8 @@ import {
   CHARACTER_HIT_HEIGHT,
   CHARACTER_SITTING_OFFSET_PX,
   CONVERSA_CHANCE,
+  PAUSA_CHANCE,
+  PAUSA_LUGARES,
   CONVERSA_ESPERA_SEC,
   CONVERSA_MAX_SEC,
   CONVERSA_MIN_SEC,
@@ -149,7 +151,7 @@ export class OfficeState {
     this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles);
     // Pets are built last because they need walkableTiles populated for spawn.
     this.rebuildPetsFromLayout(this.layout);
-    setDestinoSocial((ch) => this.destinoConversa(ch));
+    setDestinoSocial((ch) => this.destinoConversa(ch) ?? this.destinoPausa(ch));
   }
 
   // ── Ciello: a rotina dos agentes parados (conversar uns com os outros) ──────────
@@ -180,6 +182,32 @@ export class OfficeState {
     // o outro espera um pouco no lugar para o colega chegar
     outro.wanderTimer = Math.max(outro.wanderTimer, CONVERSA_ESPERA_SEC);
     return vizinhos[Math.floor(Math.random() * vizinhos.length)];
+  }
+
+  /** Quadrados livres de cada área de pausa (copa, lazer, varanda), pelo rótulo da área no layout. */
+  private quadradosDaArea(chave: string): Array<{ col: number; row: number }> {
+    const tiles = this.layout.areaTiles;
+    if (!tiles || tiles.length === 0) return [];
+    const simples = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    return this.walkableTiles.filter((w) => {
+      const rotulo = tiles[w.row * this.layout.cols + w.col];
+      return !!rotulo && simples(rotulo).includes(chave);
+    });
+  }
+
+  /** Parado e sem conversa: às vezes vai à copa tomar um café, ao sofá da área de lazer ou à varanda pensar na vida. */
+  private destinoPausa(ch: Character): { col: number; row: number } | null {
+    if (ch.isSubagent || Math.random() > PAUSA_CHANCE) return null;
+    let sorteio = Math.random();
+    for (const [chave, peso] of PAUSA_LUGARES) {
+      sorteio -= peso;
+      if (sorteio <= 0) {
+        const quadrados = this.quadradosDaArea(chave);
+        if (quadrados.length === 0) return null;
+        return quadrados[Math.floor(Math.random() * quadrados.length)];
+      }
+    }
+    return null;
   }
 
   /** Chegou do lado de quem ia conversar: os dois se viram um para o outro e batem papo por alguns segundos. */

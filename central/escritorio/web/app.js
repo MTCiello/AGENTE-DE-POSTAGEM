@@ -36,7 +36,7 @@ const icone = (n, vb = 24) => `<svg viewBox="0 0 ${vb} ${vb}">${SVG[n] || SVG.ag
 const APPS = {
   redes: { titulo: 'Rede social', icone: 'redes', cor: 'linear-gradient(135deg,#F07A9B,#7B3FE4)', w: 960, h: 720, render: renderRedes },
   conexoes: { titulo: 'Conexões', icone: 'conexoes', cor: 'linear-gradient(135deg,#6FB0D8,#2F6A99)', w: 900, h: 700, render: renderConexoes },
-  objetivos: { titulo: 'Objetivos e esteiras', icone: 'alvo', cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', w: 900, h: 700, render: renderObjetivos, cada: 3000 },
+  objetivos: { titulo: 'Gerente · objetivos e esteiras', icone: 'alvo', cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', w: 900, h: 700, render: renderObjetivos, cada: 3000 },
   atendimento: { titulo: 'Atendimento', icone: 'balao', cor: 'linear-gradient(135deg,#4CC6D1,#1E8C99)', w: 760, h: 680, render: renderAtendimento, estatico: true },
   video: { titulo: 'Estúdio de Vídeo', icone: 'video', cor: 'linear-gradient(135deg,#8E6BD8,#4B2F99)', w: 900, h: 720, render: renderVideo, estatico: true },
   voz: { titulo: 'Estúdio de Voz', icone: 'microfone', cor: 'linear-gradient(135deg,#E9826C,#B5442F)', w: 780, h: 700, render: renderVoz, estatico: true },
@@ -55,7 +55,7 @@ const APPS = {
 const GRUPOS = [['Criar', ['redes', 'video', 'conteudo', 'voz', 'tendencias', 'concorrentes']], ['Vender', ['comercial', 'atendimento', 'anuncios']],
   ['Gerir', ['briefing', 'financeiro']], ['Equipe e sistema', ['conexoes', 'equipe', 'atividade', 'verificar']]];
 
-const NOMES = { 'chefe-gabinete': 'Chefe de Gabinete', 'pesquisador-mercado': 'Pesquisador de Mercado', roteirista: 'Roteirista', 'produtor-video': 'Produtor de Vídeo',
+const NOMES = { gerente: 'Gerente', 'chefe-gabinete': 'Chefe de Gabinete', 'pesquisador-mercado': 'Pesquisador de Mercado', roteirista: 'Roteirista', 'produtor-video': 'Produtor de Vídeo',
   'produtor-imagem': 'Produtor de Imagem', postagem: 'Postagem', analista: 'Analista', 'gestor-anuncios': 'Gestor de Anúncios', sdr: 'SDR', closer: 'Closer',
   financeiro: 'Financeiro', 'caixa-entrada': 'Caixa de Entrada', 'sucesso-cliente': 'Sucesso do Cliente', sistema: 'Sistema', Mateus: 'Você' };
 const CORES = { cyan: '#2FB7C4', blue: '#3B7BE0', green: '#2FA36B', orange: '#E07B39', pink: '#D9579A', purple: '#8E6BD8', red: '#D9533B', yellow: '#E0A81C' };
@@ -403,7 +403,8 @@ $('#menu').addEventListener('click', (e) => { if (e.target.closest('[data-pedir]
 $('#auto').checked = SALVO.auto; $('#auto').onchange = (e) => { SALVO.auto = e.target.checked; salvar(); };
 $('#organizar').onclick = () => { fecharMenus(); organizar(); };
 $('#centralizar').onclick = () => { fecharMenus(); const f = $('#escritorio'); if (f) f.contentWindow.postMessage({ ciello: 'centralizar' }, location.origin); };
-$('#ver-escritorio').onclick = () => { fecharMenus(); if ([...janelas.values()].some((j) => !j.min)) mostrarEscritorio(); };
+$('#ver-escritorio').onclick = alternarEscritorio;
+$('#minimizar-tudo').onclick = () => { fecharMenus(); mostrarEscritorio(); };
 $('#tela-cheia').onclick = () => { fecharMenus(); document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); };
 $('#sino').onclick = (e) => { e.stopPropagation(); const ab = $('#central').hidden; fecharMenus(); if (ab) { desenharCentral(); $('#central').hidden = false; naoLidas = 0; contarNaoLidas(); } };
 $('#trabalhando').onclick = () => abrir('equipe');
@@ -476,7 +477,23 @@ async function rodarAcao(acao) {
 
 // ------------------------------------------------------------------ o escritório de agentes como fundo da área de trabalho
 let fundo = { noAr: null, url: '' };
+// modo foco: o escritório some (o iframe sai, sem gastar o PC) e fica só a logo da Ciello no centro
+function papelParede(aviso = '') {
+  $('#fundo').innerHTML = `<div class="papel-parede"><img src="/web/logo-marfim.svg" alt=""><b>CIELLO</b><span>assistente comercial</span>${aviso}</div>`;
+}
+function botaoEscritorio() { const b = $('#ver-escritorio'); if (b) b.textContent = SALVO.semEscritorio ? 'Mostrar escritório' : 'Esconder escritório'; }
+function alternarEscritorio() {
+  fecharMenus();
+  SALVO.semEscritorio = !SALVO.semEscritorio; salvar(); botaoEscritorio();
+  fundo = { noAr: null, url: '' };
+  fundoEscritorio();
+}
 async function fundoEscritorio() {
+  botaoEscritorio();
+  if (SALVO.semEscritorio) {
+    if (fundo.noAr !== 'foco') { fundo = { noAr: 'foco', url: '' }; papelParede(); }
+    return;
+  }
   let d; try { d = await api('/api/app/escritorio'); } catch { return; }
   if (typeof d.no_ar !== 'boolean') return; // resposta com erro: não mexe no que está na tela
   if (d.no_ar === fundo.noAr && (d.url || '') === fundo.url) return;
@@ -486,8 +503,7 @@ async function fundoEscritorio() {
     $('#escritorio').addEventListener('load', enviarControles);
     return;
   }
-  $('#fundo').innerHTML = `<div class="papel-parede"><img src="/web/logo-marfim.svg" alt=""><b>CIELLO</b><span>assistente comercial</span>
-    <small>O escritório de agentes está desligado (o Ciello OS foi aberto com --sem-escritorio).</small></div>`;
+  papelParede('<small>O escritório de agentes está desligado (o Ciello OS foi aberto com --sem-escritorio).</small>');
 }
 
 // a tela do escritório (escritorio/webview-ui/src/ciello) avisa quando um personagem é clicado
@@ -515,6 +531,7 @@ window.addEventListener('message', (e) => {
   if (e.data.evento === 'novoAgente') return void abrirTerminal({});
   if (e.data.evento !== 'clique') return;
   const proprio = agenteDoRotulo(e.data.nome);
+  if (proprio === 'gerente') return void abrir('objetivos'); // o Gerente é com quem você fala: abre a caixa de objetivos
   if (proprio) return void abrirDoEscritorio(proprio, '');
   // o coordenador e os subagentes dele dividem o mesmo id: abre quem está trabalhando com ele ("sdr: follow-ups" -> SDR)
   const porAgente = new Map();
@@ -1453,11 +1470,11 @@ async function renderAtendimento(j) {
 function promptObjetivo(objetivo) {
   return `Objetivo do Mateus: ${objetivo}
 
-Você coordena a equipe da Ciello (agentes em .claude/agents). Faça assim:
+Você é o Gerente da Ciello (siga .claude/agents/gerente.md) e coordena a equipe (agentes em .claude/agents). Faça assim:
 1. Monte um plano curto: quem faz o quê e em que ordem (o que não depende de outra etapa roda em paralelo). Mostre o plano em poucas linhas e siga.
 2. Delegue cada etapa ao agente certo com a ferramenta Task: subagent_type com o nome do agente e a descrição começando pelo nome (ex.: "roteirista: 3 roteiros da semana"), para ele aparecer trabalhando no escritório.
 3. Use as ferramentas de central/ e as regras do AGENTE.md e de docs/equipe.md. A narração usa a voz escolhida no Estúdio de Voz (python central/voz.py sem --motor).
-4. Pare e peça minha aprovação antes de qualquer coisa que sai do PC: publicar ou agendar post, enviar mensagem ou e-mail, subir anúncio, gastar dinheiro.
+4. Publicar ou agendar post segue o modo do piloto (python central/piloto.py estado: Automático publica, Aprovar espera o meu ok). Enviar mensagem ou e-mail, subir anúncio e gastar dinheiro: pare e peça minha aprovação.
 5. No fim: um resumo curto do que ficou pronto e onde está cada arquivo.`;
 }
 function pedirEquipe(objetivo, titulo = 'Objetivo') {

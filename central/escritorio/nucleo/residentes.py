@@ -14,16 +14,17 @@ from pathlib import Path
 from .agentes import Agente, Loja, Relogios
 
 ID_BASE = 10_000  # longe dos ids das sessões (que começam em 1)
-AREAS = {
-    "pesquisador-mercado": "Pesquisa", "roteirista": "Pesquisa",
-    "produtor-video": "Estúdio", "produtor-imagem": "Estúdio",
-    "sdr": "Comercial", "closer": "Comercial", "sucesso-cliente": "Comercial", "chefe-gabinete": "Comercial",
-    "analista": "Análise & Anúncios", "gestor-anuncios": "Análise & Anúncios", "financeiro": "Análise & Anúncios",
-    "postagem": "Postagem", "caixa-entrada": "Postagem",
+AREAS = {  # as salas do layout da Ciello (central/escritorio/gerar_layout.py)
+    "gerente": "Gerente",
+    "pesquisador-mercado": "Produtor Social", "roteirista": "Produtor Social", "produtor-video": "Produtor Social",
+    "produtor-imagem": "Produtor Social", "postagem": "Produtor Social", "analista": "Produtor Social",
+    "sdr": "Vendas", "closer": "Vendas", "sucesso-cliente": "Vendas",
+    "financeiro": "Comercial", "gestor-anuncios": "Comercial", "caixa-entrada": "Comercial", "chefe-gabinete": "Comercial",
 }
+SALA_DAS_SESSOES = "Gerente"  # a sessão do Claude Code em que você conversa (os objetivos) senta na sala do Gerente
 # o mesmo nome das janelas do Ciello OS (web/app.js, NOMES): o clique no personagem acha a janela por ele
 NOMES = {
-    "chefe-gabinete": "Chefe de Gabinete", "pesquisador-mercado": "Pesquisador de Mercado", "roteirista": "Roteirista",
+    "gerente": "Gerente", "chefe-gabinete": "Chefe de Gabinete", "pesquisador-mercado": "Pesquisador de Mercado", "roteirista": "Roteirista",
     "produtor-video": "Produtor de Vídeo", "produtor-imagem": "Produtor de Imagem", "postagem": "Postagem",
     "analista": "Analista", "gestor-anuncios": "Gestor de Anúncios", "sdr": "SDR", "closer": "Closer",
     "financeiro": "Financeiro", "caixa-entrada": "Caixa de Entrada", "sucesso-cliente": "Sucesso do Cliente",
@@ -53,6 +54,7 @@ class Residentes:
         rel.ao_soltar = self.terminar
 
     def carregar(self, raiz: Path):
+        self.raiz = raiz
         for i, nome in enumerate(equipe(raiz)):
             rid = ID_BASE + i
             a = Agente(id=rid, sessao="", pasta_projeto=str(raiz), jsonl="", externo=False, residente=True,
@@ -65,7 +67,10 @@ class Residentes:
 
     def areas(self) -> dict[str, list[str]]:
         """Área inicial de cada residente (a chave é o nome dele, que aparece no editor de áreas para você mudar)."""
-        return {NOMES.get(n, n): [AREAS[n]] for n in self.ids if n in AREAS}
+        areas = {NOMES.get(n, n): [AREAS[n]] for n in self.ids if n in AREAS}
+        if getattr(self, "raiz", None):
+            areas[Path(self.raiz).name] = [SALA_DAS_SESSOES]
+        return areas
 
     # ---------------------------------------------------------- quem é chamado
     def por_nome(self, nome) -> int | None:

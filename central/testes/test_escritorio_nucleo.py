@@ -170,7 +170,7 @@ class TesteResidentes(Montagem):
     def test_residente_assume_a_tarefa_e_volta_para_a_rotina(self):
         self.assertEqual(self.loja.get(self.sdr).nome, "SDR")
         self.assertEqual(self.loja.get(self.sdr).pasta_nome, "SDR")
-        self.assertEqual(self.res.areas()["SDR"], ["Comercial"])
+        self.assertEqual(self.res.areas()["SDR"], ["Vendas"])
         self.vigia.acompanhar(self.projeto)
         arq = self.sessao()
         self.escrever(arq, {"type": "user", "message": {"content": "oi"}})
@@ -312,6 +312,49 @@ class TesteAtivos(unittest.TestCase):
         tipos = [m["type"] for m in a.mensagens()]
         self.assertEqual(tipos, ["characterSpritesLoaded", "petSpritesLoaded", "floorTilesLoaded", "wallTilesLoaded",
                                  "carpetTilesLoaded", "furnitureAssetsLoaded"])
+
+    def test_layout_da_ciello_tem_todas_as_salas_ligadas(self):
+        """Cada sala do esboço existe, todo móvel existe no catálogo e dá para andar de qualquer sala a qualquer outra."""
+        if not (TELA / "assets").exists():
+            self.skipTest("tela não compilada")
+        lay = json.loads((Path(__file__).resolve().parent.parent / "escritorio" / "layout-ciello.json").read_text(encoding="utf-8"))
+        cat = {c["id"]: c for c in Ativos(TELA).moveis["catalog"]}
+        rotulos = {a["label"] for a in lay["areas"]}
+        self.assertEqual(rotulos, {"Gerente", "Arquivos G", "Copa", "Área de lazer", "Varanda", "Produtor Social", "Comercial", "Vendas"})
+        C = lay["cols"]
+        bloqueado = set()
+        for m in lay["furniture"]:
+            item = cat.get(m["type"].split(":")[0])
+            self.assertIsNotNone(item, m["type"])
+            if item.get("category") == "chairs" or item.get("canPlaceOnSurfaces"):
+                continue
+            for dr in range(item.get("backgroundTiles", 0), item["footprintH"]):
+                for dc in range(item["footprintW"]):
+                    bloqueado.add((m["col"] + dc, m["row"] + dr))
+        andavel = {(i % C, i // C) for i, v in enumerate(lay["tiles"]) if v not in (0, 255)} - bloqueado
+        inicio = next(q for q in andavel if lay["areaTiles"][q[1] * C + q[0]] == "Gerente")
+        vistos, fila = {inicio}, [inicio]
+        while fila:
+            c, r = fila.pop()
+            for v in ((c + 1, r), (c - 1, r), (c, r + 1), (c, r - 1)):
+                if v in andavel and v not in vistos:
+                    vistos.add(v)
+                    fila.append(v)
+        alcancadas = {lay["areaTiles"][r * C + c] for c, r in vistos} - {None}
+        self.assertEqual(alcancadas, rotulos)
+        self.assertEqual(lay["cielloLayout"], 2)
+
+    def test_layout_novo_da_ciello_substitui_o_antigo(self):
+        from nucleo import persistencia as P
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(P, "CASA", Path(d)):
+            P._gravar(Path(d) / "layout.json", {"version": 1, "cols": 37, "rows": 14})
+            P._gravar(Path(d) / "config.json", {"areas": {"SDR": ["Comercial"]}, "areasVistas": ["SDR"]})
+            novo = P.ler_layout()
+            self.assertEqual((novo["cols"], novo["cielloLayout"]), (33, 2))
+            self.assertTrue((Path(d) / "layout-antigo-v0.json").exists())  # cópia do antigo
+            self.assertEqual((P.config()["areas"], P.config()["areasVistas"]), ({}, []))  # as áreas refazem com as salas novas
+            P.gravar_layout({**novo, "cielloLayout": None, "cols": 33})  # o editor salva sem a versão
+            self.assertEqual(P.ler_layout()["cielloLayout"], 2)  # e não troca de novo
 
     def test_png_paleta_com_transparencia(self):
         import struct

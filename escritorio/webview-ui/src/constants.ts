@@ -20,6 +20,14 @@ export const SEAT_REST_MAX_SEC = 240.0;
 // Ciello: rotina dos agentes parados. Chance de o próximo passeio ser ir conversar com outro agente parado,
 // quanto o outro espera o colega chegar e quanto dura a conversa (com balão).
 export const CONVERSA_CHANCE = 0.35;
+// Ciello: sem conversa, a chance de o passeio ser uma pausa (copa, lazer, varanda) e o peso de cada lugar.
+// O lugar é achado pelo rótulo da área no layout (sem acento, minúsculo): renomear para "Copa da Ciello" continua valendo.
+export const PAUSA_CHANCE = 0.55;
+export const PAUSA_LUGARES: ReadonlyArray<readonly [string, number]> = [
+  ['copa', 0.35],
+  ['lazer', 0.45],
+  ['varanda', 0.2],
+];
 export const CONVERSA_ESPERA_SEC = 10.0;
 export const CONVERSA_MIN_SEC = 4.0;
 export const CONVERSA_MAX_SEC = 9.0;

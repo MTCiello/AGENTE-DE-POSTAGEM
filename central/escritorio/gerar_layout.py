@@ -1,36 +1,68 @@
-"""Gera o layout do escritório da Ciello no formato do pixel-agents (OfficeLayout v1).
+"""Gera o layout do escritório da Ciello no formato do pixel-agents (OfficeLayout v1), a partir do esboço do Mateus:
 
-Usa os mesmos móveis e os mesmos módulos do layout padrão do pixel-agents (estação com mesa + PC + banco;
-mesa de reunião com cadeiras e PCs laterais; sofás em volta da mesa de centro), em três salas:
+  +-----------+---------+-----------+
+  |  Gerente  |Arquivos |  Produtor |
+  |           +---------+   Social  |
+  |           |  Copa   |           |
+  +-----------+---------+-----------+
+  | Comercial | Área de |  Vendas   |
+  |           |  lazer  |           |
+  |           +---------+           |
+  |           | Varanda |           |
+  +-----------+---------+-----------+
 
-  Sala 1  Pesquisa (em cima) e Estúdio (embaixo)        4 estações
-  Sala 2  Comercial: mesa do SDR/closer + sala de demo   4 lugares + sofás
-  Sala 3  Análise & Anúncios (em cima) e Postagem        4 estações
+  Gerente          a sala principal: é com ele que você fala; ele monta a esteira e delega
+  Arquivos G       o armazenamento local (vídeos, métricas, o banco): estoque de caixas e o servidor
+  Copa             máquina de café, pia e geladeira
+  Área de lazer    sofás: onde os agentes parados conversam e tomam café
+  Varanda          espreguiçadeiras e plantas: onde eles vão pensar na vida
+  Produtor Social  a equipe da rede social (pesquisa, roteiro, vídeo, imagem, postagem, análise)
+  Comercial        financeiro, anúncios, agenda e e-mail
+  Vendas           SDR, closer e sucesso do cliente
 
   python central/escritorio/gerar_layout.py   ->  central/escritorio/layout-ciello.json
+O número VERSAO sobe a cada layout novo: quem ainda usa o layout antigo da Ciello recebe o novo (com cópia do antigo).
 """
 import json
 from pathlib import Path
 
-COLS, ROWS = 37, 14
-PAREDE, MADEIRA, AZUL, XADREZ, VAZIO = 0, 7, 1, 9, 255
-COR = {  # cores dos pisos e da parede tiradas do layout padrão do pixel-agents
-    PAREDE: {"h": 214, "s": 30, "b": -100, "c": -55},
-    MADEIRA: {"h": 25, "s": 48, "b": -43, "c": -88},
-    AZUL: {"h": 209, "s": 39, "b": -25, "c": -80},
-    XADREZ: {"h": 209, "s": 0, "b": -16, "c": -8},
+VERSAO = 2
+COLS, ROWS = 33, 25
+PAREDE, LISO, PISO_GRANDE, CIMENTO, TABUA, XADREZ, VAZIO = 0, 1, 2, 4, 7, 9, 255
+COR = {  # (tipo de piso, cor) -> h, s, b, c do colorize do pixel-agents
+    "parede": {"h": 214, "s": 30, "b": -100, "c": -55},
+    "gerente": {"h": 352, "s": 40, "b": -45, "c": -80},     # carpete vinho
+    "comercial": {"h": 25, "s": 48, "b": -43, "c": -88},    # madeira
+    "social": {"h": 209, "s": 39, "b": -25, "c": -80},      # azul
+    "vendas": {"h": 35, "s": 40, "b": -30, "c": -85},       # madeira clara
+    "arquivos": {"h": 210, "s": 6, "b": -35, "c": -30},     # cimento
+    "copa": {"h": 200, "s": 10, "b": -10, "c": -10},        # xadrez
+    "lazer": {"h": 30, "s": 30, "b": -20, "c": -70},        # carpete bege
+    "varanda": {"h": 28, "s": 55, "b": -38, "c": -60},      # deque
 }
-SALAS = [(1, 11, MADEIRA), (13, 23, AZUL), (25, 35, MADEIRA)]  # colunas internas e piso
-PORTAS = range(6, 9)  # linhas das portas entre as salas
-AREAS = [
-    ("Pesquisa", "#2FB7C4", 1, 11, 2, 6), ("Estúdio", "#D9533B", 1, 11, 7, 12),
-    ("Comercial", "#E0A81C", 13, 23, 2, 12),
-    ("Análise & Anúncios", "#8E6BD8", 25, 35, 2, 6), ("Postagem", "#3DBE6E", 25, 35, 7, 12),
+# sala: (rótulo, cor da área, piso, cor do piso, col0, col1, lin0, lin1)
+SALAS = [
+    ("Gerente", "#E0A81C", LISO, "gerente", 1, 11, 2, 9),
+    ("Comercial", "#D9533B", TABUA, "comercial", 1, 11, 11, 23),
+    ("Arquivos G", "#8A94A3", CIMENTO, "arquivos", 13, 19, 2, 6),
+    ("Copa", "#2FB7C4", XADREZ, "copa", 13, 19, 8, 11),
+    ("Área de lazer", "#8E6BD8", LISO, "lazer", 13, 19, 13, 19),
+    ("Varanda", "#3DBE6E", TABUA, "varanda", 13, 19, 21, 23),
+    ("Produtor Social", "#EC70A0", LISO, "social", 21, 31, 2, 13),
+    ("Vendas", "#5E92E6", TABUA, "vendas", 21, 31, 15, 23),
 ]
+# portas: (col, lin) que deixam de ser parede; o piso é o da sala do lado indicado
+PORTAS = ([(12, r, "Gerente") for r in (4, 5, 8, 9)] + [(12, r, "Comercial") for r in (16, 17)]
+          + [(20, r, "Produtor Social") for r in (4, 5, 9, 10)] + [(20, r, "Vendas") for r in (16, 17)]
+          + [(c, 10, "Gerente") for c in (5, 6)] + [(c, 14, "Produtor Social") for c in (25, 26)]
+          + [(c, 7, "Copa") for c in (14, 15)] + [(c, 12, "Área de lazer") for c in (15, 16, 17)]
+          + [(c, 20, "Varanda") for c in (15, 16, 17)])
 
 tiles = [VAZIO] * (COLS * ROWS)
+cores = [None] * (COLS * ROWS)
 areas = [None] * (COLS * ROWS)
 moveis = []
+SALA = {s[0]: s for s in SALAS}
 
 
 def pos(c, r):
@@ -42,7 +74,7 @@ def movel(tipo, c, r):
 
 
 def estacao(c, r):
-    """Mesa de frente com PC e banco (módulo do layout padrão)."""
+    """Mesa de frente com PC e banco (módulo do layout padrão): 3 colunas x 3 linhas."""
     movel("DESK_FRONT", c, r)
     movel("PC_FRONT_OFF", c + 1, r)
     movel("CUSHIONED_BENCH", c + 1, r + 2)
@@ -59,7 +91,7 @@ def mesa_reuniao(c, r):
 
 
 def sofas(c, r):
-    """Mesa de centro com sofás em volta (módulo do layout padrão)."""
+    """Mesa de centro com sofás em volta e um café (módulo do layout padrão)."""
     movel("COFFEE_TABLE", c, r)
     movel("SOFA_FRONT", c, r - 1)
     movel("SOFA_SIDE", c - 1, r)
@@ -68,59 +100,98 @@ def sofas(c, r):
     movel("COFFEE", c, r + 1)
 
 
-# paredes e pisos
-for c in range(COLS):
-    tiles[pos(c, 1)] = PAREDE
-for r in range(1, ROWS - 1):
-    for c in (0, 12, 24, 36):
-        tiles[pos(c, r)] = PAREDE
-for c0, c1, piso in SALAS:
-    for r in range(2, ROWS - 1):
+def montar():
+    # paredes: contorno de cada sala; depois os pisos por cima e as portas
+    for nome, _, _, _, c0, c1, r0, r1 in SALAS:
+        for c in range(c0 - 1, c1 + 2):
+            for r in range(r0 - 1, r1 + 2):
+                if nome == "Varanda" and r > r1:
+                    continue  # a varanda é aberta embaixo
+                if r == ROWS - 1:
+                    continue
+                tiles[pos(c, r)] = PAREDE
+                cores[pos(c, r)] = COR["parede"]
+    for nome, _, piso, cor, c0, c1, r0, r1 in SALAS:
         for c in range(c0, c1 + 1):
-            tiles[pos(c, r)] = piso
-for r in PORTAS:
-    for c in (12, 24):
-        tiles[pos(c, r)] = SALAS[0][2] if c == 12 else SALAS[2][2]
-for nome, _, c0, c1, r0, r1 in AREAS:
-    for r in range(r0, r1 + 1):
-        for c in range(c0, c1 + 1):
-            areas[pos(c, r)] = nome
+            for r in range(r0, r1 + 1):
+                tiles[pos(c, r)], cores[pos(c, r)], areas[pos(c, r)] = piso, COR[cor], nome
+    for c, r, lado in PORTAS:
+        _, _, piso, cor, *_ = SALA[lado]
+        tiles[pos(c, r)], cores[pos(c, r)] = piso, COR[cor]
 
-# Sala 1: Pesquisa e Estúdio
-for r in (3, 8):
-    for c in (2, 7):
-        estacao(c, r)
-movel("DOUBLE_BOOKSHELF", 2, 0)
-movel("CLOCK", 6, 0)
-movel("HANGING_PLANT", 9, 0)
-movel("PLANT", 11, 1)
-movel("BIN", 1, 12)
+    # Gerente: a mesa dele no meio, quadro e quadro de avisos na parede, poltronas para quem vem falar com ele
+    estacao(5, 4)
+    movel("WHITEBOARD", 2, 0)
+    movel("LARGE_PAINTING", 8, 0)
+    movel("CLOCK", 6, 0)
+    movel("LARGE_PLANT", 1, 7)
+    movel("PLANT_2", 11, 2)
+    movel("SOFA_FRONT", 8, 8)
+    movel("CUSHIONED_CHAIR_FRONT", 4, 8)
+    movel("BIN", 9, 4)
 
-# Sala 2: Comercial (mesa do time de vendas + canto de demonstração)
-mesa_reuniao(17, 3)
-sofas(18, 9)
-movel("WHITEBOARD", 15, 0)
-movel("LARGE_PAINTING", 19, 0)
-movel("PLANT_2", 13, 1)
-movel("LARGE_PLANT", 21, 10)
+    # Arquivos G: estoque de caixas e o servidor (o cérebro: tudo o que é processado fica aqui)
+    for c in (13, 15, 17):
+        movel("ESTANTE_ARQUIVO", c, 2)
+    movel("SERVIDOR", 19, 2)
+    for c in (16, 17, 18):
+        movel("CAIXAS", c, 5)
 
-# Sala 3: Análise & Anúncios e Postagem
-for r in (3, 8):
-    for c in (26, 31):
-        estacao(c, r)
-movel("SMALL_PAINTING", 27, 0)
-movel("DOUBLE_BOOKSHELF", 30, 0)
-movel("HANGING_PLANT", 34, 0)
-movel("PLANT_2", 35, 1)
-movel("BIN", 35, 12)
+    # Copa: balcão com café e pia, geladeira, lixo e uma planta
+    movel("BALCAO_CAFE", 16, 8)
+    movel("GELADEIRA", 18, 8)
+    movel("BIN", 13, 11)
+    movel("POT", 19, 11)
 
-layout = {
-    "version": 1, "cols": COLS, "rows": ROWS, "tiles": tiles,
-    "tileColors": [COR.get(t) for t in tiles],
-    "furniture": moveis, "pets": [],
-    "areas": [{"label": n, "color": cor} for n, cor, *_ in AREAS],
-    "areaTiles": areas,
-}
-destino = Path(__file__).with_name("layout-ciello.json")
-destino.write_text(json.dumps(layout, ensure_ascii=False), encoding="utf-8")
-print(f"{len(moveis)} móveis, {sum(1 for m in moveis if 'CHAIR' in m['type'] or 'BENCH' in m['type'])} lugares -> {destino}")
+    # Área de lazer: sofás em volta da mesa de centro
+    sofas(15, 15)
+    movel("LARGE_PLANT", 18, 17)
+    movel("PLANT", 13, 13)
+    movel("CACTUS", 19, 13)
+
+    # Varanda: guarda-corpo embaixo, espreguiçadeiras e plantas
+    for c in range(13, 20):
+        movel("GUARDA_CORPO", c, 23)
+    movel("ESPREGUICADEIRA", 13, 21)
+    movel("ESPREGUICADEIRA", 19, 21)
+    movel("POT", 14, 22)
+    movel("POT", 18, 22)
+    movel("WOODEN_BENCH", 16, 22)
+
+    # Produtor Social: 6 estações (pesquisa, roteiro, vídeo, imagem, postagem, análise)
+    for r in (3, 7, 11):
+        for c in (22, 27):
+            estacao(c, r)
+    movel("WHITEBOARD", 25, 0)
+    movel("HANGING_PLANT", 31, 0)
+    movel("SMALL_PAINTING", 22, 0)
+
+    # Comercial: 4 estações (financeiro, anúncios, agenda e e-mail, chefe de gabinete)
+    for r in (12, 17):
+        for c in (2, 7):
+            estacao(c, r)
+    movel("PLANT_2", 1, 21)
+    movel("LARGE_PLANT", 9, 21)
+    movel("BIN", 11, 12)
+
+    # Vendas: mesa do time de vendas e um canto de demonstração
+    mesa_reuniao(25, 16)
+    movel("SOFA_FRONT", 22, 21)
+    movel("CUSHIONED_CHAIR_FRONT", 21, 21)
+    movel("LARGE_PLANT", 30, 21)
+    movel("PLANT_2", 31, 15)
+
+    return {
+        "version": 1, "cols": COLS, "rows": ROWS, "tiles": tiles, "tileColors": cores,
+        "furniture": moveis, "pets": [],
+        "areas": [{"label": n, "color": cor} for n, cor, *_ in SALAS],
+        "areaTiles": areas, "cielloLayout": VERSAO,
+    }
+
+
+if __name__ == "__main__":
+    layout = montar()
+    destino = Path(__file__).with_name("layout-ciello.json")
+    destino.write_text(json.dumps(layout, ensure_ascii=False), encoding="utf-8")
+    lugares = sum(1 for m in moveis if any(k in m["type"] for k in ("CHAIR", "BENCH", "SOFA", "ESPREGUICADEIRA")))
+    print(f"{len(moveis)} móveis, {lugares} lugares -> {destino}")

@@ -101,6 +101,10 @@ def gravar_lugares(lugares):
 
 # ------------------------------------------------------------------ layout
 
+def versao_ciello(layout) -> int:
+    return int(layout.get("cielloLayout") or 0) if isinstance(layout, dict) else 0
+
+
 def ler_layout():
     p = CASA / "layout.json"
     if not p.exists():
@@ -108,8 +112,30 @@ def ler_layout():
         if origem.exists():
             CASA.mkdir(parents=True, exist_ok=True)
             shutil.copy2(origem, p)
-    return _ler(p, None)
+    atual = _ler(p, None)
+    novo = _ler(LAYOUT_CIELLO, None)
+    if atual is not None and novo is not None and versao_ciello(atual) < versao_ciello(novo):
+        atualizar_layout(atual, novo)
+        return novo
+    return atual
+
+
+def atualizar_layout(antigo, novo):
+    """Um layout novo da Ciello chegou: guarda uma cópia do antigo, troca e refaz as áreas dos agentes residentes
+    (as salas mudaram de nome). Quem quiser o antigo de volta: Layout → Importar a cópia guardada."""
+    _gravar(CASA / f"layout-antigo-v{versao_ciello(antigo)}.json", antigo)
+    _gravar(CASA / "layout.json", novo)
+    c = config()
+    c["areas"], c["areasVistas"] = {}, []
+    gravar_config(c)
+    e = estado()
+    e["lugares"] = {}  # os lugares antigos não existem mais: cada agente senta no lugar da sua sala nova
+    _gravar(CASA / "estado.json", e)
 
 
 def gravar_layout(layout):
+    """O editor de layout salva sem o campo cielloLayout: mantém a versão, senão o layout novo seria trocado de novo."""
+    v = versao_ciello(_ler(CASA / "layout.json", None))
+    if v and isinstance(layout, dict) and not layout.get("cielloLayout"):
+        layout = {**layout, "cielloLayout": v}
     _gravar(CASA / "layout.json", layout)

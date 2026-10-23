@@ -213,6 +213,7 @@ class Sala:
         enviar({"type": "providerCapabilities", "readingTools": list(LEITURA), "subagentToolNames": sorted(SUBAGENTE, key=["Task", "Agent"].index)})
         for m in self.ativos.mensagens():
             enviar(m)
+        layout = P.ler_layout() or self.ativos.layout_padrao  # antes das áreas: um layout novo refaz as áreas e os lugares
         cfg = P.config()
         prefs = self._preferencias()
         enviar(prefs)
@@ -231,7 +232,7 @@ class Sala:
                 externos[aid] = True
             meta[aid] = limpar({"palette": a.paleta, "hueShift": a.matiz, "seatId": (lugares.get(str(aid)) or {}).get("seatId")})
         enviar({"type": "existingAgents", "agents": ids, "agentMeta": meta, "directoryNames": nomes, "externalAgents": externos})
-        enviar({"type": "layoutLoaded", "layout": P.ler_layout() or self.ativos.layout_padrao})
+        enviar({"type": "layoutLoaded", "layout": layout})
         self._reenviar_atividade(enviar)
         # o original manda o estado dos hooks depois (é assíncrono lá); a tela trata em qualquer ordem
         enviar({"type": "hooksStatus", "providerId": "claude", "installed": instalado})
