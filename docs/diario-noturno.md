@@ -5,7 +5,7 @@ Regras: só na branch `ccr-75504115-gpanzf`, nada é enviado, agendado ou public
 
 ## Resumo para o café
 
-Foram 17 voltas, todas testadas no navegador com dados de exemplo e publicadas na branch. São 125 testes automáticos, todos passando. A sessão ficou parada das 01h10 às 07h (o processo reiniciou), por isso a noite rendeu menos voltas do que podia.
+Foram 17 voltas, todas testadas no navegador com dados de exemplo e publicadas na branch. São 123 testes automáticos, todos passando. A sessão ficou parada das 01h10 às 07h (o processo reiniciou), por isso a noite rendeu menos voltas do que podia.
 
 **O que mudou para você pilotar:**
 - **Bom dia leva até o lugar.** Cada prioridade tem **Abrir** (janela e aba certas) e **Hoje não** (some até amanhã).
