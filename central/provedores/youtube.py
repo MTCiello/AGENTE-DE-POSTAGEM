@@ -84,7 +84,8 @@ class YouTube(Provedor):
     def publicar(self, cred, envio):
         h = self._acesso(cred)
         quando = dt.datetime.fromisoformat(envio["quando"][:16])
-        agendar = quando > dt.datetime.now() + dt.timedelta(minutes=15)
+        agora = dt.datetime.fromisoformat(envio["agora"]) if envio.get("agora") else dt.datetime.now()
+        agendar = quando > agora + dt.timedelta(minutes=15)
         meta = {"snippet": {"title": envio.get("titulo", "")[:100], "description": envio.get("texto", "")[:4900], "categoryId": "28"},
                 "status": {"privacyStatus": "private" if agendar else "public", "selfDeclaredMadeForKids": False}}
         if agendar:  # o YouTube publica sozinho na hora: o PC pode estar desligado

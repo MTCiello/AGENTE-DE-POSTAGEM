@@ -147,7 +147,7 @@ def _post_do_roteiro(texto: str, data: str) -> tuple[str, str]:
         except (OSError, ValueError):
             continue
         hook = next((s for s in d.get("scenes", []) if s.get("type") == "hook"), {})
-        gancho = " ".join(l[0] if isinstance(l, list) else str(l) for l in hook.get("lines", [])) or hook.get("fala", "")
+        gancho = " ".join(l[0] if isinstance(l, list) else str(l) for l in hook.get("lines", [])) or hook.get("say") or hook.get("fala", "")
         return r.stem, gancho
     return "", (texto or "").split("\n")[0][:140]
 

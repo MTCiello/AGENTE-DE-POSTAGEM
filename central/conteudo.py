@@ -23,7 +23,10 @@ import re
 import sys
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import dados  # noqa: E402
+
+RAIZ = dados.pasta_dados()  # roteiros, mídia e histórico são dados do usuário (no produto instalado, fora da pasta do programa)
 ROTEIROS = RAIZ / "roteiros"
 HISTORICO = RAIZ / "historico.md"
 ETAPAS = ["roteiro", "narracao", "video", "final", "capa", "legenda", "agendado"]
