@@ -574,7 +574,7 @@ function dialogo(j, { titulo, texto = '', campos = [], botao = 'Salvar', enviar,
     else if (c.tipo === 'sim') return `<label class="sim"><input type="checkbox" name="${c.nome}" ${v ? 'checked' : ''}> ${esc(c.rotulo)}</label>`;
     else if (c.tipo === 'marcar') return `<fieldset class="marcar"><legend>${esc(c.rotulo)}</legend>${(c.opcoes || []).map((o) => `<label><input type="checkbox" name="${c.nome}" value="${esc(o)}" ${(c.valor || []).includes(o) ? 'checked' : ''}> ${esc(o)}</label>`).join('')}</fieldset>`;
     else if (c.tipo === 'arquivo') input = `<input type="file" name="${c.nome}" id="${id}" accept="${esc(c.aceita || '')}"${req}>`;
-    else input = `<input name="${c.nome}" id="${id}" type="${{ data: 'date', mes: 'month' }[c.tipo] || 'text'}" ${c.tipo === 'numero' ? 'inputmode="decimal"' : ''} value="${esc(v)}" placeholder="${esc(c.exemplo || '')}"${req}>`;
+    else input = `<input name="${c.nome}" id="${id}" type="${{ data: 'date', mes: 'month', datahora: 'datetime-local' }[c.tipo] || 'text'}" ${c.tipo === 'numero' ? 'inputmode="decimal"' : ''} value="${esc(v)}" placeholder="${esc(c.exemplo || '')}"${req}>`;
     return `<label class="campo ${c.meia ? 'meia' : ''}" for="${id}"><span>${esc(c.rotulo)}${c.obrigatorio ? ' *' : ''}</span>${input}${c.dica ? `<small>${esc(c.dica)}</small>` : ''}</label>`;
   };
   el.innerHTML = `<form class="caixa-dialogo" novalidate><header><b>${esc(titulo)}</b><button type="button" class="x" title="Fechar">${icone('fechar', 12)}</button></header>
@@ -872,6 +872,7 @@ async function renderComercial(j) {
               : await operar('fin_cliente', { ...x, lead: id, produto: 'crm', teste: oferta === 'crm_teste' ? '30' : '0' });
             if (!r.ok) return r; const m = await operar('sdr_marcar', { id, etapa: 'cliente' }); return { ok: m.ok, saida: `${r.saida}\n${m.saida}` }; } });
       }
+      if (nova === 'demo') { el.value = atual; return j.fns.agendar({ id }); }
       if (nova === 'nao_contatar' && !confirm(`${porId[id].empresa} vai para a lista de não contatar e nunca mais recebe mensagem. Confirma?`)) { el.value = atual; return null; }
       return marcar(id, nova, `Etapa: ${ROTULO_ETAPA[nova]}`);
     },
@@ -881,6 +882,10 @@ async function renderComercial(j) {
     copiar: ({ i, lista }) => copiar(d[lista][+i].mensagem),
     filtrar: (_, el) => { j.filtro[el.name] = el.value; pintarLeads(); },
     virou: ({ id, empresa }) => rapido('fin_converter', { id }, `${empresa} virou cliente`),
+    agendar: ({ id }) => { const l = porId[id]; const amanha = new Date(Date.now() + 864e5); const sug = `${amanha.toISOString().slice(0, 10)}T10:00`;
+      dialogo(j, { titulo: `Agendar demo · ${l.empresa}`, texto: 'Depois de salvar, a confirmação para o cliente e o link do Google Agenda aparecem aqui. No dia, o lembrete fica pronto em Comercial → Hoje.',
+        campos: [{ nome: 'quando', rotulo: 'Dia e hora', tipo: 'datahora', valor: l.agenda || sug, obrigatorio: true }, { nome: 'obs', rotulo: 'Anotação', exemplo: 'equipe de 4 pessoas, usa WhatsApp Business' }],
+        botao: 'Agendar', enviar: formOp('sdr_agendar', { id }) }); },
     desistiu: ({ id }) => rapido('fin_cancelar', { id, motivo: 'não continuou depois do teste grátis' }, 'Teste encerrado'),
     ofereci: ({ chave }) => { SALVO.ofertas = { ...(SALVO.ofertas || {}), [chave]: Date.now() }; salvar(); desenhar(j, true); },
     consultas: () => dialogo(j, { titulo: 'O que buscar no Google Maps', texto: 'Escolha os segmentos e as cidades. Depois clique em "Buscar no Google Maps" (leva alguns minutos e roda no seu PC).',
@@ -895,6 +900,7 @@ async function renderComercial(j) {
   // "Já ofereci" esconde a oportunidade por 60 dias (fica guardado neste PC)
   const oferecida = (o) => Date.now() - ((SALVO.ofertas || {})[`${o.cliente_id}:${o.oferta}`] || 0) < 60 * 864e5;
   d.oportunidades = d.oportunidades.filter((o) => !oferecida(o));
+  d.agenda_proximas = d.agenda.proximas; // para o botão Copiar
   const barra = `<div class="acoes topo"><button class="bt pri" data-fn="entrada">+ Lead que chegou</button><button class="bt" data-fn="planilha">Importar planilha</button><button class="bt" data-fn="crm">Exportar para o CRM</button><button class="bt" data-abrir="agente:sdr">SDR</button><button class="bt" data-abrir="agente:closer">Closer</button></div>`;
   const chipOferta = (l) => `<span class="chip ${l.oferta === 'site' ? 'oferta-site' : 'oferta-crm'}" title="O que oferecer primeiro">${l.oferta === 'site' ? 'oferta: site' : 'oferta: CRM'}</span>`;
   const msgSimples = (x, i, lista, titulo, botoes) => `<div class="cartao msg"><div class="cab"><b>${titulo}</b></div><pre class="texto-msg">${esc(x.mensagem)}</pre>
@@ -935,7 +941,11 @@ async function renderComercial(j) {
     const topo = Math.max(1, d.funil.etapas[0].n);
     corpo = `<div class="grade2"><div class="cartao"><h2 style="margin-top:0">Funil</h2><div class="funil">${d.funil.etapas.map((e, i) => `<div><span>${esc(e.etapa)}</span><i style="width:${Math.max(2, 100 * e.n / topo)}%"></i><b>${e.n}</b><small>${i && d.funil.etapas[i - 1].n ? Math.round(100 * e.n / d.funil.etapas[i - 1].n) + '%' : ''}</small></div>`).join('')}</div></div>
     <div class="cartao"><h2 style="margin-top:0">Quentes · responder hoje</h2><div class="lista">${d.quentes.map((l) => `<div class="linha-item"><div class="cresce"><b>${esc(l.empresa)}</b><small>${esc([l.segmento, l.cidade, l.obs].filter(Boolean).join(' · '))}</small></div>
-      ${l.telefone ? `<a class="bt mini wa" href="${esc(zap(l.telefone))}" target="_blank" rel="noopener">WhatsApp</a>` : ''}${etapaSel(l)}</div>`).join('') || '<p class="sub">Ninguém esperando resposta.</p>'}</div></div></div>
+      ${l.telefone ? `<a class="bt mini wa" href="${esc(zap(l.telefone))}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="bt mini" data-fn="agendar" data-id="${l.id}">${l.agenda ? `Demo ${ddmm(l.agenda)} ${l.agenda.slice(11, 16)}` : 'Agendar demo'}</button>${etapaSel(l)}</div>`).join('') || '<p class="sub">Ninguém esperando resposta.</p>'}</div></div></div>
+    ${d.agenda.proximas.length ? `<h2>Agenda de demos (${d.agenda.proximas.length})</h2>${d.agenda.proximas.map((a, i) => msgSimples(a, i, 'agenda_proximas',
+      `${esc(a.empresa)} <span class="chip ${a.dias === 0 ? 'erro' : 'esperando'}">${a.dias === 0 ? 'hoje' : a.dias === 1 ? 'amanhã' : ddmm(a.quando)} às ${esc(a.quando.slice(11, 16))}</span> <small class="neutro">${a.dias === 0 ? 'lembrete' : 'confirmação'}</small>`,
+      `<a class="bt" href="${esc(a.agenda_google)}" target="_blank" rel="noopener">Google Agenda</a><button class="bt" data-fn="agendar" data-id="${a.id}">Remarcar</button>`)).join('')}` : ''}
+    ${d.agenda.sem_desfecho.length ? `<h2>Como foram as demos? (${d.agenda.sem_desfecho.length})</h2><div class="lista">${d.agenda.sem_desfecho.map((a) => `<div class="linha-item"><div class="cresce"><b>${esc(a.empresa)}</b><small>demo em ${ddmm(a.quando)} às ${esc(a.quando.slice(11, 16))}</small></div>${etapaSel(porId[a.id] || a)}</div>`).join('')}</div>` : ''}
     ${d.testes.length ? `<h2>Teste grátis acabando (${d.testes.length})</h2>${d.testes.map((t, i) => msgSimples(t, i, 'testes', `${esc(t.empresa)} <span class="chip ${t.dias <= 2 ? 'erro' : 'esperando'}">${t.dias < 0 ? `acabou há ${-t.dias} dia(s)` : t.dias === 0 ? 'acaba hoje' : `faltam ${t.dias} dias`}</span> <small class="neutro">${brl(t.valor)}/mês</small>`,
       `<button class="bt pri" data-fn="virou" data-id="${t.cliente_id}" data-empresa="${esc(t.empresa)}">Virou cliente</button><button class="bt" data-fn="desistiu" data-id="${t.cliente_id}">Desistiu</button>`)).join('')}` : ''}
     <h2>Follow-ups de hoje (${d.followups.length})</h2>${d.followups.map((l, i) => msgCartao(l, i, 'followups', `tentativa ${+l.tentativas + 1}`)).join('') || '<p class="sub">Nenhum follow-up para hoje.</p>'}
@@ -943,7 +953,7 @@ async function renderComercial(j) {
     ${d.oportunidades.length ? `<h2>Vender para quem já é cliente (${d.oportunidades.length})</h2><p class="sub">Quem já confia na Ciello compra o 2º produto mais fácil do que um lead novo.</p>${d.oportunidades.map((o, i) => msgSimples(o, i, 'oportunidades', `${esc(o.empresa)} <span class="chip ${o.oferta === 'site' ? 'oferta-site' : 'oferta-crm'}">oferta: ${o.oferta === 'site' ? 'site' : 'CRM'}</span> <small class="neutro">${esc(o.porque)}</small>`, `<button class="bt" data-fn="ofereci" data-chave="${o.cliente_id}:${o.oferta}" title="Some da lista por 60 dias">Já ofereci</button>`)).join('')}` : ''}`;
   }
   j.corpo.innerHTML = `<div class="pagina"><h1>Comercial</h1><p class="sub">${d.funil ? `${num(d.funil.total)} leads · ${num(d.funil.perdidos)} perdidos ou frios` : 'Prospecção, follow-up e fechamento do CIELLO CRM.'}</p>${SEM_CLAUDE}${barra}
-  ${abas(j, [['hoje', 'Hoje', d.followups.length + d.quentes.length + d.testes.length || ''], ['leads', 'Leads', d.leads.length], ['buscar', 'Buscar leads']])}${corpo}</div>`;
+  ${abas(j, [['hoje', 'Hoje', d.followups.length + d.quentes.length + d.testes.length + d.agenda.proximas.length || ''], ['leads', 'Leads', d.leads.length], ['buscar', 'Buscar leads']])}${corpo}</div>`;
 }
 
 // ------------------------------------------------------------------ apps: conteúdo

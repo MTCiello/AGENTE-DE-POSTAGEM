@@ -66,6 +66,14 @@ def _data(v):
         raise Invalido("data inválida (use AAAA-MM-DD)") from None
 
 
+def _datahora(v):
+    t = _texto(v, 16)
+    try:
+        return dt.datetime.fromisoformat(t).strftime("%Y-%m-%dT%H:%M")
+    except ValueError:
+        raise Invalido("data e hora inválidas") from None
+
+
 def _mes(v):
     t = _texto(v, 7)
     if not re.fullmatch(r"20\d\d-(0[1-9]|1[0-2])", t):
@@ -131,6 +139,8 @@ OPERACOES = {
         ("saldo", _numero, False, "--saldo"), ("data", _data, False, "--data"), ("alerta", _numero, False, "--alerta"),
         ("link_avaliacao", _texto, False, "--link-avaliacao"), ("assinatura", _texto, False, "--assinatura")]),
     "sdr_marcar": (sdr, "marcar", [("id", ID, True, None), ("etapa", _escolha(sdr.ETAPAS), True, None), ("obs", _texto, False, "--obs")]),
+    "sdr_agendar": (sdr, "agendar", [("id", ID, True, None), ("quando", _datahora, True, "--quando"), ("obs", _texto, False, "--obs"),
+                                      ("assinatura", _texto, False, "--assinatura")]),
     "sdr_anotar": (sdr, "anotar", [("id", ID, True, None), ("texto", _texto, True, None)]),
     "sdr_entrada": (sdr, "entrada", [
         ("nome", _texto, False, "--nome"), ("empresa", _texto, False, "--empresa"), ("telefone", _texto, False, "--telefone"),

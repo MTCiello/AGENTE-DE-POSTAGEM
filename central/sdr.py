@@ -45,7 +45,7 @@ ICP = PASTA / "icp.json"
 LEADS = PASTA / "leads.csv"
 BLOQUEIO = PASTA / "nao-contatar.txt"
 CAMPOS = ["id", "empresa", "segmento", "cidade", "telefone", "whatsapp", "site", "email", "nota_google", "avaliacoes",
-          "pontos", "dor_citada", "maps", "etapa", "ultimo_contato", "proximo_contato", "tentativas", "origem", "obs", "oferta"]
+          "pontos", "dor_citada", "maps", "etapa", "ultimo_contato", "proximo_contato", "tentativas", "origem", "obs", "oferta", "agenda"]
 CADENCIA = [2, 5, 10]  # dias depois do contato anterior; depois da 3ª tentativa sem resposta, vira "frio"
 ETAPAS = ["novo", "contatado", "respondeu", "demo", "proposta", "cliente", "perdido", "frio", "nao_contatar"]
 # Reclamações de atendimento nas avaliações: é a dor exata que o CRM resolve.
@@ -441,6 +441,78 @@ def cmd_anotar(a):
     print(f"#{l['id']} {l['empresa']}: anotado")
 
 
+# ---------------------------------------------------------------- agenda de demonstrações
+
+DURACAO_DEMO = 20  # minutos (15 de demo + folga)
+
+
+def link_agenda(l, quando: dt.datetime) -> str:
+    """Link "adicionar ao Google Agenda" (abre no navegador; nada é criado sem você clicar em salvar)."""
+    fim = quando + dt.timedelta(minutes=DURACAO_DEMO)
+    o_que = "CIELLO CRM" if oferta(l) == "crm" else "site"
+    q = {"action": "TEMPLATE", "text": f"Demo {o_que} · {l['empresa']}", "dates": f"{quando:%Y%m%dT%H%M%S}/{fim:%Y%m%dT%H%M%S}",
+         "ctz": "America/Sao_Paulo", "details": f"WhatsApp: {l.get('telefone', '')}\n{l.get('obs', '')}"[:900]}
+    return "https://calendar.google.com/calendar/render?" + urllib.parse.urlencode(q)
+
+
+def msg_confirmacao(l, quando: dt.datetime, assinatura="Mateus") -> str:
+    dia = "hoje" if quando.date() == dt.date.today() else ("amanhã" if quando.date() == dt.date.today() + dt.timedelta(days=1) else f"{quando:%d/%m}")
+    o_que = "o CIELLO CRM funcionando" if oferta(l) == "crm" else "exemplos de site e como ficaria o de vocês"
+    return (f"Combinado! {dia.capitalize()} às {quando:%H:%M} eu te mostro {o_que}, em 15 minutos, por videochamada aqui no WhatsApp. "
+            f"Se precisar mudar o horário, é só me avisar. {assinatura}, da Ciello.")
+
+
+def msg_lembrete(l, quando: dt.datetime) -> str:
+    return f"Oi! Passando para confirmar nossa conversa de hoje às {quando:%H:%M}. Continua bom para você?"
+
+
+def cmd_agendar(a):
+    leads = ler_leads()
+    l = next((x for x in leads if x["id"] == str(a.id)), None)
+    if not l:
+        sys.exit(f"Lead #{a.id} não encontrado.")
+    try:
+        quando = dt.datetime.fromisoformat(a.quando)
+    except ValueError:
+        sys.exit("Data e hora inválidas (use AAAA-MM-DDTHH:MM).")
+    l["agenda"] = quando.strftime("%Y-%m-%dT%H:%M")
+    if l["etapa"] in ("novo", "contatado", "respondeu", "frio"):
+        l["etapa"] = "demo"
+    l["proximo_contato"] = quando.date().isoformat()
+    l["ultimo_contato"] = dt.date.today().isoformat()
+    if a.obs:
+        l["obs"] = (l.get("obs", "") + f" | {dt.date.today():%d/%m}: {a.obs}").strip(" |")
+    gravar_leads(leads)
+    msg = msg_confirmacao(l, quando, a.assinatura)
+    print(f"#{l['id']} {l['empresa']}: demo em {quando:%d/%m às %H:%M}.\n\nConfirme para o cliente:\n{msg}\n")
+    if l.get("telefone"):
+        print(link_wa(l["telefone"], msg))
+    print("Google Agenda:", link_agenda(l, quando))
+
+
+def agenda(ref: dt.date | None = None, dias=7) -> dict:
+    """Demos de hoje e dos próximos dias (com lembrete pronto) e as que já passaram sem desfecho."""
+    ref = ref or dt.date.today()
+    proximas, sem_desfecho = [], []
+    for l in ler_leads():
+        if not l.get("agenda"):
+            continue
+        try:
+            quando = dt.datetime.fromisoformat(l["agenda"])
+        except ValueError:
+            continue
+        item = {"id": l["id"], "empresa": l["empresa"], "quando": l["agenda"], "etapa": l["etapa"], "oferta": oferta(l)}
+        dif = (quando.date() - ref).days
+        if 0 <= dif <= dias and l["etapa"] == "demo":
+            msg = msg_lembrete(l, quando) if dif == 0 else msg_confirmacao(l, quando)
+            proximas.append({**item, "dias": dif, "mensagem": msg,
+                             "link": link_wa(l["telefone"], msg) if l.get("whatsapp") and l.get("telefone") else "",
+                             "agenda_google": link_agenda(l, quando)})
+        elif dif < 0 and l["etapa"] == "demo":
+            sem_desfecho.append({**item, "dias": dif})
+    return {"proximas": sorted(proximas, key=lambda x: x["quando"]), "sem_desfecho": sorted(sem_desfecho, key=lambda x: x["quando"])}
+
+
 # ---------------------------------------------------------------- 7. crm
 
 def cmd_crm(a):
@@ -474,6 +546,9 @@ def parser():
     s = sub.add_parser("abordar"); s.add_argument("--top", type=int, default=15); s.add_argument("--assinatura", default="Mateus"); s.set_defaults(f=cmd_abordar)
     s = sub.add_parser("marcar"); s.add_argument("id", type=int); s.add_argument("etapa", choices=ETAPAS); s.add_argument("--obs", default=""); s.set_defaults(f=cmd_marcar)
     s = sub.add_parser("anotar", help="anota algo no lead sem mudar a etapa"); s.add_argument("id", type=int); s.add_argument("texto"); s.set_defaults(f=cmd_anotar)
+    s = sub.add_parser("agendar", help="marca a demo (data e hora) e devolve a confirmação e o link do Google Agenda")
+    s.add_argument("id", type=int); s.add_argument("--quando", required=True, help="AAAA-MM-DDTHH:MM"); s.add_argument("--obs", default="")
+    s.add_argument("--assinatura", default="Mateus"); s.set_defaults(f=cmd_agendar)
     s = sub.add_parser("hoje"); s.set_defaults(f=cmd_hoje)
     s = sub.add_parser("entrada", help="lead que chegou sozinho: registra e devolve a resposta pronta")
     s.add_argument("--nome", default=""); s.add_argument("--empresa", default=""); s.add_argument("--telefone", default="")

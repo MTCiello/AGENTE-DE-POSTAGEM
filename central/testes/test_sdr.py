@@ -102,9 +102,6 @@ class TesteSDR(unittest.TestCase):
             sdr.cmd_entrada(NS(nome="", empresa="X", telefone="49 97777-6666", origem="site", segmento="", cidade="", mensagem="", assinatura="Mateus"))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class TesteDuasOfertas(TesteSDR):
     """CRM para quem tem site; site para quem não tem (ou só tem Instagram)."""
@@ -149,3 +146,45 @@ class TesteInstalarScraper(unittest.TestCase):
                 sdr.cmd_instalar_scraper(NS(forcar=True))
             self.assertEqual([p.name for p in (Path(d) / "bin").iterdir()], ["google-maps-scraper-1.9.2-windows-amd64.exe"])
             self.assertEqual((Path(d) / "bin" / "google-maps-scraper-1.9.2-windows-amd64.exe").read_bytes(), b"exe")
+
+
+class TesteAgendaDemo(TesteSDR):
+    """Agendar a demo: data e hora no lead, confirmação, link do Google Agenda e lembrete no dia."""
+
+    def test_agendar_e_agenda(self):
+        self.qualificar()
+        hoje = dt.date.today()
+        quando = dt.datetime.combine(hoje, dt.time(15, 30))
+        sdr.cmd_agendar(NS(id=1, quando=quando.strftime("%Y-%m-%dT%H:%M"), obs="quer ver o funil", assinatura="Mateus"))
+        l = sdr.ler_leads()[0]
+        self.assertEqual((l["etapa"], l["agenda"], l["proximo_contato"]), ("demo", quando.strftime("%Y-%m-%dT%H:%M"), hoje.isoformat()))
+        self.assertIn("quer ver o funil", l["obs"])
+        ag = sdr.agenda(hoje)
+        self.assertEqual([x["empresa"] for x in ag["proximas"]], ["Imobiliária Sol"])
+        self.assertIn("hoje às 15:30", ag["proximas"][0]["mensagem"])  # no dia: lembrete
+        self.assertTrue(ag["proximas"][0]["link"].startswith("https://wa.me/"))
+        # no dia seguinte, a demo que ficou em "demo" pede o desfecho
+        depois = sdr.agenda(hoje + dt.timedelta(days=1))
+        self.assertEqual((depois["proximas"], [x["id"] for x in depois["sem_desfecho"]]), ([], [l["id"]]))
+        # com desfecho (proposta), sai das duas listas
+        sdr.cmd_marcar(NS(id=1, etapa="proposta", obs=""))
+        self.assertEqual(sdr.agenda(hoje + dt.timedelta(days=1)), {"proximas": [], "sem_desfecho": []})
+
+    def test_link_e_confirmacao(self):
+        l = {"empresa": "Ótica Centro", "telefone": "5549999123456", "site": "https://otica.com.br", "obs": ""}
+        quando = dt.datetime(2030, 3, 4, 9, 0)
+        url = sdr.link_agenda(l, quando)
+        self.assertIn("dates=20300304T090000%2F20300304T092000", url)
+        self.assertIn("ctz=America%2FSao_Paulo", url)
+        self.assertIn("CIELLO CRM", sdr.msg_confirmacao(l, quando))
+        self.assertIn("04/03 às 09:00", sdr.msg_confirmacao(l, quando))
+        self.assertIn("como ficaria o de vocês", sdr.msg_confirmacao({**l, "site": ""}, quando))
+
+    def test_data_invalida(self):
+        self.qualificar()
+        with self.assertRaises(SystemExit):
+            sdr.cmd_agendar(NS(id=1, quando="amanhã cedo", obs="", assinatura="Mateus"))
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -21,6 +21,7 @@ import atendimento  # noqa: E402
 import conteudo  # noqa: E402
 import financeiro  # noqa: E402
 import plano  # noqa: E402
+import sdr  # noqa: E402
 import status  # noqa: E402
 
 LEADS = RAIZ / "comercial" / "leads.csv"
@@ -85,6 +86,12 @@ def coletar(ref):
     if parados:
         nomes = ", ".join(f"#{l['id']} {l['empresa'][:25]}" for l in parados[:3])
         add(95, "closer", f"Responder {len(parados)} lead(s) quente(s) parado(s) desde ontem ou antes: {nomes}")
+    ag = sdr.agenda(ref, dias=1)
+    for d in ag["proximas"]:
+        hora = d["quando"][11:16]
+        add(97 if d["dias"] == 0 else 66, "closer", f"Demo {'hoje' if d['dias'] == 0 else 'amanhã'} às {hora} com {d['empresa']}: mande o lembrete (Comercial → Hoje → Agenda)")
+    for d in ag["sem_desfecho"][:3]:
+        add(74, "closer", f"Como foi a demo com {d['empresa']} ({d['quando'][8:10]}/{d['quando'][5:7]})? Marque proposta, cliente ou perdido")
     devidos = [l for l in leads if l["etapa"] == "contatado" and l.get("proximo_contato") and l["proximo_contato"] <= ref.isoformat()]
     if devidos:
         add(70, "sdr", f"Enviar {len(devidos)} follow-up(s) do dia: Comercial → Hoje (ou `python central/sdr.py hoje`)")

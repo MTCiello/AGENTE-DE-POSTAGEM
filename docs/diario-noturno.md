@@ -156,3 +156,20 @@ Cada passo tem **Fazer agora**, que abre a janela na aba certa já com o formul�
 **Simulação:** percorri o menu Iniciar, Bom dia, Financeiro, Comercial, Conteúdo, Estúdio de Vídeo, Atendimento, Objetivos e Estúdio de Voz em 1366x768. Tudo cabe e funciona; as faixas de botões quebram em 2 linhas sem esconder nada.
 
 **Ajuste:** em telas até 1440 px de largura, cada app abre maximizado na 1ª vez (um app por vez, sem arrastar janela). Depois vale o tamanho que você deixar. Terminal e execução continuam em janela.
+
+### Volta 10 · 23/10 · Agenda de demos
+
+**Simulação:** um lead respondeu "pode ser amanhã às 15h?". O Comercial só deixava mudar a etapa para "demo". Não havia onde guardar data e hora, nem mensagem de confirmação, lembrete no dia ou aviso de demo que passou sem desfecho. Era fácil esquecer a demo ou não registrar o resultado.
+
+**Feito:**
+- **Agendar demo** (Comercial, em "Quentes" ou ao mudar a etapa para demo): você escolhe data e hora, e o OS guarda no lead e devolve:
+  - a **mensagem de confirmação** pronta para o WhatsApp ("Combinado! Amanhã às 15:00 eu te mostro…");
+  - o link **Adicionar ao Google Agenda**, que abre no navegador; nada é criado sem você clicar em salvar.
+- **Comercial → Hoje → Agenda de demos:**
+  - no dia da demo, o **lembrete** ("Passando para confirmar nossa conversa de hoje às 15:30…");
+  - **Remarcar**.
+- **Como foram as demos?** A demo que passou e continua em "demo" pede o desfecho: proposta, fechou ou perdido.
+- **Bom dia:** "Demo hoje às…" no topo, "Demo amanhã" e "Como foi a demo com…".
+- Pelo terminal: `python central/sdr.py agendar 12 --quando 2026-10-24T15:00`.
+
+**Testes:** 3 testes novos (agendar e a agenda do dia; link do Google Agenda e confirmação; data inválida).
