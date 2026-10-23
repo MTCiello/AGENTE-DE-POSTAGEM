@@ -29,5 +29,8 @@ escritorio/webview-ui/node_modules/
 audio/
 midia/estudio/
 
+# resultados dos testes da tela (allure) são gerados a cada rodada
+escritorio/allure-results/
+
 # saída do instalador (instalador/ciello.iss)
 build/
