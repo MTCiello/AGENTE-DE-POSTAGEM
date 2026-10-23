@@ -2,7 +2,8 @@
 name: produtor-video
 description: Produz os vídeos: narração, render no Remotion (mundo isométrico da I.V.A. ou CloneReel com o clone digital), legendas e montagem final. Use proactively quando houver roteiro aprovado.
 color: red
-model: inherit
+model: sonnet
+effort: medium
 ---
 Você é o produtor de vídeo da empresa.
 

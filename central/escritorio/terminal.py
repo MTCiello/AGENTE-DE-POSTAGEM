@@ -20,9 +20,11 @@ LINHAS, COLUNAS = 30, 110
 
 # o comando do Claude Code; os testes trocam por um script falso
 COMANDO_CLAUDE: list[str] | None = None
+# modelos que a janela pode pedir (--model): o Gerente abre no sonnet e escolhe o modelo de cada etapa (gerente.md)
+MODELOS = ("haiku", "sonnet", "opus")
 
 
-def comando_claude(prompt: str | None = None, pular_permissoes: bool = False) -> list[str]:
+def comando_claude(prompt: str | None = None, pular_permissoes: bool = False, modelo: str | None = None) -> list[str]:
     if COMANDO_CLAUDE:
         base = list(COMANDO_CLAUDE)
     else:
@@ -34,6 +36,8 @@ def comando_claude(prompt: str | None = None, pular_permissoes: bool = False) ->
         base = ["cmd.exe", "/c", claude] if claude.lower().endswith((".cmd", ".bat")) else [claude]
     if pular_permissoes:
         base.append("--dangerously-skip-permissions")
+    if modelo in MODELOS:
+        base += ["--model", modelo]
     if prompt:
         base.append(prompt)
     return base
@@ -168,10 +172,10 @@ class Terminais:
         self.contador = itertools.count(1)
         self.trava = threading.Lock()
 
-    def abrir(self, prompt=None, titulo="", pular_permissoes=False) -> Terminal:
+    def abrir(self, prompt=None, titulo="", pular_permissoes=False, modelo=None) -> Terminal:
         with self.trava:
             tid = str(next(self.contador))
-        t = Terminal(tid, comando_claude(prompt, pular_permissoes), self.cwd, titulo)
+        t = Terminal(tid, comando_claude(prompt, pular_permissoes, modelo), self.cwd, titulo)
         self.todos[tid] = t
         return t
 
