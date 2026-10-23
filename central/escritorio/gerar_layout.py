@@ -4,7 +4,7 @@
   | Gerente ==Arquivos |  Produtor |
   |    ||    +---------+   Social  |
   |    ||    |  Copa   |           |
-  +----||----+---||----+           |
+  +----||----+  · · ·  |           |
   | Comercial == Lazer ==          |
   |          |         +----||-----+
   |          +---||----+  Vendas   |
@@ -12,7 +12,7 @@
   +----------+---------+-----------+
 
 As portas são só estas (um caminho único, como o Mateus pediu):
-  Arquivos G <-> Gerente <-> Comercial <-> Área de lazer <-> Copa
+  Arquivos G <-> Gerente <-> Comercial <-> Área de lazer + Copa (um ambiente só, sem parede entre elas)
                                                     <-> Varanda
                                                     <-> Produtor Social <-> Vendas
 
@@ -31,7 +31,7 @@ O número VERSAO sobe a cada layout novo: quem ainda usa um layout anterior da C
 import json
 from pathlib import Path
 
-VERSAO = 4
+VERSAO = 5
 COLS, ROWS = 28, 21
 PAREDE, LISO, CIMENTO, TABUA, XADREZ, VAZIO = 0, 1, 4, 7, 9, 255
 COR = {  # cores dos pisos (colorize do pixel-agents: h, s, b, c)
@@ -50,7 +50,7 @@ SALAS = [
     ("Gerente", "#E0A81C", TABUA, "gerente", 1, 8, 2, 8),
     ("Comercial", "#D9533B", TABUA, "comercial", 1, 8, 10, 19),
     ("Arquivos G", "#8A94A3", CIMENTO, "arquivos", 10, 16, 2, 5),
-    ("Copa", "#2FB7C4", XADREZ, "copa", 10, 16, 7, 9),
+    ("Copa", "#2FB7C4", XADREZ, "copa", 10, 16, 7, 10),         # Copa e Área de lazer: um ambiente só (sem parede)
     ("Área de lazer", "#8E6BD8", LISO, "lazer", 10, 16, 11, 15),
     ("Varanda", "#3DBE6E", TABUA, "varanda", 10, 16, 17, 19),
     ("Produtor Social", "#EC70A0", LISO, "social", 18, 26, 2, 12),
@@ -60,7 +60,6 @@ SALAS = [
 PORTAS = ([(9, r, "Gerente") for r in (4, 5)]                  # Gerente <-> Arquivos G
           + [(c, 9, "Gerente") for c in (4, 5)]                # Gerente <-> Comercial
           + [(9, r, "Comercial") for r in (13, 14)]            # Comercial <-> Área de lazer
-          + [(c, 10, "Área de lazer") for c in (15, 16)]       # Área de lazer <-> Copa
           + [(c, 16, "Varanda") for c in (13, 14)]             # Área de lazer <-> Varanda
           + [(17, r, "Área de lazer") for r in (11, 12)]       # Área de lazer <-> Produtor Social
           + [(c, 13, "Produtor Social") for c in (22, 23)])    # Produtor Social <-> Vendas
@@ -163,22 +162,23 @@ def montar():
     for c in (14, 15, 16):
         movel("CAIXAS", c, 3)
 
-    # Copa: balcão com café e pia, geladeira e bebedouro colados na parede; mesinha com café e cadeira no meio
+    # Copa e Área de lazer, um ambiente só: a cozinha encostada na parede do fundo (piso xadrez), a mesinha de
+    # café no meio e, no carpete, os sofás em volta da mesa de centro, com luminária e fliperama
     movel("BALCAO_CAFE", 10, 6)
     movel("GELADEIRA", 12, 6)
     movel("BEBEDOURO", 16, 6)
     movel("SMALL_TABLE_FRONT", 13, 8)
     movel("COFFEE", 13, 8)
     movel("WOODEN_CHAIR_SIDE", 12, 8)
-
-    # Área de lazer: sofás em volta da mesa de centro (tapete embaixo), luminária no canto e fliperama
+    movel("WOODEN_CHAIR_SIDE:left", 15, 8)
+    movel("PLANT_2", 16, 9)
     movel("SOFA_FRONT", 12, 11)
     movel("SOFA_SIDE", 11, 12)
     movel("COFFEE_TABLE", 12, 12)
     movel("SOFA_SIDE:left", 14, 12)
     movel("SOFA_BACK", 12, 14)
     movel("COFFEE", 12, 13)
-    movel("LUMINARIA", 10, 10)
+    movel("LUMINARIA", 10, 11)
     movel("ARCADE", 16, 13)
 
     # Varanda: guarda-corpo, espreguiçadeiras nas pontas, vasos e um banco
