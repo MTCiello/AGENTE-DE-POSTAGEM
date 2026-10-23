@@ -364,7 +364,7 @@ def configurar(d: dict) -> dict:
 def para_janela() -> dict:
     p = ler()
     return {"plano": p, "projecao": projetar(p), "auditoria": auditar(p), "equilibrio": equilibrio(p), "precos": precos(),
-            "regimes": {k: {"nome": v["nome"], "nota": v["nota"]} for k, v in REGIMES.items()}, "status": STATUS,
+            "regimes": {k: {"nome": v["nome"], "nota": v["nota"], "aliquota": v["aliquota"], "fixo": v["fixo"]} for k, v in REGIMES.items()}, "status": STATUS,
             "categorias": CATEGORIAS, "existe": arquivo().exists()}
 
 

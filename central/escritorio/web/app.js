@@ -875,6 +875,28 @@ function planoCorpo(j, pl) {
     negocio: ({ i }) => dialogo(j, { titulo: i != null ? 'Editar negócio' : 'Novo negócio', texto: 'Cliente atual ou negociação. "Talvez" conta 25% do valor na receita provável.', campos: camposNegocio(i != null ? p.negocios[+i] : {}), enviar: (x) => operar('plano_item', { ...x, lista: 'negocios', i }) }),
     custo: ({ i }) => dialogo(j, { titulo: i != null ? 'Editar custo' : 'Novo custo', campos: camposCusto(i != null ? p.custos[+i] : {}), enviar: (x) => operar('plano_item', { ...x, lista: 'custos', i }) }),
     remover: ({ lista, i }) => { const it = p[lista][+i]; if (confirm(`Tirar "${it.cliente || it.item}" do plano?`)) rapido('plano_remover', { lista, i }, 'Removido do plano'); },
+    simular: () => {
+      const reg = pl.regimes[p.regime] || { aliquota: 0, fixo: 0 }; const taxa = +p.taxa_recebimento || 0;
+      const alvo = eq.custos_fixos_mes + reg.fixo + (+p.pro_labore || 0);
+      const n = (v) => +String(v || '0').replace(/\./g, '').replace(',', '.') || 0;
+      const conta = (preco, anual, impl, novos) => { const medio = preco * (1 - (anual / 100) * (2 / 12)); const liq = medio * (1 - reg.aliquota - taxa);
+        return { medio, liq, clientes: liq > 0 ? Math.ceil(alvo / liq) : null, impl_ano: impl * novos, adianta: preco * 10 }; };
+      const base = conta(eq.preco_crm, 0, 0, 0);
+      const el = dialogo(j, { titulo: 'Simular preço do CRM', texto: `Mude os números e veja na hora quantos clientes pagam ${p.pro_labore ? `os custos e os seus ${brl(p.pro_labore)}/mês` : 'os custos (informe o pró-labore em Regras do plano para a conta completa)'}. Nada muda no plano nem no preço.`,
+        campos: [{ nome: 'preco', rotulo: 'Mensalidade (R$)', tipo: 'numero', valor: String(eq.preco_crm).replace('.', ','), meia: true }, { nome: 'anual', rotulo: '% dos clientes no plano anual (12 por 10)', tipo: 'numero', valor: '0', meia: true },
+          { nome: 'impl', rotulo: 'Taxa de implantação (R$, uma vez)', tipo: 'numero', valor: '0', meia: true }, { nome: 'novos', rotulo: 'Clientes novos no ano', tipo: 'numero', valor: '12', meia: true }],
+        extra: '<div class="sim-preco"></div>', botao: 'Discutir este cenário com o Financeiro',
+        enviar: (x) => { const r = conta(n(x.preco), n(x.anual), n(x.impl), n(x.novos));
+          pedirEquipe(`Use o agente financeiro. Quero discutir um cenário de preço do CIELLO CRM: mensalidade ${brl(n(x.preco))}, ${n(x.anual)}% dos clientes no plano anual (12 por 10), taxa de implantação de ${brl(n(x.impl))} e ${n(x.novos)} clientes novos no ano. Pela conta do OS, são ${r.clientes} clientes para pagar os custos${p.pro_labore ? ' e o pró-labore' : ''} (hoje, a ${brl(eq.preco_crm)}, são ${base.clientes}). Leia financeiro/plano.json, comercial/produtos.json, comercial/concorrentes.json e financeiro/regras.md. Me diga o que ganho e o que arrisco (conversão no teste grátis, cancelamento, posição frente aos concorrentes), e como testar sem queimar os clientes atuais. Não mude preço nem plano: a decisão é minha, em Financeiro → Metas e decisões.`, 'Financeiro · preço');
+          return Promise.resolve({ ok: true, saida: 'O Financeiro vai discutir o cenário no terminal.' }); } });
+      const pinta = () => { const f = $('form', el); const v = (k) => n(f.elements.namedItem(k).value); const r = conta(v('preco'), v('anual'), v('impl'), v('novos'));
+        const dif = r.clientes != null && base.clientes != null ? r.clientes - base.clientes : 0;
+        $('.sim-preco', el).innerHTML = `<div class="kpis">${[['Clientes para pagar a conta', r.clientes ?? '—', dif ? `${dif > 0 ? '+' : ''}${dif} contra hoje (${base.clientes})` : `igual a hoje`, dif > 0 ? 'ruim' : dif < 0 ? 'bom' : 'neutro'],
+          ['Cada cliente deixa', brl(r.liq), `por mês, ${p.regime ? 'depois de imposto e taxas' : 'sem imposto (escolha o regime em Regras do plano)'}${v('anual') ? ` (média com anual: ${brl(r.medio)})` : ''}`],
+          ['Implantação no ano', brl(r.impl_ano), v('impl') ? `${brl(v('impl'))} × ${v('novos')} clientes novos` : 'sem taxa'],
+          ['Plano anual', v('anual') ? brl(r.adianta) : '—', v('anual') ? 'entra adiantado por cliente anual' : 'ninguém no anual']].map(([a, b, c, k]) => `<div class="kpi"><small>${a}</small><strong>${b}</strong><em class="${k || 'neutro'}">${c}</em></div>`).join('')}</div>`; };
+      $('form', el).addEventListener('input', pinta); pinta();
+    },
     trazerClientes: () => rapido('plano_importar', {}, 'Plano atualizado'),
     discutir: () => pedirEquipe(`Discuta comigo o plano ${p.ano} da Ciello como o agente financeiro. Rode \`python central/plano.py\`, leia o resultado (financeiro/relatorios/plano-${p.ano}.md e financeiro/plano.json) e comece pelos pontos marcados como importantes. Para cada um: o que significa na prática, 2 caminhos possíveis com os números, e a sua recomendação. Depois proponha 3 regras simples para a empresa seguir (ex.: quando cobrar implantação, quanto separar por mês, quando contratar) e um plano de implantação em etapas para os próximos 90 dias. Use /founder-cfo e /founder-pricing se ajudar. Não mude o plano nem os preços sem a minha aprovação.`, 'Financeiro · plano'),
     planilha: () => pedirEquipe(`Use o agente financeiro: leia no Google Drive a aba "NEGÓCIOS CIELLO" da planilha "CONTROLE PESSOAL" (só os números da empresa; nada pessoal, CPF ou conta). Monte financeiro/plano.json no formato do central/plano.py (negocios: cliente, produto, tipo mensal|parcelas|unico, valor, parcelas, inicio AAAA-MM, fim, status fechado|negociando|talvez; custos: item, valor, frequencia mensal|anual|unico, mes, categoria). Me mostre a lista antes de gravar, junte com o que já está no plano sem duplicar, e aponte o que na planilha parece errado ou faltando.`, 'Financeiro · planilha'),
@@ -887,7 +909,7 @@ function planoCorpo(j, pl) {
       <p class="sub">Já tem tudo numa planilha do Google? <button class="bt mini" data-fn="planilha">Puxar da planilha</button> (usa o Claude para ler e te mostra antes de gravar).</p></div>`;
   }
   return `<div class="faixa-plano"><div><b>Plano ${esc(p.ano)}</b> · ${esc((pl.regimes[p.regime] || {}).nome || 'regime de imposto não informado')} ${p.pro_labore ? ` · você precisa de ${brl(p.pro_labore)}/mês` : ''}</div>
-    <div class="acoes-linha"><button class="bt mini" data-fn="planoConfig">Regras do plano</button><button class="bt mini" data-fn="planilha" title="Usa o Claude para ler a sua planilha do Google Drive">Puxar da planilha</button><button class="bt mini pri" data-fn="discutir">Discutir com o Financeiro</button></div></div>
+    <div class="acoes-linha"><button class="bt mini" data-fn="planoConfig">Regras do plano</button><button class="bt mini" data-fn="simular">Simular preço</button><button class="bt mini" data-fn="planilha" title="Usa o Claude para ler a sua planilha do Google Drive">Puxar da planilha</button><button class="bt mini pri" data-fn="discutir">Discutir com o Financeiro</button></div></div>
   <div class="kpis">${[['Receita provável no ano', brl(soma('receita_provavel')), `se tudo fechar: ${brl(soma('receita_se_tudo_fechar'))}`],
     ['Resultado do ano', brl(soma('resultado')), `impostos ${brl(soma('imposto'))} · custos ${brl(soma('custos'))}`, soma('resultado') >= 0 ? 'bom' : 'ruim'],
     ['Te paga em', p.pro_labore ? `${pagam} de 12 meses` : '—', p.pro_labore ? `meta ${brl(p.pro_labore)}/mês` : 'informe em Regras do plano', p.pro_labore ? (pagam === 12 ? 'bom' : 'ruim') : 'neutro'],
@@ -903,7 +925,7 @@ function planoCorpo(j, pl) {
   <h2>Custos (${p.custos.length})</h2><div class="acoes" style="margin-top:0"><button class="bt pri mini" data-fn="custo">+ Custo</button></div>
   <table class="tab"><tr><th>Custo</th><th>Valor</th><th>Quando</th><th>Categoria</th><th></th></tr>${p.custos.map((c, i) => `<tr><td><b>${esc(c.item)}</b></td><td>${brl(c.valor)}</td><td>${c.frequencia === 'mensal' ? 'todo mês' : c.frequencia === 'anual' ? `por ano (${esc((c.mes || '').slice(5))})` : `uma vez (${esc(c.mes || '')})`}</td><td>${esc(c.categoria || '')}</td>
     <td class="acoes-linha"><button class="bt mini" data-fn="custo" data-i="${i}">Editar</button><button class="bt mini" data-fn="remover" data-lista="custos" data-i="${i}">Tirar</button></td></tr>`).join('') || '<tr><td colspan="5">Nenhum custo cadastrado.</td></tr>'}</table>
-  <h2>Ideias de preço</h2><div class="grade2">${pl.precos.map((x) => `<div class="cartao"><b>${esc(x.titulo)}</b><p class="sub" style="margin:4px 0 0">${esc(x.detalhe)}</p></div>`).join('')}</div>
+  <h2>Ideias de preço</h2><p class="sub" style="margin-top:0"><button class="bt mini" data-fn="simular">Simular preço</button> mensalidade, plano anual e taxa de implantação: quantos clientes pagam a conta em cada cenário.</p><div class="grade2">${pl.precos.map((x) => `<div class="cartao"><b>${esc(x.titulo)}</b><p class="sub" style="margin:4px 0 0">${esc(x.detalhe)}</p></div>`).join('')}</div>
   <p class="sub" style="margin-top:12px">Para decidir: <b>Discutir com o Financeiro</b> abre o Claude com este plano e pede caminhos, números e uma recomendação. Nada muda sem você aprovar.</p>`;
 }
 

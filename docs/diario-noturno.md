@@ -288,3 +288,19 @@ Conferido no navegador com os posts reais de 27/10 e 29/10.
 - **Hoje não:** o item some até amanhã e a próxima pendência sobe para as 3 prioridades. No fim aparece "N item(ns) deixado(s) para amanhã · mostrar de novo". Fica guardado só neste PC.
 
 **Bug achado na simulação e corrigido:** "Abrir" levava à Visão geral em vez de "Cobrança e pós-venda", por causa do hífen no nome da aba.
+
+### Volta 16 · 23/10 · Simulador de preço
+
+**Simulação:** as "Ideias de preço" eram texto. Para responder "e se o CRM custar R$ 497?" ou "e se metade fechar no plano anual?", era preciso abrir o Claude.
+
+**Feito:** **Financeiro → Plano do ano → Simular preço** (também na seção Ideias de preço).
+- Você mexe em 4 números: mensalidade, % no plano anual (12 por 10), taxa de implantação e clientes novos no ano.
+- O OS mostra na hora:
+  - quantos clientes pagam a conta, comparado com hoje;
+  - quanto cada cliente deixa por mês;
+  - quanto a implantação traz no ano;
+  - quanto entra adiantado por cliente anual.
+- Os números são os do seu plano: custos fixos, pró-labore, imposto do regime e taxas.
+- **Discutir este cenário com o Financeiro:** o agente compara com os concorrentes e mostra o risco na conversão do teste grátis e no cancelamento. Ele não muda nada: a decisão você registra em Metas e decisões.
+
+Conferido no navegador: com o plano de exemplo, R$ 397 pede 8 clientes. A R$ 497, com metade no anual e R$ 300 de implantação, pede 7, e a implantação traz R$ 3.600 no ano.

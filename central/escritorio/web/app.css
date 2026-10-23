@@ -396,3 +396,4 @@ details.taxas .tab { margin-top: 6px; }
 .prioridade .txt { flex: 1; min-width: 0; }
 .acoes-item { display: flex; gap: 6px; flex: none; align-self: center; }
 .bt.fantasma { background: transparent; border-color: transparent; color: var(--cinza); } .bt.fantasma:hover { border-color: var(--linha); color: var(--tinta); }
+.sim-preco .kpis { margin-top: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
