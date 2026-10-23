@@ -44,6 +44,7 @@ WEB = AQUI / "web"
 RAIZ = AQUI.parent.parent
 sys.path.insert(0, str(AQUI.parent))
 import status  # noqa: E402
+import atendimento  # noqa: E402
 import briefing  # noqa: E402
 import conteudo  # noqa: E402
 import estudio_video  # noqa: E402
@@ -292,6 +293,15 @@ def app_video():
             "voz": estudio_voz.voz.preferencia()["motor"], "proximos": conteudo.proximos_horarios()}
 
 
+def app_atendimento():
+    """FAQ (com o que falta completar) e os clientes com WhatsApp, para a resposta sair com o link certo."""
+    clientes = [{"id": c["id"], "empresa": c["empresa"], "contato": c["contato"], "whatsapp": c["whatsapp"]}
+                for c in financeiro.ler(financeiro.CLIENTES, financeiro.C_CLIENTE) if c["status"] in ("ativo", "teste", "projeto") and c["whatsapp"]]
+    quentes = [{"id": f"lead{l['id']}", "empresa": l["empresa"], "contato": "", "whatsapp": l["telefone"]}
+               for l in ler_leads() if l.get("etapa") in ("respondeu", "demo", "proposta") and l.get("telefone")]
+    return {"faq": atendimento.ler(), "clientes": clientes + quentes}
+
+
 def ultimo_relatorio_instagram():
     arqs = sorted((RAIZ / "metricas").glob("relatorio-20??-??-??.md"))
     return {"arquivo": arqs[-1].relative_to(RAIZ).as_posix(), "texto": arqs[-1].read_text(encoding="utf-8")} if arqs else None
@@ -314,7 +324,7 @@ def app_tendencias():
     return {"relatorio": ultimo_md("20??-??-??*.md")}
 
 
-APPS = {"escritorio": app_escritorio, "voz": estudio_voz.estado, "video": app_video, "plano": plano.para_janela, "briefing": app_briefing, "financeiro": app_financeiro, "comercial": app_comercial,
+APPS = {"escritorio": app_escritorio, "voz": estudio_voz.estado, "video": app_video, "atendimento": app_atendimento, "plano": plano.para_janela, "briefing": app_briefing, "financeiro": app_financeiro, "comercial": app_comercial,
         "conteudo": app_conteudo, "concorrentes": app_concorrentes, "tendencias": app_tendencias,
         "anuncios": lambda: {"campanhas": campanhas(), "resumo": kpis()["anuncios"]}}
 
@@ -375,6 +385,10 @@ def operar(op, dados):
             return {"ok": True, "saida": "", "vozes": estudio_voz.voz.VoiceStudio(espera=30).vozes()}
         except (OSError, RuntimeError, ValueError) as e:
             return {"ok": False, "saida": f"Não consegui falar com o VoiceStudio: {e}"}
+    if op == "faq_buscar":
+        return {"ok": True, "saida": "", "achados": atendimento.buscar(str(dados.get("texto") or "")[:1000], 4)}
+    if op == "faq_salvar":
+        return atendimento.salvar(dados.get("pergunta"), dados.get("resposta"), dados.get("i"), str(dados.get("secao") or "Perguntas novas")[:60])
     if op == "video_roteiro":
         itens = dados.get("itens")
         itens = itens if isinstance(itens, list) else str(itens or "").split("\n")

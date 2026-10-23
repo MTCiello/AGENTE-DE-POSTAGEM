@@ -23,6 +23,7 @@ const SVG = {
   pino: '<path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/>',
   play: '<path d="M7 5v14l11-7z"/>',
   alvo: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
+  balao: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
   video: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/>',
   microfone: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/>',
   min: '<path d="M2 6h8"/>', max: '<rect x="2" y="2" width="8" height="8"/>', rest: '<rect x="2" y="4" width="6" height="6"/><path d="M4 4V2h6v6H8"/>', fechar: '<path d="M2 2l8 8M10 2l-8 8"/>',
@@ -32,6 +33,7 @@ const icone = (n, vb = 24) => `<svg viewBox="0 0 ${vb} ${vb}">${SVG[n] || SVG.ag
 // ------------------------------------------------------------------ apps
 const APPS = {
   objetivos: { titulo: 'Objetivos e esteiras', icone: 'alvo', cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', w: 900, h: 700, render: renderObjetivos, cada: 3000 },
+  atendimento: { titulo: 'Atendimento', icone: 'balao', cor: 'linear-gradient(135deg,#4CC6D1,#1E8C99)', w: 760, h: 680, render: renderAtendimento, estatico: true },
   video: { titulo: 'Estúdio de Vídeo', icone: 'video', cor: 'linear-gradient(135deg,#8E6BD8,#4B2F99)', w: 900, h: 720, render: renderVideo, estatico: true },
   voz: { titulo: 'Estúdio de Voz', icone: 'microfone', cor: 'linear-gradient(135deg,#E9826C,#B5442F)', w: 780, h: 700, render: renderVoz, estatico: true },
   briefing: { titulo: 'Bom dia', icone: 'sol', cor: 'linear-gradient(135deg,#F7A35C,#E0722F)', w: 640, h: 660, render: renderBriefing },
@@ -46,7 +48,7 @@ const APPS = {
   verificar: { titulo: 'Verificação', icone: 'verificar', cor: 'linear-gradient(135deg,#5BC0A0,#2D8C70)', acao: 'verificar' },
 };
 // menu Iniciar por objetivo: o que você quer fazer agora
-const GRUPOS = [['Criar', ['video', 'conteudo', 'voz', 'tendencias', 'concorrentes']], ['Vender', ['comercial', 'anuncios']],
+const GRUPOS = [['Criar', ['video', 'conteudo', 'voz', 'tendencias', 'concorrentes']], ['Vender', ['comercial', 'atendimento', 'anuncios']],
   ['Gerir', ['briefing', 'financeiro']], ['Equipe e sistema', ['equipe', 'atividade', 'verificar']]];
 
 const NOMES = { 'chefe-gabinete': 'Chefe de Gabinete', 'pesquisador-mercado': 'Pesquisador de Mercado', roteirista: 'Roteirista', 'produtor-video': 'Produtor de Vídeo',
@@ -1099,6 +1101,41 @@ async function renderVideo(j) {
     <div class="acoes topo"><button class="bt pri" data-fn="novo">+ Novo roteiro</button><button class="bt" data-abrir="voz">Estúdio de Voz</button><button class="bt" data-abrir="objetivos" title="Os agentes escrevem os roteiros">Pedir roteiros à equipe</button></div>
     <h2>Modelo</h2><div class="modelos">${Object.entries(m).map(([k, x]) => `<button class="modelo ${j.modelo === k ? 'on' : ''}" data-fn="modelo" data-m="${k}"><span class="amostra" style="background:${x.fundo}"><i style="color:${x.texto}">Título</i><i style="color:${x.ouro}">em destaque</i></span><b>${esc(x.nome)}</b><small>${esc(x.descricao)}</small></button>`).join('')}</div>
     <h2>Roteiros</h2><div class="quadro-posts">${d.posts.map(cartao).join('') || '<div class="vazio">Nenhum roteiro. Clique em <b>+ Novo roteiro</b>.</div>'}</div></div>`;
+}
+
+// ------------------------------------------------------------------ apps: atendimento (central/atendimento.py, comercial/faq.md)
+async function renderAtendimento(j) {
+  const d = await api('/api/app/atendimento');
+  j.achados = j.achados || null;
+  const faltam = d.faq.filter((x) => !x.completa);
+  const cliente = () => d.clientes.find((c) => c.id === ($('[name=cliente]', j.corpo) || {}).value);
+  const linkPara = (texto) => { const c = cliente(); return c ? zap(c.whatsapp) + `?text=${encodeURIComponent(texto)}` : ''; };
+  const editar = (it, titulo) => dialogo(j, { titulo, texto: it ? `Seção: ${esc(it.secao)}. A resposta fica no FAQ e o Sucesso do Cliente passa a usar.` : 'Pergunta nova para o FAQ: escreva como o cliente pergunta e a resposta como você responderia.',
+    campos: [{ nome: 'pergunta', rotulo: 'Pergunta', valor: it ? it.pergunta : ($('.objetivo-texto', j.corpo)?.value || ''), obrigatorio: true },
+      { nome: 'resposta', rotulo: 'Resposta', tipo: 'area', valor: it ? it.resposta.replace(/⟨[^⟩]*⟩\.?/g, '').trim() : '', obrigatorio: true }],
+    botao: 'Salvar no FAQ', enviar: async (x) => { const r = await operar('faq_salvar', { ...x, i: it ? it.i : '' }); if (r.ok) desenhar(j, true); return r; } });
+  j.fns = {
+    mandar: async () => {
+      const t = $('.objetivo-texto', j.corpo).value.trim(); if (!t) return;
+      const r = await operar('faq_buscar', { texto: t }); j.achados = r.achados || []; j.pergunta = t;
+      document.activeElement?.blur(); desenhar(j, true); // sem o blur, a atualização espera você sair da caixa de texto
+    },
+    copiar: ({ i }) => copiar($(`[data-resp="${i}"]`, j.corpo).value),
+    zap: ({ i }) => { const l = linkPara($(`[data-resp="${i}"]`, j.corpo).value); if (l) window.open(l, '_blank', 'noopener'); else aviso({ titulo: 'Escolha o cliente', texto: 'Selecione para quem é a resposta (ou copie e cole no WhatsApp).', cor: '#E0A81C' }); },
+    completar: ({ i }) => editar(d.faq[+i], 'Completar o FAQ'),
+    nova: () => editar(null, 'Pergunta nova'),
+    claude: () => pedirEquipe(`Use o sucesso-cliente: um cliente perguntou "${j.pergunta || $('.objetivo-texto', j.corpo).value}". Responda com base em comercial/faq.md, no tom do Mateus (curto, simpático, sem prometer o que não está no FAQ). Se a resposta não estiver no FAQ, escreva um rascunho e me pergunte antes de acrescentar. Não envie nada.`, 'Atendimento'),
+  };
+  const pergunta = j.pergunta || '';
+  j.corpo.innerHTML = `<div class="pagina"><h1>Atendimento</h1><p class="sub">Cole a pergunta do cliente: a resposta sai do FAQ da Ciello, pronta para revisar e mandar no WhatsApp.</p>${SEM_CLAUDE}
+  <div class="objetivo compacto"><textarea class="objetivo-texto" rows="2" placeholder="Ex.: funciona no celular? / quanto fica por mês? / esqueci de pagar o boleto">${esc(pergunta)}</textarea><button class="bt pri" data-fn="mandar">Achar resposta</button></div>
+  <div class="campos-voz" style="margin:8px 0 0"><label>Para quem é a resposta<select name="cliente"><option value="">escolha o cliente (para o link do WhatsApp)</option>${d.clientes.map((c) => `<option value="${esc(c.id)}">${esc(c.empresa)}${c.contato ? ` · ${esc(c.contato)}` : ''}</option>`).join('')}</select></label></div>
+  ${j.achados ? (j.achados.length ? `<h2>Respostas do FAQ</h2>${j.achados.map((a, i) => `<div class="cartao msg"><div class="cab"><b>${esc(a.pergunta)}</b> <small class="neutro">${esc(a.secao)}</small>${a.completa ? '' : ' <span class="chip esperando">resposta incompleta</span>'}</div>
+      <textarea class="texto-msg" data-resp="${i}" rows="3">${esc(a.resposta)}</textarea>
+      <div class="acoes-linha"><button class="bt wa" data-fn="zap" data-i="${i}">Abrir no WhatsApp</button><button class="bt" data-fn="copiar" data-i="${i}">Copiar</button>${a.completa ? '' : `<button class="bt pri" data-fn="completar" data-i="${a.i}">Completar no FAQ</button>`}</div></div>`).join('')}`
+    : '<div class="vazio">Nada no FAQ sobre isso.</div>') + `<div class="acoes"><button class="bt" data-fn="nova">Escrever a resposta e guardar no FAQ</button><button class="bt" data-fn="claude">Pedir ao Sucesso do Cliente (Claude)</button></div>` : ''}
+  ${faltam.length ? `<h2>FAQ incompleto (${faltam.length})</h2><p class="sub">São as perguntas que todo cliente faz. Responda uma vez e o atendimento passa a usar.</p><div class="lista">${faltam.map((x) => `<div class="linha-item"><div class="cresce"><b>${esc(x.pergunta)}</b><small>${esc(x.resposta || '(vazia)')}</small></div><button class="bt mini pri" data-fn="completar" data-i="${x.i}">Responder</button></div>`).join('')}</div>` : ''}
+  <details class="passados"><summary>FAQ inteiro (${d.faq.length})</summary><div class="lista">${d.faq.map((x) => `<div class="linha-item"><div class="cresce"><b>${esc(x.pergunta)}</b><small style="white-space:normal">${esc(x.resposta)}</small></div><button class="bt mini" data-fn="completar" data-i="${x.i}">Editar</button></div>`).join('')}</div></details></div>`;
 }
 
 // ------------------------------------------------------------------ apps: objetivos e esteiras

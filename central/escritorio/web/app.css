@@ -363,3 +363,5 @@ label.bt { cursor: pointer; }
 .modelo .amostra i { font-style: normal; }
 .post-video { display: flex; flex-direction: column; gap: 8px; }
 .previa { width: 200px; aspect-ratio: 9 / 16; border-radius: 10px; background: #000; }
+textarea.texto-msg { width: 100%; border: 1px solid transparent; resize: vertical; } textarea.texto-msg:focus { outline: 2px solid rgba(224, 168, 28, .5); }
+.objetivo.compacto .bt { white-space: nowrap; flex: none; }

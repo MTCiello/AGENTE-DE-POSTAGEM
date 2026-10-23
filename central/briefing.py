@@ -17,6 +17,7 @@ from pathlib import Path
 AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parent
 sys.path.insert(0, str(AQUI))
+import atendimento  # noqa: E402
 import conteudo  # noqa: E402
 import financeiro  # noqa: E402
 import plano  # noqa: E402
@@ -106,6 +107,9 @@ def coletar(ref):
     sem_zap = [c["empresa"] for c in ativos if not (c.get("whatsapp") or "").strip()]
     if sem_zap:
         add(35, "financeiro", f"Cliente(s) sem WhatsApp cadastrado, sem como cobrar ou mandar pós-venda: {', '.join(sem_zap[:3])}")
+    faltam = [x for x in atendimento.ler() if not x["completa"]]
+    if faltam:
+        add(33, "sucesso-cliente", f"{len(faltam)} resposta(s) do FAQ em branco (ex.: {faltam[0]['pergunta']}): Atendimento → FAQ incompleto")
     ops = financeiro.oportunidades()
     if ops:
         add(38, "closer", f"{len(ops)} cliente(s) prontos para o 2º produto (site ou CRM): Comercial → Hoje → Vender para quem já é cliente")

@@ -135,3 +135,18 @@ Cada passo tem **Fazer agora**, que abre a janela na aba certa já com o formul�
 - Gerar um vídeo abria a janela do Produtor de Vídeo por cima e repetia o aviso de "terminou".
 
 **Testes:** 5 testes novos (títulos, legendas, projeto HTML, tempos reais, roteiro escrito à mão). Também gerei 2 vídeos de verdade, pelo terminal e pela janela, nos dois modelos.
+
+### Volta 8 · 23/10 · Atendimento a clientes sem o Claude
+
+**Simulação:** fiz 6 perguntas típicas de cliente ("quanto fica o sistema por mês?", "funciona no iphone?", "esqueci de pagar o boleto"…). Sem o Claude não havia como responder pelo OS. E o FAQ que o Sucesso do Cliente usa tem **6 respostas em branco**, justamente as mais comuns: celular, fidelidade, WhatsApp Business, quantas pessoas, se perde as conversas, colunas da importação.
+
+**Feito:**
+- `central/atendimento.py` + **janela Atendimento** (menu Iniciar → Vender).
+  - Você cola a pergunta e o OS acha as respostas no FAQ, entendendo o jeito de o cliente falar ("fica" → custa, "boleto" → pagamento, "iphone" → celular, "cancelar" → fidelidade).
+  - A resposta vem editável, com **Abrir no WhatsApp** para o cliente escolhido e **Copiar**.
+  - Não achou: **Escrever a resposta e guardar no FAQ** ou **Pedir ao Sucesso do Cliente**.
+- **FAQ incompleto:** a lista das respostas em branco, com **Responder**. A resposta é gravada no FAQ e o agente passa a usar. O Bom dia também avisa.
+
+**Bug achado na simulação e corrigido:** apertar Enter buscava, mas a tela não mostrava o resultado (a atualização esperava o cursor sair da caixa de texto).
+
+**Testes:** 2 testes novos (busca com as palavras do cliente; completar e acrescentar no FAQ).
