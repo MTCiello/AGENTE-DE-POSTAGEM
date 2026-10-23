@@ -28,16 +28,17 @@ Roteiro para baixar o assistente no seu PC (Windows) e testar tudo, com foco no 
 
 **Primeira vez, com Git (recomendado, facilita as próximas atualizações):**
 ```powershell
-git clone -b ccr-75504115-gpanzf https://github.com/MTCiello/AGENTE-DE-POSTAGEM.git C:\Ciello\agente-de-postagem
+git clone https://github.com/MTCiello/AGENTE-DE-POSTAGEM.git C:\Ciello\agente-de-postagem
 ```
 
-**Já tinha baixado com Git:** dentro da pasta do assistente:
+**Já tinha baixado com Git:** dentro da pasta do assistente (desde 23/10 tudo está na `main`):
 ```powershell
+git checkout main
 git pull
 ```
 
 **Sem Git:** baixe o ZIP, extraia em `C:\Ciello\` e renomeie a pasta para `agente-de-postagem`:
-https://github.com/MTCiello/AGENTE-DE-POSTAGEM/archive/refs/heads/ccr-75504115-gpanzf.zip
+https://github.com/MTCiello/AGENTE-DE-POSTAGEM/archive/refs/heads/main.zip
 
 > Se for **substituir** uma pasta antiga pelo ZIP novo, copie antes as pastas que só existem no seu PC: `comercial\` (leads), `financeiro\`, `estado\` e `founder\`. Elas não estão no GitHub de propósito.
 

@@ -8,7 +8,7 @@
 
 Canais (estado/atualizacoes/config.json, ou a janela de Atualizações):
 - "estavel": as versões publicadas em Releases (tags vX.Y.Z), as mesmas do instalador CielloOS-Setup.
-- "teste": o último commit de uma branch (padrão: a branch em que o assistente está sendo desenvolvido).
+- "teste": o último commit de uma branch (padrão: main), antes de virar Release.
 
 Pasta clonada com Git: a atualização é um `git pull --ff-only` (não baixa ZIP).
 
@@ -31,7 +31,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 RAIZ = Path(__file__).resolve().parent.parent
-PADRAO = {"repo": "MTCiello/AGENTE-DE-POSTAGEM", "canal": "estavel", "branch_teste": "ccr-75504115-gpanzf",
+PADRAO = {"repo": "MTCiello/AGENTE-DE-POSTAGEM", "canal": "estavel", "branch_teste": "main",
           "verificar_ao_abrir": True, "intervalo_horas": 12}
 API = "https://api.github.com"
 
@@ -163,7 +163,7 @@ def consultar_git(raiz=RAIZ, tempo=60):
         raise OSError(busca.stderr.strip() or "git fetch falhou")
     atras = git(raiz, "rev-list", "--count", "HEAD..@{u}")
     if atras.returncode:
-        raise OSError("a branch local não acompanha nenhuma branch do GitHub")
+        raise OSError("a branch local não acompanha nenhuma branch do GitHub (rode: git checkout main)")
     n = int(atras.stdout.strip() or 0)
     log = git(raiz, "log", "--format=%h %s", "HEAD..@{u}").stdout.strip()
     return {"canal": "git", "versao": git(raiz, "rev-parse", "--short", "@{u}").stdout.strip(), "nova": n > 0,

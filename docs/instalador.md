@@ -28,7 +28,7 @@ No menu Iniciar, na pasta **Ciello OS**, também ficam: **Atualizações do Ciel
   se estiver sem internet). Se tiver, pergunta se quer atualizar.
 - **Na mão:** Ciello OS → menu Iniciar → **Atualizações → Procurar agora**, ou o atalho **Atualizações do Ciello OS** no
   menu Iniciar do Windows (é ali que se escolhe o canal e liga/desliga a procura automática).
-- **Canais:** *Estável* = as Releases publicadas (tags `vX.Y.Z`). *Teste* = o último commit da branch de desenvolvimento,
+- **Canais:** *Estável* = as Releases publicadas (tags `vX.Y.Z`). *Teste* = o último commit da `main`,
   para testar antes de publicar. Se a pasta foi clonada com Git, a atualização é um `git pull --ff-only`.
 - **Seus dados não são tocados:** `.venv`, `estado`, leads e abordagens, `financeiro`, `founder`, áudios, rascunhos do
   Estúdio e `node_modules` ficam fora da atualização. Arquivo do programa que você editou à mão é copiado antes para
