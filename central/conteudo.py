@@ -98,7 +98,8 @@ def alertas(ps=None, ref=None) -> list[str]:
     out = []
     for p in ps:
         if 0 <= p["dias"] <= 2 and not p["etapas"]["final"]:
-            out.append(f"Post de {p['data'][8:]}/{p['data'][5:7]} ({p['slug']}) sai em {p['dias']} dia(s) e ainda não tem o vídeo final")
+            quando = "sai hoje" if p["dias"] == 0 else "sai amanhã" if p["dias"] == 1 else f"sai em {p['dias']} dias"
+            out.append(f"Post de {p['data'][8:]}/{p['data'][5:7]} ({p['slug']}) {quando} e ainda não tem o vídeo final")
         elif 0 <= p["dias"] <= 2 and not p["etapas"]["agendado"]:
             out.append(f"Post de {p['data'][8:]}/{p['data'][5:7]} ({p['slug']}) está pronto mas não foi agendado")
     passados = [p for p in ps if p["dias"] < 0 and not re.search(r"publicad", p["status_historico"], re.I)]

@@ -766,7 +766,7 @@ async function renderFinanceiro(j) {
     <h2>Pós-venda (${d.posvenda.length})</h2>${d.posvenda.map((x, i) => msgCartao(x, i, 'posvenda', `${esc(x.empresa)} <span class="chip pronto">${esc(x.rotulo)}</span>`,
       `<button class="bt" data-fn="enviado" data-tipo="posvenda" data-id="${x.cliente_id}" data-etapa="${x.etapa}">Enviei</button>${x.etapa === '30' ? `<button class="bt" data-fn="nps" data-id="${x.cliente_id}">Registrar NPS</button>` : ''}`)).join('') || '<p class="sub">Nenhum pós-venda para hoje.</p>'}`;
   } else if (j.aba === 'lancamentos') {
-    corpo = `${d.a_classificar.length ? `<h2>A classificar (${d.a_classificar.length})</h2><div class="lista">${d.a_classificar.map((l) => `<div class="linha-item"><div class="cresce"><b>${esc(l.descricao)}</b><small>${ddmm(l.data)} · ${esc(l.origem)}</small></div><b class="${+l.valor < 0 ? 'ruim' : 'bom'}">${brl(+l.valor)}</b>
+    corpo = `${gastosFixos(j, d.gastos)}${d.a_classificar.length ? `<h2>A classificar (${d.a_classificar.length})</h2><div class="lista">${d.a_classificar.map((l) => `<div class="linha-item"><div class="cresce"><b>${esc(l.descricao)}</b><small>${ddmm(l.data)} · ${esc(l.origem)}</small></div><b class="${+l.valor < 0 ? 'ruim' : 'bom'}">${brl(+l.valor)}</b>
       <select data-mudar="categoria" data-id="${l.id}"><option value="">categoria…</option>${d.categorias.map((c) => `<option>${esc(c)}</option>`).join('')}</select></div>`).join('')}</div>
       <div class="acoes"><button class="bt" data-fn="reclassificar" title="Aplica de novo as regras de financeiro/categorias.json">Reclassificar pelas regras</button></div>` : ''}
     <h2>Últimos lançamentos</h2><table class="tab"><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Valor</th></tr>${d.lancamentos.map((l) => `<tr><td>${ddmm(l.data)}</td><td>${esc(l.descricao)}${l.fatura_id ? ` <small class="neutro">fatura #${esc(l.fatura_id)}</small>` : ''}</td><td>${esc(l.categoria)}</td><td class="${+l.valor < 0 ? 'ruim' : 'bom'}">${brl(+l.valor)}</td></tr>`).join('') || '<tr><td colspan="4">Nenhum lançamento: importe o extrato ou lance à mão.</td></tr>'}</table>`;
@@ -783,7 +783,27 @@ async function renderFinanceiro(j) {
     <div class="acoes"><button class="bt" data-acao="fin_resumo">Resumo completo</button><button class="bt" data-abrir="agente:financeiro">Agente Financeiro</button></div>`;
   }
   j.corpo.innerHTML = `<div class="pagina"><h1>Financeiro</h1><p class="sub">${num(s.clientes_ativos)} clientes ativos · despesa média ${brl(s.despesa_media)}/mês</p>${SEM_CLAUDE}${barra}
-  ${abas(j, [['geral', 'Visão geral'], ['clientes', 'Clientes', d.clientes.length], ['cobranca', 'Cobrança e pós-venda', fila], ['lancamentos', 'Lançamentos', d.a_classificar.length || ''], ['plano', 'Plano do ano'], ['rumo', 'Metas e decisões']])}${corpo}</div>`;
+  ${abas(j, [['geral', 'Visão geral'], ['clientes', 'Clientes', d.clientes.length], ['cobranca', 'Cobrança e pós-venda', fila], ['lancamentos', 'Lançamentos', d.a_classificar.length + d.gastos.alertas.filter((a) => a.nivel !== 'dica').length || ''], ['plano', 'Plano do ano'], ['rumo', 'Metas e decisões']])}${corpo}</div>`;
+}
+
+// ------------------------------------------------------------------ financeiro: gastos fixos (central/gastos.py)
+const TIPO_GASTO = { dobro: 'em dobro', subiu: 'subiu', parou: 'não veio', nova: 'nova', fora_do_plano: 'fora do plano' };
+function gastosFixos(j, g) {
+  if (!g || (!g.fixos.length && !g.alertas.length)) return '';
+  Object.assign(j.fns, {
+    paraPlano: ({ i, de }) => { const x = de === 'alerta' ? g.alertas[+i].item : g.fixos[+i];
+      dialogo(j, { titulo: 'Pôr no Plano do ano', texto: 'O custo entra no plano como mensal. Ajuste o nome e o valor se precisar.',
+        campos: [{ nome: 'item', rotulo: 'Custo', valor: x.rotulo || x.nome, obrigatorio: true }, { nome: 'valor', rotulo: 'Valor (R$)', tipo: 'numero', valor: String(x.valor).replace('.', ','), obrigatorio: true, meia: true },
+          { nome: 'categoria', rotulo: 'Categoria', tipo: 'escolha', opcoes: ['ferramentas', 'servidor', 'infraestrutura', 'hospedagem', 'anuncios', 'contabilidade', 'terceiros', 'impostos', 'outros'], valor: g.para_o_plano[x.categoria] || 'ferramentas', meia: true }],
+        enviar: (v) => operar('plano_item', { ...v, lista: 'custos', frequencia: 'mensal' }) }); },
+  });
+  const alertas = g.alertas.filter((a) => a.tipo !== 'fora_do_plano');
+  const fora = g.alertas.filter((a) => a.tipo === 'fora_do_plano').length;
+  return `<h2>Gastos fixos · ${brl(g.total_mensal)}/mês</h2><p class="sub" style="margin-top:0">O que o extrato mostra todo mês.${g.tem_plano ? ` No Plano do ano estão ${brl(g.plano_mensal)}/mês${fora ? `; ${fora} gasto(s) fixo(s) ainda fora dele` : ''}.` : ' Monte o Plano do ano para comparar.'}</p>
+  ${alertas.length ? `<div class="lista">${alertas.map((a) => `<div class="linha-item achado ${a.nivel}"><span class="chip ${NIVEL[a.nivel][0]}">${TIPO_GASTO[a.tipo]}</span><div class="cresce"><small style="white-space:normal;font-size:12.5px;color:var(--tinta)">${esc(a.texto)}</small></div>${a.tipo === 'nova' && g.tem_plano ? `<button class="bt mini" data-fn="paraPlano" data-de="alerta" data-i="${g.alertas.indexOf(a)}">Pôr no plano</button>` : ''}</div>`).join('')}</div>` : ''}
+  ${g.fixos.length ? `<table class="tab" style="margin-top:8px"><tr><th>Gasto</th><th>Valor</th><th>Mês anterior</th><th>Dia</th><th>Plano do ano</th></tr>${g.fixos.map((f, i) => `<tr><td><b>${esc(f.rotulo)}</b><br><small class="neutro">${esc(f.categoria)} · ${f.meses} meses no extrato</small></td>
+    <td>${brl(f.valor)}</td><td class="${f.valor > f.anterior * 1.05 ? 'ruim' : 'neutro'}">${brl(f.anterior)}</td><td>${f.dia}</td>
+    <td>${f.no_plano ? '<span class="chip pronto">no plano</span>' : g.tem_plano ? `<button class="bt mini" data-fn="paraPlano" data-i="${i}">Pôr no plano</button>` : '—'}</td></tr>`).join('')}</table>` : ''}`;
 }
 
 // ------------------------------------------------------------------ financeiro: plano do ano (central/plano.py)

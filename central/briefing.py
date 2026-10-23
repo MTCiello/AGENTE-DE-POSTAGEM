@@ -21,6 +21,7 @@ import atendimento  # noqa: E402
 import conteudo  # noqa: E402
 import decisoes  # noqa: E402
 import financeiro  # noqa: E402
+import gastos  # noqa: E402
 import metas  # noqa: E402
 import plano  # noqa: E402
 import sdr  # noqa: E402
@@ -104,7 +105,7 @@ def coletar(ref):
     # conteúdo: post perto de sair sem vídeo, pronto sem agendar, rascunho esquecido, semana com poucos posts
     for alerta in conteudo.alertas(conteudo.quadro(raiz=RAIZ, ref=ref), ref):
         dono = "postagem" if ("agendado" in alerta or "publicação" in alerta) else ("roteirista" if "meta é 3" in alerta else "produtor-video")
-        add(80 if "sai em" in alerta else 62 if "publicação" in alerta else 48, dono, alerta)
+        add((90 if "sai hoje" in alerta else 80) if " sai " in alerta else 62 if "publicação" in alerta else 48, dono, alerta)
 
     # o que costuma passar despercebido no financeiro
     clientes = financeiro.ler(financeiro.CLIENTES, financeiro.C_CLIENTE)
@@ -116,6 +117,9 @@ def coletar(ref):
     sem_zap = [c["empresa"] for c in ativos if not (c.get("whatsapp") or "").strip()]
     if sem_zap:
         add(35, "financeiro", f"Cliente(s) sem WhatsApp cadastrado, sem como cobrar ou mandar pós-venda: {', '.join(sem_zap[:3])}")
+    peso_gasto = {"dobro": 72, "parou": 64, "subiu": 46, "nova": 34}
+    for a in [a for a in gastos.analisar(ref)["alertas"] if a["tipo"] in peso_gasto][:3]:
+        add(peso_gasto[a["tipo"]], "financeiro", f"{a['texto']} (Financeiro → Lançamentos)")
     faltam = [x for x in atendimento.ler() if not x["completa"]]
     if faltam:
         add(33, "sucesso-cliente", f"{len(faltam)} resposta(s) do FAQ em branco (ex.: {faltam[0]['pergunta']}): Atendimento → FAQ incompleto")

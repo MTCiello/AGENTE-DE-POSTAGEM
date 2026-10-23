@@ -42,7 +42,7 @@ class TesteConteudo(unittest.TestCase):
         self.assertEqual((q["amanha"]["proximo"], q["amanha"]["dono"], q["amanha"]["dias"]), ("narracao", "produtor-video", 1))
         self.assertEqual(q["velho"]["status_historico"], "Rascunho no Metricool")
         al = " | ".join(conteudo.alertas())
-        self.assertIn("Post de 21/11 (amanha) sai em 1 dia(s)", al)
+        self.assertIn("Post de 21/11 (amanha) sai amanhã", al)
         self.assertIn("1 post(s) com data passada sem registro de publicação (18/11)", al)
         self.assertIn("Só 2 post(s) nos próximos 7 dias", al)
         self.assertEqual(conteudo.proximos_horarios(), ["2026-11-23", "2026-11-27", "2026-11-30"])  # 25/11 já tem post

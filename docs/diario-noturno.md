@@ -202,3 +202,32 @@ Cada passo tem **Fazer agora**, que abre a janela na aba certa já com o formul�
 **Bug achado na simulação e corrigido:** na segunda de manhã a semana já aparecia "atrás do ritmo".
 
 **Testes:** 11 testes novos: funil de trás para frente, cancelamentos, meta já coberta, sem tempo pelo teste grátis, taxas dos seus dados, ritmo da semana, validação, decisões e regras, chave do assunto e adiar/descartar.
+
+### Volta 12 · 23/10 · O que passa despercebido no extrato
+
+**Simulação:** importei 3 meses de extrato com casos que acontecem na vida real:
+- o Canva cobrado 2 vezes no mesmo mês;
+- o Claude que subiu de R$ 110 para R$ 121,44;
+- o servidor (todo dia 5) que não veio em outubro: cartão recusado, e o site do cliente pode cair;
+- uma ferramenta nova (Heygen) que ninguém pôs no plano.
+
+O Financeiro mostrava tudo como lançamentos soltos, sem nenhum aviso.
+
+**Feito:**
+- `central/gastos.py`, em **Financeiro → Lançamentos → Gastos fixos**.
+  - O OS junta as despesas pelo nome. Ele tira números, datas e prefixos do banco ("COMPRA CARTAO", "PIX ENVIADO", "Pagamento de boleto"). Vira fixo o que aparece em 2 meses ou mais; o que varia muito (combustível, mercado) fica de fora.
+  - Avisa:
+    - **em dobro** (mesmo valor duas vezes no mês);
+    - **subiu** (com o percentual);
+    - **não veio** (a conta de todo dia X que passou da data);
+    - **nova** (ferramenta que apareceu agora);
+    - **fora do plano** (gasto fixo que o Plano do ano não tem).
+  - **Pôr no plano:** um clique leva o gasto para o Plano do ano, como custo mensal.
+- **Bom dia:** cobrança em dobro, conta que não veio, aumento e assinatura nova entram nas prioridades e pendências.
+
+**Ruídos achados na simulação e corrigidos:**
+- Um PIX avulso "a classificar" aparecia como "assinatura nova".
+- A assinatura nova continuava aparecendo depois de ir para o plano.
+- O Bom dia dizia "sai em 0 dia(s)". Agora diz "sai hoje" (e sobe de prioridade) ou "sai amanhã".
+
+**Testes:** 4 testes novos (nome sem prefixo do banco; os 5 avisos num extrato de 3 meses; PIX avulso; mês sem extrato não acusa conta parada).
