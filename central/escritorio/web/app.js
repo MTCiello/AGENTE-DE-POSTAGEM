@@ -6,6 +6,7 @@ const TOKEN = window.CIELLO_TOKEN; delete window.CIELLO_TOKEN; // fica só aqui 
 
 // ------------------------------------------------------------------ ícones (traço branco, 24x24)
 const SVG = {
+  atualizar: '<path d="M20 11a8 8 0 0 0-14.6-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.6 4.5L20 16M20 20v-4h-4"/>',
   escritorio: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><circle cx="9" cy="9" r="1.6"/><circle cx="15" cy="9" r="1.6"/><path d="M6.5 13.5c.6-1.3 1.5-2 2.5-2s1.9.7 2.5 2M12.5 13.5c.6-1.3 1.5-2 2.5-2s1.9.7 2.5 2"/>',
   sol: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   financeiro: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-6"/><path d="M16 8h4v4"/>',
@@ -50,10 +51,11 @@ const APPS = {
   equipe: { titulo: 'Equipe', icone: 'equipe', cor: 'linear-gradient(135deg,#7385AC,#3A4C70)', w: 860, h: 620, render: renderEquipe, cada: 4000 },
   atividade: { titulo: 'Atividade', icone: 'atividade', cor: 'linear-gradient(135deg,#7E8AA1,#4B566B)', w: 520, h: 580, render: renderAtividade, cada: 3000 },
   verificar: { titulo: 'Verificação', icone: 'verificar', cor: 'linear-gradient(135deg,#5BC0A0,#2D8C70)', acao: 'verificar' },
+  atualizacoes: { titulo: 'Atualizações', icone: 'atualizar', cor: 'linear-gradient(135deg,#3A5582,#263A59)', w: 620, h: 520, render: renderAtualizacoes },
 };
 // menu Iniciar por objetivo: o que você quer fazer agora
 const GRUPOS = [['Criar', ['redes', 'video', 'conteudo', 'voz', 'tendencias', 'concorrentes']], ['Vender', ['comercial', 'atendimento', 'anuncios']],
-  ['Gerir', ['briefing', 'financeiro']], ['Equipe e sistema', ['conexoes', 'equipe', 'atividade', 'verificar']]];
+  ['Gerir', ['briefing', 'financeiro']], ['Equipe e sistema', ['conexoes', 'equipe', 'atividade', 'verificar', 'atualizacoes']]];
 
 const NOMES = { gerente: 'Gerente', 'pesquisador-mercado': 'Pesquisador de Mercado', roteirista: 'Roteirista', 'produtor-video': 'Produtor de Vídeo',
   'produtor-imagem': 'Produtor de Imagem', postagem: 'Postagem', analista: 'Analista', 'gestor-anuncios': 'Gestor de Anúncios', sdr: 'SDR', closer: 'Closer',
@@ -1723,6 +1725,25 @@ function renderTerminal(j) {
 async function renderAtividade(j) {
   j.corpo.innerHTML = `<div class="pagina"><h1>Atividade</h1><p class="sub">O que cada agente e cada ferramenta fez, do mais novo para o mais antigo.</p><div class="lista">${estadoCache.eventos.map((e) =>
     `<div class="linha-item" data-abrir="agente:${esc(e.agente)}" style="cursor:pointer">${sprite(e.agente, 20)}<div class="cresce"><b>${esc(nome(e.agente))}</b><small>${esc(e.tarefa || '')}</small></div><small>${esc(e.ts.slice(11, 16))}</small>${chipEstado(e.estado)}</div>`).join('') || '<div class="vazio">Sem atividade ainda.</div>'}</div></div>`;
+}
+
+// ------------------------------------------------------------------ atualizações (instalador/atualizacao.py)
+async function renderAtualizacoes(j) {
+  const d = await api('/api/app/atualizacoes');
+  const c = d.consulta || {};
+  const canal = { git: 'pasta do Git', estavel: 'estável', teste: 'teste' }[d.canal] || d.canal;
+  const quando = (t) => (t ? `${ddmm(t)} às ${t.slice(11, 16)}` : 'nunca');
+  const situacao = c.erro ? `<div class="faixa">${esc(c.erro)}</div>`
+    : c.nova ? `<div class="faixa"><b>Versão nova: ${esc(c.versao)}</b> · ${esc(c.titulo || '')} <button class="bt pri mini" data-acao="atualizacao_aplicar">Atualizar agora</button></div>
+      ${c.notas ? `<pre class="console" style="max-height:220px;overflow:auto;white-space:pre-wrap">${esc(c.notas)}</pre>` : ''}`
+    : `<p>${d.ultima_verificacao ? (c.versao ? 'Você está na versão mais nova.' : esc(c.titulo || '')) : 'Ainda não procurou atualizações.'}</p>`;
+  j.corpo.innerHTML = `<div class="pagina"><h1>Atualizações</h1>
+    <p class="sub">Ciello OS <b>${esc(d.versao)}</b> · canal ${esc(canal)} · última verificação: ${esc(quando(d.ultima_verificacao))}</p>
+    ${situacao}
+    <div class="acoes"><button class="bt ${c.nova ? '' : 'pri'}" data-acao="atualizacao_verificar">${icone('atualizar')} Procurar agora</button></div>
+    <p class="sub">${d.verificar_ao_abrir ? 'O ícone do Ciello OS procura sozinho ao abrir (a cada 12 horas).' : 'A procura automática está desligada.'}
+    Os seus dados (leads, financeiro, rascunhos, estado) nunca são tocados; arquivos do programa que você editou ficam guardados em estado\\atualizacoes.
+    Depois de atualizar, feche e abra o Ciello OS. Canal e procura automática: atalho <b>Atualizações do Ciello OS</b> no menu Iniciar do Windows.</p></div>`;
 }
 
 // ------------------------------------------------------------------ execução de uma ação (console ao vivo)

@@ -117,9 +117,18 @@ flowchart LR
 
 ## Instalação
 
-> **Instalador em construção.** Um instalador para Windows (com ícone, escolha de pasta, atalho na área de trabalho e gerenciador de atualizações) está sendo feito e vai substituir os passos abaixo. Esta seção será atualizada quando ele estiver pronto.
+**Windows 10 ou 11 (recomendado):**
 
-Enquanto isso, no Windows:
+1. Baixe o **`CielloOS-Setup-<versão>.exe`** em [Releases](https://github.com/MTCiello/AGENTE-DE-POSTAGEM/releases) e clique duas vezes.
+2. Escolha a pasta e o tipo de instalação (Padrão, ou Completa com o Estúdio de Voz).
+3. O instalador baixa sozinho o que falta: Python 3.12, Git, FFmpeg, Node.js, Claude Code, as bibliotecas, o gerador de vídeo e o buscador do SDR.
+4. Abra pelo ícone **Ciello OS** na área de trabalho. Ele procura atualizações no GitHub e pergunta antes de instalar; dá para procurar na mão em **Atualizações**.
+
+<p align="center"><img src="docs/img/icone-ciello-os.png" alt="Ícone do Ciello OS" width="96"></p>
+
+Detalhes, canais de atualização e como publicar uma versão nova em [`docs/instalador.md`](docs/instalador.md).
+
+**Pela pasta clonada (desenvolvimento):**
 
 1. Baixe o repositório (ZIP ou `git clone`).
 2. Clique duas vezes em **`instalar.cmd`**. Ele instala o que faltar pelo `winget` (Python 3.12, Git, Node.js, ffmpeg), cria o ambiente Python e pergunta se você quer a voz (uns 3 GB).
@@ -149,6 +158,7 @@ python central/escritorio/servidor.py            # abre em http://127.0.0.1:3200
 ```
 .
 ├── Ciello.cmd · instalar.cmd · testar.cmd · agendar.cmd   atalhos do Windows
+├── instalador/              instalador do Windows (CielloOS-Setup.exe), ícone e atualizações · VERSION
 ├── central/                 o programa em Python
 │   ├── escritorio/          Ciello OS: servidor, tela (web/) e núcleo do escritório (nucleo/)
 │   ├── provedores/          Metricool, Instagram, YouTube, TikTok
@@ -173,6 +183,7 @@ python central/escritorio/servidor.py            # abre em http://127.0.0.1:3200
 
 O índice completo está em [`docs/README.md`](docs/README.md). Os mais usados:
 
+- [`docs/instalador.md`](docs/instalador.md): instalador do Windows e atualizações
 - [`docs/teste-de-hoje.md`](docs/teste-de-hoje.md): roteiro de teste das novidades
 - [`docs/equipe.md`](docs/equipe.md): os agentes e os comandos
 - [`docs/rede-social.md`](docs/rede-social.md): piloto automático da rede social

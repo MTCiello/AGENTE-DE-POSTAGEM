@@ -44,6 +44,7 @@ AQUI = Path(__file__).resolve().parent
 WEB = AQUI / "web"
 RAIZ = AQUI.parent.parent
 sys.path.insert(0, str(AQUI.parent))
+sys.path.insert(0, str(RAIZ / "instalador"))
 import status  # noqa: E402
 import atendimento  # noqa: E402
 import briefing  # noqa: E402
@@ -57,6 +58,7 @@ import financeiro  # noqa: E402
 import gastos  # noqa: E402
 import metas  # noqa: E402
 import atexit  # noqa: E402
+import atualizacao  # noqa: E402
 
 import estudio_voz  # noqa: E402
 import operacao  # noqa: E402
@@ -100,6 +102,8 @@ ACOES = {
     "verificar": ("Verificação do assistente", "sistema", ["central/verificar.py", "--rapido"]),
     "piloto": ("Rodada do piloto automático", "postagem", ["central/piloto.py", "rodar"]),
     "sincronizar": ("Sincronizar as redes", "analista", ["central/social.py", "sincronizar"]),
+    "atualizacao_verificar": ("Procurar atualizações do Ciello OS", "sistema", ["instalador/atualizacao.py", "verificar"]),
+    "atualizacao_aplicar": ("Atualizar o Ciello OS", "sistema", ["instalador/atualizacao.py", "aplicar"]),
     "voz_instalar": ("Instalar a voz (Kokoro e Chatterbox, uns 3 GB)", "produtor-video", ["-m", "pip", "install", "-r", "central/requirements-voz.txt"]),
 }
 execucoes = {}
@@ -358,7 +362,7 @@ def app_tendencias():
 
 APPS = {"escritorio": app_escritorio, "conexoes": app_conexoes, "redes": app_redes, "rumo": app_rumo, "voz": estudio_voz.estado, "video": app_video, "atendimento": app_atendimento, "plano": plano.para_janela, "briefing": app_briefing, "financeiro": app_financeiro, "comercial": app_comercial,
         "conteudo": app_conteudo, "concorrentes": app_concorrentes, "tendencias": app_tendencias,
-        "anuncios": lambda: {"campanhas": campanhas(), "resumo": kpis()["anuncios"]}}
+        "anuncios": lambda: {"campanhas": campanhas(), "resumo": kpis()["anuncios"]}, "atualizacoes": atualizacao.resumo_status}
 
 
 # ---------------------------------------------------------------- execução das ações

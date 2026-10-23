@@ -6,6 +6,7 @@ Visão geral, capturas e instalação no [README principal](../README.md).
 
 | Documento | Para quê |
 |---|---|
+| [instalador.md](instalador.md) | Instalador do Windows (`CielloOS-Setup.exe`), atualizações automáticas e como publicar uma versão |
 | [teste-de-hoje.md](teste-de-hoje.md) | Roteiro de teste das novidades, passo a passo no Windows |
 | [equipe.md](equipe.md) | Os 13 agentes, o que cada um faz e os comandos `/bom-dia`, `/semana`, `/comercial`, `/segunda`, `/sexta` e `/conselho` |
 | [rede-social.md](rede-social.md) | Piloto automático da rede social: conexões, fila de publicação, comentários e limites do Metricool |
