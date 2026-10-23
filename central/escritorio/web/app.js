@@ -611,6 +611,13 @@ function abas(j, lista) {
 // ------------------------------------------------------------------ apps: bom dia
 // abre uma janela já na aba certa (atalhos do Bom dia)
 function abrirAba(chave, aba) { const w = abrir(chave); if (w) { w.aba = aba; desenhar(w, true); } }
+// abre a janela na aba e já abre o formulário (primeiros passos)
+async function abrirAcao(chave, aba, fn) {
+  const w = abrir(chave); if (!w) return;
+  if (aba) w.aba = aba;
+  await desenhar(w, true);
+  if (fn && w.fns && w.fns[fn]) w.fns[fn]({});
+}
 const ATALHOS = [['financeiro', 'cobranca', 'Cobrança e pós-venda'], ['comercial', 'hoje', 'Comercial de hoje'], ['conteudo', 'producao', 'Produção de conteúdo'],
   ['financeiro', 'plano', 'Plano do ano'], ['voz', '', 'Estúdio de Voz'], ['objetivos', '', 'Esteiras da equipe']];
 async function renderBriefing(j) {
@@ -618,7 +625,12 @@ async function renderBriefing(j) {
   j.fns = {
     mandar: () => { const t = $('.objetivo-texto', j.corpo); if (t.value.trim()) { pedirEquipe(t.value); t.value = ''; } else t.focus(); },
     atalho: ({ chave, aba }) => (aba ? abrirAba(chave, aba) : abrir(chave)),
+    passo: ({ i }) => { const [c, a, f] = d.passos[+i].abrir; abrirAcao(c, a, f); },
+    esconderPassos: () => { SALVO.semPassos = true; salvar(); desenhar(j, true); },
   };
+  const feitos = d.passos.filter((x) => x.feito).length;
+  const passos = feitos < d.passos.length && !SALVO.semPassos ? `<div class="cartao passos-inicio"><div class="cab-passos"><b>Primeiros passos · ${feitos} de ${d.passos.length}</b><i style="--p:${Math.round(100 * feitos / d.passos.length)}%"></i><button class="bt mini" data-fn="esconderPassos" title="Esconde este cartão">Esconder</button></div>
+    <div class="lista">${d.passos.map((x, i) => `<div class="linha-item ${x.feito ? 'feito' : ''}"><span class="marca">${x.feito ? '✓' : i + 1}</span><div class="cresce"><b>${esc(x.titulo)}</b><small>${esc(x.porque)}</small></div>${x.feito ? '' : `<button class="bt mini pri" data-fn="passo" data-i="${i}">Fazer agora</button>`}</div>`).join('')}</div></div>` : '';
   const texto = $('.objetivo-texto', j.corpo)?.value || '';
   const h = new Date().getHours(); const saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
   const data = new Date(`${d.data}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -626,7 +638,7 @@ async function renderBriefing(j) {
   const top = d.itens.slice(0, 3); const resto = d.itens.slice(3);
   j.corpo.innerHTML = `<div class="saudacao"><img src="/web/logo-marfim.svg" alt=""><div><h1>${saud}, Mateus</h1><p>${esc(data)}</p></div></div>
   <div class="pagina"><div class="objetivo compacto"><textarea class="objetivo-texto" rows="1" placeholder="O que você quer que a equipe faça hoje? (Enter manda)">${esc(texto)}</textarea><button class="bt pri" data-fn="mandar">${icone('play')} Mandar</button></div>
-  <div class="atalhos">${ATALHOS.map(([c, a, r]) => `<button class="atalho" data-fn="atalho" data-chave="${c}" data-aba="${a}">${tile(APPS[c])}<span>${esc(r)}</span></button>`).join('')}</div>
+  ${passos}<div class="atalhos">${ATALHOS.map(([c, a, r]) => `<button class="atalho" data-fn="atalho" data-chave="${c}" data-aba="${a}">${tile(APPS[c])}<span>${esc(r)}</span></button>`).join('')}</div>
   <h2>As 3 prioridades de hoje</h2><div class="lista">${top.map((x, i) => `<div class="prioridade"><span class="num">${i + 1}</span><div class="txt md">${md(x.texto).replace(/^<p>|<\/p>$/g, '')}<small>com ${dono(x)}</small></div></div>`).join('') || '<div class="vazio">Nada urgente. Bom dia para gravar conteúdo ou prospectar.</div>'}</div>
   <h2>Números</h2><div class="cartao md">${md(d.numeros.join('\n'))}</div>
   ${resto.length ? `<h2>Pendências</h2><div class="lista">${resto.map((x) => `<div class="linha-item"><div class="cresce md">${md(x.texto).replace(/^<p>|<\/p>$/g, '')}</div><small>${dono(x)}</small></div>`).join('')}</div>` : ''}

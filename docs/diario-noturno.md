@@ -84,3 +84,17 @@ _(atualizado no fim da noite)_
 - O plano vazio dizia "te paga em 12 de 12 meses". Agora mostra 3 passos para montar o plano.
 
 **Testes:** 2 testes novos do quadro de conteúdo; os 91 passam.
+
+### Volta 5 · 23/10 · Primeiros passos
+
+**Simulação:** abri o OS "zerado", como ele está hoje no seu PC. O financeiro não tem nenhum dos clientes que já pagam, então MRR, cobrança e pós-venda ficam vazios, e nada na tela dizia por onde começar.
+
+**Feito:** o cartão **Primeiros passos** no Bom dia (x de 6, com barra de progresso):
+1. clientes que já pagam;
+2. saldo do banco;
+3. plano do ano;
+4. a sua voz;
+5. números do Instagram;
+6. leads na fila.
+
+Cada passo tem **Fazer agora**, que abre a janela na aba certa já com o formulário aberto. O passo some da lista quando está feito, e **Esconder** tira o cartão.

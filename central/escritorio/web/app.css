@@ -350,3 +350,7 @@ label.bt { cursor: pointer; }
 .atalho:hover { border-color: var(--ouro); background: #FFFBEF; }
 .atalho .tile { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; flex: none; }
 .atalho .tile svg { width: 15px; height: 15px; fill: none; stroke: #fff; stroke-width: 1.9; }
+.passos-inicio { margin: 10px 0 4px; } .cab-passos { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.cab-passos i { flex: 1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--verde) var(--p), #EFEADC var(--p)); }
+.passos-inicio .marca { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: #EFEADC; font-weight: 700; font-size: 12px; flex: none; }
+.passos-inicio .feito { opacity: .6; } .passos-inicio .feito .marca { background: #E3F5EA; color: var(--verde); }

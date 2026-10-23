@@ -177,10 +177,34 @@ def app_escritorio():
     return {"no_ar": True, "url": f"/escritorio/?token={TOKEN}"}
 
 
+def primeiros_passos():
+    """O que falta para o Ciello OS refletir a empresa real. Cada passo diz onde resolver (janela, aba e formulário)."""
+    clientes = financeiro.ler(financeiro.CLIENTES, financeiro.C_CLIENTE)
+    cfg = financeiro.config()
+    retratos = sorted((RAIZ / "metricas").glob("20??-??-??.json"))
+    idade = (financeiro.hoje() - financeiro.data(retratos[-1].stem)).days if retratos else None
+    p = plano.ler()
+    passos = [
+        ("clientes", "Cadastre os clientes que já pagam", "CRM, hospedagem e sites em andamento: sem eles não há cobrança, pós-venda nem MRR.",
+         bool(clientes), ["financeiro", "clientes", "novoCliente"]),
+        ("caixa", "Informe o saldo do banco", "É o ponto de partida do caixa e da previsão de 30, 60 e 90 dias.",
+         bool(cfg.get("data_saldo")) or financeiro.LANCAMENTOS.exists(), ["financeiro", "geral", "caixa"]),
+        ("plano", "Monte o plano do ano", "Negócios, custos e quanto você precisa tirar: a auditoria aponta o que não fecha.",
+         bool(p["negocios"]), ["financeiro", "plano", ""]),
+        ("voz", "Grave a sua voz", "10 a 20 segundos lendo um texto: os vídeos podem sair com a sua voz.",
+         estudio_voz.voz.AMOSTRA.exists(), ["voz", "", ""]),
+        ("instagram", "Atualize os números do Instagram", "Retrato da semana: o Bom dia e o relatório usam.",
+         idade is not None and idade <= 7, ["conteudo", "instagram", "retrato"]),
+        ("leads", "Coloque leads na fila", "Busca no Google Maps, planilha ou quem chegou sozinho.",
+         sdr.LEADS.exists() and bool(sdr.ler_leads()), ["comercial", "buscar", ""]),
+    ]
+    return [{"id": i, "titulo": t, "porque": d, "feito": f, "abrir": a} for i, t, d, f, a in passos]
+
+
 def app_briefing():
     ref = financeiro.hoje()
     itens, fin, leads = briefing.coletar(ref)
-    return {"data": ref.isoformat(), "itens": itens, "numeros": briefing.numeros(fin, leads, ref)}
+    return {"data": ref.isoformat(), "itens": itens, "numeros": briefing.numeros(fin, leads, ref), "passos": primeiros_passos()}
 
 
 def app_financeiro():
