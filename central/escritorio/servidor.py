@@ -46,6 +46,7 @@ sys.path.insert(0, str(AQUI.parent))
 import status  # noqa: E402
 import atendimento  # noqa: E402
 import briefing  # noqa: E402
+import carteira  # noqa: E402
 import conteudo  # noqa: E402
 import decisoes  # noqa: E402
 import estudio_video  # noqa: E402
@@ -231,7 +232,7 @@ def app_financeiro():
             "faturas_abertas": sorted(abertas, key=lambda f: f["vencimento"]),
             "faturado_no_mes": any(f["competencia"] == mes for f in faturas), "mes": mes,
             "cobrancas": financeiro.cobrancas_devidas(), "posvenda": financeiro.posvendas_devidos(),
-            "gastos": gastos.analisar(ref, lancs), "lancamentos": ultimos[:40], "a_classificar": [l for l in ultimos if l["categoria"] == financeiro.SEM_CATEGORIA][:40],
+            "gastos": gastos.analisar(ref, lancs), "carteira": carteira.carteira(ref), "lancamentos": ultimos[:40], "a_classificar": [l for l in ultimos if l["categoria"] == financeiro.SEM_CATEGORIA][:40],
             "categorias": financeiro.categorias(), "produtos": financeiro.produtos(),
             "config": {k: cfg[k] for k in ("saldo_inicial", "data_saldo", "alerta_saldo", "link_avaliacao", "assinatura")}}
 

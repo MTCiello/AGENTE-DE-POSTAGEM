@@ -380,3 +380,7 @@ textarea.texto-msg { width: 100%; border: 1px solid transparent; resize: vertica
 .decisao.rever { border-left: 4px solid var(--ouro); }
 details.taxas { margin-top: 10px; } details.taxas summary { cursor: pointer; color: var(--azul); font-weight: 600; padding: 4px 0; }
 details.taxas .tab { margin-top: 6px; }
+
+/* saúde da carteira */
+.faixa-carteira { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; padding: 10px 14px; background: #fff; border: 1px solid var(--linha); border-radius: 10px; }
+.faixa-carteira b { margin-right: 4px; }

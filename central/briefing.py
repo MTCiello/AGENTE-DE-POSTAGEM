@@ -18,6 +18,7 @@ AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parent
 sys.path.insert(0, str(AQUI))
 import atendimento  # noqa: E402
+import carteira  # noqa: E402
 import conteudo  # noqa: E402
 import decisoes  # noqa: E402
 import financeiro  # noqa: E402
@@ -72,7 +73,7 @@ def coletar(ref):
         if alerta.startswith("caixa previsto"):
             add(85, "financeiro", f"Atenção ao caixa: {alerta}")
         elif "NPS" in alerta:
-            add(75, "sucesso-cliente", f"Ligar para {alerta.split(': ', 1)[-1]} (nota baixa, risco de cancelar)")
+            pass  # a saúde da carteira (abaixo) já cobre nota baixa, com o motivo e a mensagem
         elif "classificar" in alerta:
             add(20, "financeiro", f"{alerta}: Financeiro → Lançamentos")
     for t in fin.get("testes", []):
@@ -80,6 +81,14 @@ def coletar(ref):
             quando = f"acabou há {-t['dias']} dia(s)" if t["dias"] < 0 else ("acaba hoje" if t["dias"] == 0 else f"acaba em {t['dias']} dia(s)")
             add(92 if t["dias"] <= 1 else 78, "closer",
                 f"Teste grátis de {t['empresa']} {quando}: ligue e feche ({financeiro.reais(t['valor'])}/mês). Fechou? Financeiro → Clientes → Virou cliente")
+    cart = carteira.carteira(ref)
+    for s in [s for s in cart["clientes"] if s["nivel"] == "risco" and s["atraso"] <= 3][:3]:  # atraso já está na cobrança
+        add(76, "sucesso-cliente", f"{s['empresa']} em risco de cancelar ({'; '.join(s['motivos'][:2])}): {s['acao'].lower()}, mensagem pronta em Financeiro → Clientes")
+    conversar = [s for s in cart["clientes"] if s["nivel"] == "atencao" and s["sem_conversa"] > 45]
+    if conversar:
+        add(42, "sucesso-cliente", f"Puxar conversa com {len(conversar)} cliente(s) sem contato há mais de 45 dias ({', '.join(s['empresa'] for s in conversar[:3])}): Financeiro → Clientes")
+    if cart["promotores"]:
+        add(31, "sucesso-cliente", f"{len(cart['promotores'])} cliente(s) que deram 9 ou 10: pedir indicação (Financeiro → Clientes)")
     if fin["posvenda_devidos"]:
         add(55, "sucesso-cliente", f"{fin['posvenda_devidos']} mensagem(ns) de pós-venda: Financeiro → Cobrança e pós-venda (ou `python central/financeiro.py posvenda`)")
 

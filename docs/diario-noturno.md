@@ -231,3 +231,35 @@ O Financeiro mostrava tudo como lançamentos soltos, sem nenhum aviso.
 - O Bom dia dizia "sai em 0 dia(s)". Agora diz "sai hoje" (e sobe de prioridade) ou "sai amanhã".
 
 **Testes:** 4 testes novos (nome sem prefixo do banco; os 5 avisos num extrato de 3 meses; PIX avulso; mês sem extrato não acusa conta parada).
+
+### Volta 13 · 23/10 · Saúde da carteira
+
+**Simulação:** uma cliente com NPS 10 estava com a fatura 48 dias atrasada, outra deu nota 6 e ninguém ligou, e outra estava há meses sem conversa. Cada sinal ficava num canto (cobrança, NPS, pós-venda), e ninguém juntava "quem está para cancelar?".
+
+**Feito:**
+- `central/carteira.py`: cada cliente ativo ganha uma **nota de 0 a 100**, os motivos e a próxima ação.
+  - **O que tira pontos:**
+    - atraso agora;
+    - o costume de pagar atrasado (média das últimas 6 faturas);
+    - a nota de satisfação;
+    - os dias sem conversa;
+    - os primeiros 90 dias;
+    - o pós-venda pendente.
+  - **Faixas:** saudável (80+), atenção (55+) e risco.
+  - **Mensagem pronta para o WhatsApp:**
+    - "Vi a sua nota e queria entender…" para quem deu nota baixa;
+    - "como está o CRM aí com a equipe?" para quem está esquecido;
+    - **pedido de indicação** para quem deu 9 ou 10. Sem prometer recompensa: isso é decisão sua.
+  - Quem está atrasado vai direto para a **Cobrança**, que já tem as mensagens por etapa.
+- **Financeiro → Clientes:**
+  - faixa "Saúde da carteira" com a receita em risco por mês;
+  - os cartões de ação;
+  - a nota de cada cliente na tabela, com os motivos ao passar o mouse;
+  - botão **Conversei**, para registrar ligação, visita ou WhatsApp e zerar o "sem conversa".
+- **Bom dia:** cliente em risco (com motivo), clientes sem conversa há mais de 45 dias e promotores para pedir indicação. A nota baixa deixou de aparecer duplicada.
+
+**Achado na simulação e corrigido:** os clientes em risco por atraso não apareciam na lista de ação, porque não tinham mensagem própria. Agora aparecem com o botão **Cobrar**.
+
+**Para o Mateus decidir:** vale ter uma **recompensa por indicação** (ex.: um mês grátis para quem indicar e o indicado fechar)? Se sim, registre em Metas e decisões e as mensagens passam a citar.
+
+**Testes:** 2 testes novos (notas, motivos, ações e ordem; registrar conversa melhora a nota).

@@ -135,6 +135,7 @@ OPERACOES = {
         ("tipo", _escolha(["cobranca", "posvenda"]), True, None), ("id", ID, True, None),
         ("etapa", _escolha(["1", "3", "7", "14", "30", "90", "avaliacao"]), False, "--etapa")]),
     "fin_nps": (financeiro, "nps", [("id", ID, True, None), ("nota", NOTA, True, None)]),
+    "fin_conversa": (financeiro, "conversa", [("id", ID, True, None), ("texto", _texto, True, None)]),
     "fin_config": (financeiro, "config", [
         ("saldo", _numero, False, "--saldo"), ("data", _data, False, "--data"), ("alerta", _numero, False, "--alerta"),
         ("link_avaliacao", _texto, False, "--link-avaliacao"), ("assinatura", _texto, False, "--assinatura")]),

@@ -695,6 +695,8 @@ async function renderFinanceiro(j) {
     cancelar: ({ id }) => dialogo(j, { titulo: `Cancelar ${porId[id].empresa}`, texto: 'O cliente sai do MRR e não recebe mais fatura. Dá para reativar depois.',
       campos: [{ nome: 'motivo', rotulo: 'Motivo', tipo: 'area', exemplo: 'preço, não usou, fechou a empresa…' }, { nome: 'data', rotulo: 'Data', tipo: 'data', valor: hojeISO() }], botao: 'Cancelar assinatura', enviar: formOp('fin_cancelar', { id }) }),
     reativar: ({ id }) => rapido('fin_editar', { id, reativar: true }, 'Cliente reativado'),
+    conversa: ({ id }) => dialogo(j, { titulo: `Conversa com ${porId[id].empresa}`, texto: 'Ligação, visita ou WhatsApp: o que ficou combinado? A saúde da carteira conta os dias desde a última conversa.',
+      campos: [{ nome: 'texto', rotulo: 'Resumo', tipo: 'area', obrigatorio: true, exemplo: 'Ex.: equipe usando, pediu ajuda com as etiquetas' }], enviar: (x) => operar('fin_conversa', { ...x, id }) }),
     nps: ({ id }) => dialogo(j, { titulo: 'Registrar NPS', texto: 'De 0 a 10, quanto o cliente recomendaria o CRM. 9–10 recebe o pedido de avaliação no Google; até 6 é risco de cancelamento.',
       campos: [{ nome: 'id', rotulo: 'Cliente', tipo: 'escolha', opcoes: clienteOpcoes(ativos), valor: id }, { nome: 'nota', rotulo: 'Nota', tipo: 'escolha', opcoes: [...Array(11).keys()].reverse().map(String), valor: '10' }],
       enviar: formOp('fin_nps') }),
@@ -741,6 +743,21 @@ async function renderFinanceiro(j) {
     <div class="acoes-linha">${wa(x.link)}<button class="bt" data-fn="copiar" data-lista="${lista}" data-i="${i}">Copiar</button>${botoes}</div></div>`;
 
   const ROT_PLANO = { crm: 'CRM', hospedagem: 'Hospedagem', site: 'Site' };
+  // saúde da carteira (central/carteira.py): nota de 0 a 100, motivos e a mensagem para quem precisa de atenção
+  const cart = d.carteira || { clientes: [], contagem: {}, promotores: [] };
+  const saudePorId = Object.fromEntries(cart.clientes.map((s) => [s.id, s]));
+  const SAUDE = { saudavel: ['trabalhando', 'saudável'], atencao: ['esperando', 'atenção'], risco: ['erro', 'risco'] };
+  const chipSaude = (c) => { const s = saudePorId[c.id]; return s ? ` <span class="chip ${SAUDE[s.nivel][0]}" title="${esc(s.motivos.join(' · ') || 'tudo certo')}">${SAUDE[s.nivel][1]} ${s.nota}</span>` : ''; };
+  d.carteira_acoes = cart.clientes.filter((s) => s.mensagem);
+  const carteiraTopo = () => {
+    if (!cart.clientes.length) return '';
+    const k = cart.contagem;
+    return `<div class="faixa-carteira"><b>Saúde da carteira</b><span class="chip trabalhando">${k.saudavel} saudáveis</span><span class="chip esperando">${k.atencao} em atenção</span><span class="chip erro">${k.risco} em risco</span>
+      ${cart.mrr_em_risco ? `<small class="ruim">${brl(cart.mrr_em_risco)}/mês em risco</small>` : '<small class="neutro">nenhuma receita em risco</small>'}</div>
+    ${cart.clientes.filter((s) => s.atraso > 3).map((s) => `<div class="linha-item" style="margin-bottom:6px"><div class="cresce"><b>${esc(s.empresa)}</b>${chipSaude(s)} <small class="neutro">${esc(s.motivos.join('; '))}</small></div><button class="bt mini pri" data-fn="aba" data-aba="cobranca">Cobrar</button></div>`).join('')}
+    ${d.carteira_acoes.map((s, i) => msgCartao(s, i, 'carteira_acoes', `${esc(s.empresa)} ${chipSaude(s)} <small class="neutro">${esc(s.acao)} · ${esc(s.motivos.join('; ') || 'tudo certo')}</small>`,
+      `<button class="bt pri" data-fn="conversa" data-id="${s.id}">Conversei</button>`)).join('')}`;
+  };
   const situacaoCliente = (c) => {
     if (c.status === 'teste') { const t = s.testes.find((x) => x.id === c.id) || {}; return `<span class="chip ${t.dias <= 5 ? 'esperando' : 'trabalhando'}" title="teste grátis até ${ddmm(c.teste_ate)}">teste · ${t.dias < 0 ? 'acabou' : `${t.dias} dias`}</span>`; }
     if (c.status === 'ativo') return '<span class="chip pronto">ativo</span>';
@@ -753,12 +770,12 @@ async function renderFinanceiro(j) {
   } else if (j.aba === 'rumo' && pl) {
     corpo = rumoCorpo(j, pl);
   } else if (j.aba === 'clientes') {
-    corpo = `<table class="tab"><tr><th>Empresa</th><th>Contato</th><th>Mensalidade</th><th>Vence</th><th>Desde</th><th>NPS</th><th>Situação</th><th></th></tr>${d.clientes.map((c) => `<tr>
-      <td><b>${esc(c.empresa)}</b>${c.plano ? ` <small class="neutro">${esc(ROT_PLANO[c.plano] || c.plano)}</small>` : ''}${c.obs ? `<br><small class="neutro">${esc(c.obs)}</small>` : ''}</td><td>${esc(c.contato)}${c.whatsapp ? `<br><a href="${esc(zap(c.whatsapp))}" target="_blank" rel="noopener"><small>${esc(c.whatsapp)}</small></a>` : ''}</td>
+    corpo = `${carteiraTopo()}<table class="tab"><tr><th>Empresa</th><th>Contato</th><th>Mensalidade</th><th>Vence</th><th>Desde</th><th>NPS</th><th>Situação</th><th></th></tr>${d.clientes.map((c) => `<tr>
+      <td><b>${esc(c.empresa)}</b>${c.plano ? ` <small class="neutro">${esc(ROT_PLANO[c.plano] || c.plano)}</small>` : ''}${c.obs ? `<br><small class="neutro" title="${esc(c.obs)}">${esc(c.obs.split(' | ').pop())}</small>` : ''}</td><td>${esc(c.contato)}${c.whatsapp ? `<br><a href="${esc(zap(c.whatsapp))}" target="_blank" rel="noopener"><small>${esc(c.whatsapp)}</small></a>` : ''}</td>
       <td>${brl(+c.valor_mensal)}</td><td>dia ${esc(c.dia_vencimento)}</td><td>${ddmm(c.inicio)}</td><td>${esc(c.nps || '—')}</td>
-      <td>${situacaoCliente(c)}</td>
+      <td>${situacaoCliente(c)}${chipSaude(c)}</td>
       <td class="acoes-linha"><button class="bt mini" data-fn="editar" data-id="${c.id}">Editar</button>${c.status === 'teste' ? `<button class="bt mini pri" data-fn="converter" data-id="${c.id}">Virou cliente</button><button class="bt mini" data-fn="desistiu" data-id="${c.id}">Desistiu</button>`
-        : c.status === 'ativo' ? `<button class="bt mini" data-fn="nps" data-id="${c.id}">NPS</button><button class="bt mini" data-fn="cancelar" data-id="${c.id}">Cancelar</button>` : c.status === 'cancelado' ? `<button class="bt mini" data-fn="reativar" data-id="${c.id}">Reativar</button>` : ''}</td></tr>`).join('')}</table>`;
+        : c.status === 'ativo' ? `<button class="bt mini" data-fn="conversa" data-id="${c.id}" title="Registrar uma conversa (ligação, visita, WhatsApp)">Conversei</button><button class="bt mini" data-fn="nps" data-id="${c.id}">NPS</button><button class="bt mini" data-fn="cancelar" data-id="${c.id}">Cancelar</button>` : c.status === 'cancelado' ? `<button class="bt mini" data-fn="reativar" data-id="${c.id}">Reativar</button>` : ''}</td></tr>`).join('')}</table>`;
   } else if (j.aba === 'cobranca') {
     corpo = `<p class="sub">Mensagens prontas. Abra no WhatsApp, revise, envie e marque aqui. Nada é enviado sozinho.</p>
     <h2>Cobranças (${d.cobrancas.length})</h2>${d.cobrancas.map((x, i) => msgCartao(x, i, 'cobrancas', `${esc(x.empresa)} · ${brl(x.valor)} · ${x.dias} dias de atraso <span class="chip esperando">D+${x.etapa}</span>`,

@@ -46,7 +46,7 @@ REGRAS = RAIZ / "financeiro" / "categorias.json"  # regras versionadas no git, v
 LEADS = RAIZ / "comercial" / "leads.csv"
 PRODUTOS = RAIZ / "comercial" / "produtos.json"  # produtos e preços de lista (CRM, site, hospedagem)
 C_CLIENTE = ["id", "empresa", "contato", "whatsapp", "plano", "valor_mensal", "dia_vencimento", "inicio", "status",
-             "cancelado_em", "motivo", "lead_id", "nps", "posvenda", "obs", "teste_ate"]
+             "cancelado_em", "motivo", "lead_id", "nps", "posvenda", "obs", "teste_ate", "ultimo_contato"]
 C_FATURA = ["id", "cliente_id", "competencia", "vencimento", "valor", "pago_em", "lancamento", "cobrancas", "descricao"]
 C_LANC = ["id", "data", "descricao", "valor", "categoria", "fitid", "fatura_id", "origem"]
 COBRANCA = [3, 7, 14]                    # dias de atraso
@@ -604,6 +604,7 @@ def cmd_enviado(a):
         if not etapa:
             sys.exit("nenhuma etapa de pós-venda devida para esse cliente")
         c["posvenda"] = ",".join(x for x in (c["posvenda"], str(etapa)) if x)
+        c["ultimo_contato"] = hoje().isoformat()
         gravar(CLIENTES, C_CLIENTE, clientes)
     print(f"{a.tipo} {a.id}: etapa {etapa} registrada")
 
@@ -612,6 +613,7 @@ def cmd_nps(a):
     clientes = ler(CLIENTES, C_CLIENTE)
     c = achar(clientes, a.id, "cliente")
     c["nps"] = str(a.nota)
+    c["ultimo_contato"] = hoje().isoformat()
     gravar(CLIENTES, C_CLIENTE, clientes)
     if a.nota >= 9:
         print(f"{c['empresa']}: NPS {a.nota} (promotor) · o 'posvenda' já prepara o pedido de avaliação no Google")
@@ -619,6 +621,17 @@ def cmd_nps(a):
         print(f"{c['empresa']}: NPS {a.nota} (detrator) · risco de cancelamento: ligue esta semana e anote o motivo em --obs")
     else:
         print(f"{c['empresa']}: NPS {a.nota} (neutro)")
+
+
+def cmd_conversa(a):
+    """Registra uma conversa com o cliente (ligação, visita, WhatsApp): a saúde da carteira conta os dias desde a última."""
+    clientes = ler(CLIENTES, C_CLIENTE)
+    c = achar(clientes, a.id, "cliente")
+    texto = " ".join(a.texto.split())[:300]
+    c["obs"] = (c["obs"] + f" | {hoje():%d/%m}: {texto}").strip(" |")[-1500:]
+    c["ultimo_contato"] = hoje().isoformat()
+    gravar(CLIENTES, C_CLIENTE, clientes)
+    print(f"{c['empresa']}: conversa registrada ({hoje():%d/%m})")
 
 
 def msg_fim_teste(c, assinatura):
@@ -854,6 +867,7 @@ def parser():
     s = sub.add_parser("enviado"); s.add_argument("tipo", choices=["cobranca", "posvenda"]); s.add_argument("id")
     s.add_argument("--etapa", help="padrão: a etapa devida hoje"); s.set_defaults(f=cmd_enviado)
     s = sub.add_parser("nps"); s.add_argument("id"); s.add_argument("nota", type=int, choices=range(11)); s.set_defaults(f=cmd_nps)
+    s = sub.add_parser("conversa", help="registra uma conversa com o cliente"); s.add_argument("id"); s.add_argument("texto"); s.set_defaults(f=cmd_conversa)
     s = sub.add_parser("resumo"); s.add_argument("--mes"); s.add_argument("--meses", type=int, default=6); s.set_defaults(f=cmd_resumo)
     s = sub.add_parser("config"); s.add_argument("--saldo", type=float); s.add_argument("--data"); s.add_argument("--alerta", type=float)
     s.add_argument("--link-avaliacao"); s.add_argument("--assinatura"); s.set_defaults(f=cmd_config)
