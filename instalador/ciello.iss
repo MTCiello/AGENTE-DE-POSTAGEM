@@ -1,7 +1,7 @@
 ; Instalador do Ciello OS (Inno Setup 6). Gera CielloOS-Setup-<versão>.exe.
 ; Quem compila é o GitHub Actions (.github/workflows/instalador.yml). Para compilar no PC:
 ;   git archive --format=zip HEAD -o app.zip  e extraia em build\app  (só os arquivos do repositório)
-;   "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DVersao=1.0.0 /DFonte=..\build\app instalador\ciello.iss
+;   "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DVersao=1.0.1 /DFonte=..\build\app instalador\ciello.iss
 ; O instalador copia o programa para a pasta escolhida e roda instalador\preparar.ps1, que baixa as dependências.
 ; Se o .venv (de onde sai o pythonw.exe dos atalhos) não ficar de pé, ele mostra o motivo e oferece tentar de novo.
 
