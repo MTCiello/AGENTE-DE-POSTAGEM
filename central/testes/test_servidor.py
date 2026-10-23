@@ -168,7 +168,7 @@ class TesteEscritorio(unittest.TestCase):
             if m["type"] == "officeAccess":
                 self.assertFalse(m["readOnly"])
             if m["type"] == "layoutLoaded":
-                self.assertEqual((m["layout"]["cols"], m["layout"]["cielloLayout"]), (28, 3))  # o layout da Ciello entra na primeira vez
+                self.assertEqual((m["layout"]["cols"], m["layout"]["cielloLayout"]), (28, 4))  # o layout da Ciello entra na primeira vez
         self.assertEqual(tipos[:3], ["officeAccess", "providerCapabilities", "characterSpritesLoaded"])
         self.assertIn("furnitureAssetsLoaded", tipos)
         self.pasta.mkdir(parents=True, exist_ok=True)

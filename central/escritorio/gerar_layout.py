@@ -21,13 +21,17 @@ servidor; o balcão do café; os sofás; a mesa de reunião de Vendas; o set de 
 da porta até cada lugar, tapete marcando a zona de estar ou de reunião, plantas nos cantos e detalhes nas paredes
 de fora (janelas, quadros). As salas têm o tamanho do que acontece nelas.
 
+Móvel encostado na parede de cima: a parede limita a sala, mas o corpo do móvel cobre a face da parede, como na vida
+real. No pixel-agents isso é a "linha de fundo" do móvel (backgroundTiles) em cima da linha da parede, com a base no
+primeiro piso: a geladeira, a estante, a mesa e a planta ficam coladas na parede, não soltas no meio da sala.
+
   python central/escritorio/gerar_layout.py   ->  central/escritorio/layout-ciello.json
 O número VERSAO sobe a cada layout novo: quem ainda usa um layout anterior da Ciello recebe este (com cópia do antigo).
 """
 import json
 from pathlib import Path
 
-VERSAO = 3
+VERSAO = 4
 COLS, ROWS = 28, 21
 PAREDE, LISO, CIMENTO, TABUA, XADREZ, VAZIO = 0, 1, 4, 7, 9, 255
 COR = {  # cores dos pisos (colorize do pixel-agents: h, s, b, c)
@@ -54,7 +58,7 @@ SALAS = [
 ]
 # portas: (col, lin, sala cujo piso a porta usa)
 PORTAS = ([(9, r, "Gerente") for r in (4, 5)]                  # Gerente <-> Arquivos G
-          + [(c, 9, "Gerente") for c in (5, 6)]                # Gerente <-> Comercial
+          + [(c, 9, "Gerente") for c in (4, 5)]                # Gerente <-> Comercial
           + [(9, r, "Comercial") for r in (13, 14)]            # Comercial <-> Área de lazer
           + [(c, 10, "Área de lazer") for c in (15, 16)]       # Área de lazer <-> Copa
           + [(c, 16, "Varanda") for c in (13, 14)]             # Área de lazer <-> Varanda
@@ -65,7 +69,7 @@ TAPETES = [
     (2, 6, 3, 7, 0, {"h": 352, "s": 55, "b": -35, "c": 0, "colorize": True}, {"h": 42, "s": 70, "b": 15, "c": 0, "colorize": True}),   # Gerente
     (11, 14, 11, 14, 1, {"h": 265, "s": 40, "b": -30, "c": 0, "colorize": True}, {"h": 34, "s": 60, "b": 20, "c": 0, "colorize": True}),  # lazer
     (20, 24, 15, 19, 2, {"h": 215, "s": 45, "b": -30, "c": 0, "colorize": True}, {"h": 200, "s": 40, "b": 25, "c": 0, "colorize": True}),  # Vendas
-    (4, 7, 15, 18, 1, {"h": 20, "s": 45, "b": -35, "c": 0, "colorize": True}, {"h": 40, "s": 55, "b": 15, "c": 0, "colorize": True}),     # Comercial
+    (4, 7, 14, 17, 1, {"h": 20, "s": 45, "b": -35, "c": 0, "colorize": True}, {"h": 40, "s": 55, "b": 15, "c": 0, "colorize": True}),     # Comercial
     (25, 26, 2, 7, 0, {"h": 330, "s": 35, "b": -35, "c": 0, "colorize": True}, {"h": 330, "s": 30, "b": 25, "c": 0, "colorize": True}),   # set de gravação
 ]
 
@@ -133,8 +137,9 @@ def montar():
             for r in range(r0, r1 + 1):
                 tapetes[pos(c, r)] = {"variant": variante, "color": cor, "accentColor": destaque}
 
+    # Linha da parede de cima de cada sala: é nela que fica a linha de fundo dos móveis encostados.
     # Gerente: a mesa dele de frente para a sala (ele senta atrás dela), a logo da Ciello na parede atrás,
-    # duas poltronas de visita, estante, janela, luminária e plantas nos cantos
+    # duas poltronas de visita, estante, janela, luminária encostada e plantas nos cantos
     movel("DESK_FRONT", 3, 4)
     movel("CUSHIONED_CHAIR_FRONT", 4, 3)  # de frente para a sala: ele olha para quem entra
     movel("PC_SIDE", 3, 4)
@@ -145,34 +150,35 @@ def montar():
     movel("QUADRO_CIELLO", 3, 0)
     movel("CLOCK", 5, 0)
     movel("JANELA", 6, 0)
-    movel("LUMINARIA", 8, 2)
+    movel("LUMINARIA", 8, 1)
     movel("LARGE_PLANT", 1, 6)
     movel("PLANT_2", 8, 6)
     movel("BIN", 6, 4)
 
-    # Arquivos G: estantes de estoque e o servidor no fundo, arquivo de aço e pilhas de caixas na frente
+    # Arquivos G: estantes de estoque e o servidor colados na parede do fundo; na frente, arquivo de aço e caixas
     for c in (10, 12, 14):
-        movel("ESTANTE_ARQUIVO", c, 2)
-    movel("SERVIDOR", 16, 2)
-    movel("ARQUIVO_ACO", 12, 4)
+        movel("ESTANTE_ARQUIVO", c, 1)
+    movel("SERVIDOR", 16, 1)
+    movel("ARQUIVO_ACO", 12, 3)
     for c in (14, 15, 16):
-        movel("CAIXAS", c, 4)
+        movel("CAIXAS", c, 3)
 
-    # Copa: balcão com café e pia, geladeira, mesinha com café e bebedouro
-    movel("BALCAO_CAFE", 10, 7)
-    movel("GELADEIRA", 12, 7)
-    movel("SMALL_TABLE_FRONT", 13, 7)
-    movel("COFFEE", 13, 7)
-    movel("BEBEDOURO", 16, 7)
+    # Copa: balcão com café e pia, geladeira e bebedouro colados na parede; mesinha com café e cadeira no meio
+    movel("BALCAO_CAFE", 10, 6)
+    movel("GELADEIRA", 12, 6)
+    movel("BEBEDOURO", 16, 6)
+    movel("SMALL_TABLE_FRONT", 13, 8)
+    movel("COFFEE", 13, 8)
+    movel("WOODEN_CHAIR_SIDE", 12, 8)
 
-    # Área de lazer: sofás em volta da mesa de centro (tapete embaixo), luminária e fliperama
+    # Área de lazer: sofás em volta da mesa de centro (tapete embaixo), luminária no canto e fliperama
     movel("SOFA_FRONT", 12, 11)
     movel("SOFA_SIDE", 11, 12)
     movel("COFFEE_TABLE", 12, 12)
     movel("SOFA_SIDE:left", 14, 12)
     movel("SOFA_BACK", 12, 14)
     movel("COFFEE", 12, 13)
-    movel("LUMINARIA", 10, 11)
+    movel("LUMINARIA", 10, 10)
     movel("ARCADE", 16, 13)
 
     # Varanda: guarda-corpo, espreguiçadeiras nas pontas, vasos e um banco
@@ -184,34 +190,36 @@ def montar():
     movel("WOODEN_BENCH", 12, 18)
     movel("POT", 15, 18)
 
-    # Produtor Social: 6 mesas (pesquisa, roteiro, vídeo, imagem, postagem, análise) e o set de gravação
-    for r in (2, 5, 8):
+    # Produtor Social: 6 mesas (a primeira fila colada na parede) e o set de gravação no canto:
+    # ring light na parede, cadeira de quem grava e a câmera no tripé de frente para ela
+    for r in (1, 4, 7):
         for c in (18, 22):
             estacao(c, r)
     movel("JANELA", 19, 0)
     movel("WHITEBOARD", 22, 0)
     movel("SMALL_PAINTING", 24, 0)
-    movel("RING_LIGHT", 25, 2)
-    movel("TRIPE_CAMERA", 26, 4)
-    movel("CUSHIONED_CHAIR_FRONT", 25, 4)
+    movel("RING_LIGHT", 25, 1)
+    movel("CUSHIONED_CHAIR_FRONT", 25, 3)
+    movel("TRIPE_CAMERA", 25, 5)
     movel("HANGING_PLANT", 26, 0)
     movel("LARGE_PLANT", 25, 9)
     movel("BIN", 21, 11)
 
-    # Comercial: 3 mesas (financeiro, anúncios, agenda e e-mail), arquivo de aço e uma mesinha de atendimento
-    estacao(1, 11)
-    estacao(5, 11)
-    estacao(1, 15)
-    movel("ARQUIVO_ACO", 8, 10)
-    movel("SMALL_TABLE_FRONT", 5, 16)
-    movel("WOODEN_CHAIR_SIDE", 4, 16)
-    movel("WOODEN_CHAIR_SIDE:left", 7, 16)
+    # Comercial: 2 mesas coladas na parede de cima (a porta do Gerente fica entre elas), a 3ª embaixo,
+    # arquivo de aço e uma mesinha de atendimento sobre tapete
+    estacao(1, 9)
+    estacao(6, 9)
+    estacao(1, 13)
+    movel("SMALL_TABLE_FRONT", 5, 14)
+    movel("WOODEN_CHAIR_SIDE", 4, 14)
+    movel("WOODEN_CHAIR_SIDE:left", 7, 14)
+    movel("ARQUIVO_ACO", 8, 16)
     movel("PLANT_2", 1, 18)
     movel("PLANT_2", 8, 18)
 
-    # Vendas: a mesa de reunião do time (SDR, closer, sucesso do cliente) e o cavalete com a meta do mês
+    # Vendas: a mesa de reunião do time (SDR, closer, sucesso do cliente) e o cavalete com a meta, encostado
     mesa_reuniao(21, 15)
-    movel("CAVALETE_METAS", 19, 14)
+    movel("CAVALETE_METAS", 19, 13)
     movel("LARGE_PLANT", 25, 17)
     movel("PLANT_2", 18, 18)
 
