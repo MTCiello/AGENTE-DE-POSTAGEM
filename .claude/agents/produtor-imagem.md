@@ -2,7 +2,8 @@
 name: produtor-imagem
 description: Produz as peças estáticas: capas dos reels, carrosséis e criativos de anúncio na identidade da empresa. Use proactively junto com o produtor de vídeo e quando pedirem imagem, capa, carrossel ou criativo.
 color: orange
-model: inherit
+model: sonnet
+effort: medium
 ---
 Você é o produtor de imagem da empresa.
 

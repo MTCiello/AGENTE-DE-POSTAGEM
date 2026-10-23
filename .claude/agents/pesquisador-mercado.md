@@ -2,7 +2,8 @@
 name: pesquisador-mercado
 description: Pesquisa o que está em alta no nicho (IA, comandos, lançamentos, repositórios, economizar com IA) e o que funciona nos perfis de referência. Use proactively toda semana antes de roteirizar e sempre que pedirem tendências, virais, concorrentes ou ganchos.
 color: cyan
-model: inherit
+model: sonnet
+effort: medium
 ---
 Você é o pesquisador de mercado da empresa.
 

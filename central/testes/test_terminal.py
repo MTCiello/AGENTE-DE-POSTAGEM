@@ -90,6 +90,8 @@ class TesteTerminal(unittest.TestCase):
     def test_comando_do_claude(self):
         with mock.patch.object(terminal, "COMANDO_CLAUDE", None), mock.patch.object(terminal.shutil, "which", return_value=r"C:\x\claude.cmd"):
             self.assertEqual(terminal.comando_claude("oi", True), ["cmd.exe", "/c", r"C:\x\claude.cmd", "--dangerously-skip-permissions", "oi"])
+            self.assertEqual(terminal.comando_claude("oi", modelo="sonnet"), ["cmd.exe", "/c", r"C:\x\claude.cmd", "--model", "sonnet", "oi"])
+            self.assertNotIn("--model", terminal.comando_claude("oi", modelo="qualquer; rm -rf"))  # só os modelos conhecidos
         with mock.patch.object(terminal, "COMANDO_CLAUDE", None), mock.patch.object(terminal.shutil, "which", return_value=None):
             self.assertIn("Claude Code não encontrado", " ".join(terminal.comando_claude()))
 

@@ -1623,8 +1623,8 @@ function promptObjetivo(objetivo) {
   return `Meu objetivo: ${objetivo}
 
 Você é o Gerente da ${EMP()} (siga .claude/agents/gerente.md) e coordena a equipe (agentes em .claude/agents). Faça assim:
-1. Monte um plano curto: quem faz o quê e em que ordem (o que não depende de outra etapa roda em paralelo). Mostre o plano em poucas linhas e siga.
-2. Delegue cada etapa ao agente certo com a ferramenta Task: subagent_type com o nome do agente e a descrição começando pelo nome (ex.: "roteirista: 3 roteiros da semana"), para ele aparecer trabalhando no escritório.
+1. Classifique cada etapa (leve, média ou pesada) e escolha o modelo e o esforço pela tabela "Escolher modelo e esforço" do gerente.md: o mais barato que entrega com a qualidade de sempre (o que vai para cliente ou público ou mexe com dinheiro nunca fica no haiku). Monte um plano curto: etapa → agente (modelo · esforço) → entrega, e o que não depende de outra etapa roda em paralelo. Mostre o plano em poucas linhas e siga.
+2. Delegue cada etapa, até as leves, ao agente certo com a ferramenta Agent (antiga Task): subagent_type com o nome do agente, model e effort da tabela e a descrição começando pelo nome (ex.: "roteirista: 3 roteiros da semana"), para ele aparecer trabalhando no escritório. Sem especialista para a etapa (ex.: mudar a cor de um botão do sistema), use general-purpose.
 3. Use as ferramentas de central/ e as regras do AGENTE.md e de docs/equipe.md. A narração usa a voz escolhida no Estúdio de Voz (python central/voz.py sem --motor).
 4. Publicar ou agendar post segue o modo do piloto (python central/piloto.py estado: Automático publica, Aprovar espera o meu ok). Enviar mensagem ou e-mail, subir anúncio e gastar dinheiro: pare e peça minha aprovação.
 5. No fim: um resumo curto do que ficou pronto e onde está cada arquivo.`;
@@ -1633,7 +1633,7 @@ function pedirEquipe(objetivo, titulo = 'Objetivo') {
   objetivo = String(objetivo || '').trim(); if (!objetivo) return;
   fecharMenus();
   SALVO.objetivos = [objetivo, ...(SALVO.objetivos || []).filter((o) => o !== objetivo)].slice(0, 6); salvar();
-  abrirTerminal({ prompt: promptObjetivo(objetivo), titulo });
+  abrirTerminal({ prompt: promptObjetivo(objetivo), titulo, modelo: 'sonnet' }); // o Gerente coordena no sonnet; o trabalho pesado vai para o opus só quando precisa
 }
 const ESTEIRAS = [
   { id: 'semana', titulo: 'Semana de conteúdo', desc: 'Pesquisa as novidades, escreve os roteiros, narra, monta os vídeos, faz capa e legenda e agenda no Metricool.',
@@ -1839,8 +1839,8 @@ function painelIniciar(agente) {
 // ------------------------------------------------------------------ terminal do Claude Code dentro do OS (xterm.js)
 // abrirTerminal({ prompt, titulo }): abre uma janela com o Claude Code rodando na pasta do assistente; com prompt, ele
 // já começa por aquele pedido (ex.: "Use o subagente sdr para: ..."). Cada janela é um processo; fechar encerra.
-async function abrirTerminal({ prompt = '', titulo = '' } = {}) {
-  let r; try { r = await api('/api/terminal', { prompt, titulo }); } catch { return null; }
+async function abrirTerminal({ prompt = '', titulo = '', modelo = '' } = {}) {
+  let r; try { r = await api('/api/terminal', { prompt, titulo, modelo }); } catch { return null; }
   if (!r || !r.id) { aviso({ titulo: 'Terminal', texto: (r && r.erro) || 'Não deu para abrir o terminal.', cor: '#C8442F' }); return null; }
   SALVO.terminais = { ...(SALVO.terminais || {}), [r.id]: titulo };
   return abrir(`term:${r.id}`);

@@ -733,7 +733,8 @@ class Painel(BaseHTTPRequestHandler):
             return self._json(operar(pedido.get("op"), pedido.get("dados") or {}))
         if self.path == "/api/terminal":
             prompt = pedido.get("prompt") if isinstance(pedido.get("prompt"), str) and pedido["prompt"].strip() else None
-            t = terminais.abrir(prompt, str(pedido.get("titulo") or "")[:80], persistencia.preferencia("bypassPermissions"))
+            t = terminais.abrir(prompt, str(pedido.get("titulo") or "")[:80], persistencia.preferencia("bypassPermissions"),
+                                pedido.get("modelo"))
             return self._json({"id": t.id})
         if self.path == "/api/terminal/fechar":
             terminais.fechar(pedido.get("id"))
