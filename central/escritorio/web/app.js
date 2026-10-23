@@ -752,12 +752,13 @@ async function renderFinanceiro(j) {
   const barra = `<div class="acoes topo"><button class="bt pri" data-fn="novoCliente">+ Cliente</button><button class="bt" data-fn="venda">+ Venda de site</button><button class="bt" data-fn="pagamento">Registrar pagamento</button>
     <button class="bt" data-fn="lancar">Lançar receita/despesa</button><button class="bt" data-fn="extrato">Importar extrato</button>
     <button class="bt" data-fn="faturar" title="Cria as faturas de ${nomeMes(d.mes)} para os clientes ativos (não duplica)">Gerar faturas de ${nomeMes(d.mes)}</button><button class="bt" data-fn="caixa">Caixa</button></div>`;
-  if (!s.tem_dados) {
+  if (!s.tem_dados && !['plano', 'rumo'].includes(j.aba)) {  // plano e metas funcionam antes do 1º cliente
     j.corpo.innerHTML = `<div class="pagina"><h1>Financeiro</h1><p class="sub">Assinaturas, cobrança, caixa e crescimento.</p>${SEM_CLAUDE}${barra}
     <div class="passos"><h2>Para começar</h2><ol>
       <li><button class="bt pri" data-fn="novoCliente">Cadastrar uma assinatura</button> CRM (com ou sem teste grátis) ou hospedagem. Vendeu um site? <button class="bt" data-fn="venda">+ Venda de site</button></li>
       <li><button class="bt" data-fn="caixa">Informar o saldo do banco</button> é o ponto de partida do caixa.</li>
-      <li><button class="bt" data-fn="extrato">Importar o extrato</button> (OFX ou CSV do banco): classifica as despesas e dá baixa nas faturas.</li></ol></div></div>`;
+      <li><button class="bt" data-fn="extrato">Importar o extrato</button> (OFX ou CSV do banco): classifica as despesas e dá baixa nas faturas.</li></ol>
+      <p class="sub">Quer planejar antes? <button class="bt mini" data-fn="aba" data-aba="plano">Plano do ano</button> <button class="bt mini" data-fn="aba" data-aba="rumo">Metas e decisões</button></p></div></div>`;
     return;
   }
   const atual = d.serie[d.serie.length - 1];

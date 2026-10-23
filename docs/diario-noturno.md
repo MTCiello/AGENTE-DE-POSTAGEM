@@ -304,3 +304,15 @@ Conferido no navegador com os posts reais de 27/10 e 29/10.
 - **Discutir este cenário com o Financeiro:** o agente compara com os concorrentes e mostra o risco na conversão do teste grátis e no cancelamento. Ele não muda nada: a decisão você registra em Metas e decisões.
 
 Conferido no navegador: com o plano de exemplo, R$ 397 pede 8 clientes. A R$ 497, com metade no anual e R$ 300 de implantação, pede 7, e a implantação traz R$ 3.600 no ano.
+
+### Volta 17 · 23/10 · O OS vazio, como vai estar no seu PC
+
+**Simulação:** abri o OS sem nenhum dado, como ele está hoje no seu PC: sem clientes, extrato, leads ou plano.
+
+**Bug achado:** sem dados, o Financeiro mostrava só o "Para começar" e escondia as abas. O passo "Defina a meta de clientes" do Bom dia caía nessa tela, e não havia como chegar ao Plano do ano nem a Metas e decisões antes do 1º cliente.
+
+**Corrigido:**
+- Plano do ano e Metas e decisões abrem mesmo sem dados.
+- O "Para começar" ganhou os atalhos "Quer planejar antes? Plano do ano · Metas e decisões".
+
+Conferido no navegador: Bom dia vazio → "Defina a meta" → abre o formulário da meta. As ideias de preço já aparecem como decisões em aberto.
