@@ -8,6 +8,8 @@ import {
   CONVERSA_CHANCE,
   PAUSA_CHANCE,
   PAUSA_LUGARES,
+  SALAS_FECHADAS,
+  SALAS_PRIVATIVAS,
   CONVERSA_ESPERA_SEC,
   CONVERSA_MAX_SEC,
   CONVERSA_MIN_SEC,
@@ -151,10 +153,34 @@ export class OfficeState {
     this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles);
     // Pets are built last because they need walkableTiles populated for spawn.
     this.rebuildPetsFromLayout(this.layout);
-    setDestinoSocial((ch) => this.destinoConversa(ch) ?? this.destinoPausa(ch));
+    setDestinoSocial((ch) => this.destinoParado(ch));
   }
 
   // ── Ciello: a rotina dos agentes parados (conversar uns com os outros) ──────────
+
+  /** A sala fechada onde este agente mora (o Gerente), ou null: ele não sai dela. */
+  private salaFechada(ch: Character): string | null {
+    const areas = ch.directoryName ? this.areaMappings[ch.directoryName] : undefined;
+    return areas?.find((a) => SALAS_FECHADAS.includes(a)) ?? null;
+  }
+
+  /** Para onde vai quem está parado: quem mora numa sala fechada passeia só por ela; os outros conversam, fazem uma
+   *  pausa ou andam a esmo, sem entrar nas salas privativas. */
+  private destinoParado(ch: Character): { col: number; row: number } | null {
+    const fechada = this.salaFechada(ch);
+    if (fechada) {
+      ch.conversaCom = null;
+      const dentro = this.quadradosDaArea(fechada, true);
+      return dentro.length ? dentro[Math.floor(Math.random() * dentro.length)] : null;
+    }
+    const social = this.destinoConversa(ch) ?? this.destinoPausa(ch);
+    if (social || ch.isSubagent) return social;
+    const tiles = this.layout.areaTiles;
+    const fora = tiles?.length
+      ? this.walkableTiles.filter((w) => !SALAS_PRIVATIVAS.includes(tiles[w.row * this.layout.cols + w.col] ?? ''))
+      : this.walkableTiles;
+    return fora.length ? fora[Math.floor(Math.random() * fora.length)] : null;
+  }
 
   /** Às vezes, em vez de passear a esmo, o agente parado vai conversar com outro que também está parado. */
   private destinoConversa(ch: Character): { col: number; row: number } | null {
@@ -166,6 +192,7 @@ export class OfficeState {
         !o.isActive &&
         !o.isSubagent &&
         !o.matrixEffect &&
+        !this.salaFechada(o) &&
         !o.conversa &&
         o.state !== CharacterState.TYPE,
     );
@@ -185,13 +212,13 @@ export class OfficeState {
   }
 
   /** Quadrados livres de cada área de pausa (copa, lazer, varanda), pelo rótulo da área no layout. */
-  private quadradosDaArea(chave: string): Array<{ col: number; row: number }> {
+  private quadradosDaArea(chave: string, exato = false): Array<{ col: number; row: number }> {
     const tiles = this.layout.areaTiles;
     if (!tiles || tiles.length === 0) return [];
     const simples = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     return this.walkableTiles.filter((w) => {
       const rotulo = tiles[w.row * this.layout.cols + w.col];
-      return !!rotulo && simples(rotulo).includes(chave);
+      return !!rotulo && (exato ? rotulo === chave : simples(rotulo).includes(chave));
     });
   }
 

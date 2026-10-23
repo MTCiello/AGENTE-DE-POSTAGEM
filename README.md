@@ -67,9 +67,9 @@ As janelas de Financeiro, Comercial, Conteúdo, Anúncios e os dois Estúdios **
 
 ## O escritório dos agentes
 
-<p align="center"><img src="docs/img/escritorio.png" alt="Escritório em pixel art com as salas do Gerente, Comercial, Produtor Social e Vendas" width="80%"></p>
+<p align="center"><img src="docs/img/escritorio.png" alt="Escritório em pixel art: sala do Gerente com porta de carvalho, Arquivos, Comercial, Copa, Área de lazer, Produtor Social, Vendas e Varanda" width="80%"></p>
 
-O fundo do Ciello OS é um escritório com uma sala para cada time: **Gerente**, **Comercial**, **Produtor Social** e **Vendas**. Esse é o layout padrão; você pode montar o seu no editor e levá-lo de um PC para outro no .zip de dados. Cada sessão do Claude Code aberta na pasta do assistente vira um personagem: ele vai até a mesa quando começa uma tarefa, digita enquanto trabalha e avisa quando precisa de você. Agentes parados vão tomar café, sentar no sofá ou pegar um ar na varanda. Clicar num personagem abre a janela daquele agente.
+O fundo do Ciello OS é um escritório com uma sala para cada time (**Gerente**, **Comercial**, **Produtor Social** e **Vendas**), além de Arquivos, Copa, Área de lazer e Varanda. A sala do Gerente é fechada por uma porta de carvalho e ele não sai de lá, então você sempre sabe onde achá-lo. Esse é o layout padrão; você pode montar o seu no editor e levá-lo de um PC para outro no .zip de dados. Cada sessão do Claude Code aberta na pasta do assistente vira um personagem: ele vai até a mesa quando começa uma tarefa, digita enquanto trabalha e avisa quando precisa de você. Agentes parados vão tomar café, sentar no sofá ou pegar um ar na varanda. Clicar num personagem abre a janela daquele agente.
 
 O escritório nasceu como fork do [pixel-agents](https://github.com/pablodelucca/pixel-agents) (MIT) e hoje é servido por um núcleo próprio em Python, sem Node. Detalhes em [`escritorio/README.md`](escritorio/README.md).
 

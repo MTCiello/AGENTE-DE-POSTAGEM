@@ -170,7 +170,7 @@ class TesteEscritorio(unittest.TestCase):
             if m["type"] == "officeAccess":
                 self.assertFalse(m["readOnly"])
             if m["type"] == "layoutLoaded":
-                self.assertEqual(m["layout"]["cols"], 19)  # o layout padrão entra na primeira vez
+                self.assertEqual(m["layout"]["cols"], 27)  # o layout padrão entra na primeira vez
         self.assertEqual(tipos[:3], ["officeAccess", "providerCapabilities", "characterSpritesLoaded"])
         self.assertIn("furnitureAssetsLoaded", tipos)
         self.pasta.mkdir(parents=True, exist_ok=True)

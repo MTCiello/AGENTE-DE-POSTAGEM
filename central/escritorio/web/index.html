@@ -16,32 +16,48 @@
   <div id="avisos" class="avisos" aria-live="polite"></div>
 </main>
 
+<header class="barra-topo" aria-label="Barra do sistema">
+  <img src="/web/logo-marfim.svg" alt="" class="logo-topo">
+  <b id="app-ativo">Ciello OS</b>
+  <span class="espaco"></span>
+  <button id="trabalhando" class="trabalhando" title="Agentes trabalhando agora"><i></i><span>equipe livre</span></button>
+  <button id="sino" class="sino" title="Notificações" aria-label="Notificações">
+    <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><em hidden></em>
+  </button>
+  <div id="relogio" class="relogio"></div>
+</header>
+
 <div id="menu" class="menu" hidden>
-  <div class="menu-busca"><input id="busca" type="search" placeholder="O que você quer fazer? Escreva um objetivo ou procure um app" autocomplete="off"></div>
+  <div class="menu-busca">
+    <label class="campo-busca"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <input id="busca" type="search" placeholder="Abrir um app ou pedir algo à equipe" autocomplete="off" aria-label="Abrir um app ou pedir algo à equipe"></label>
+    <p>Escreva um objetivo, como "3 vídeos sobre IA para a semana", e o Gerente divide o trabalho.</p>
+  </div>
   <div class="menu-corpo">
-    <section><div id="menu-apps" class="menu-apps"></div></section>
-    <section><h3>Equipe</h3><div id="menu-equipe" class="menu-equipe"></div></section>
+    <div id="menu-apps" class="menu-apps"></div>
+    <aside class="menu-lado"><h3 id="titulo-equipe">Equipe</h3><div id="menu-equipe" class="menu-equipe"></div></aside>
   </div>
   <div class="menu-rodape">
     <div class="usuario"><span class="avatar-m">C</span><div><b>Você</b><small>Ciello OS</small></div></div>
-    <label class="chave"><input id="auto" type="checkbox" checked> Abrir a janela do agente quando ele começar</label>
-    <div class="menu-botoes"><button class="bt" id="ver-escritorio" title="Modo foco: esconde o escritório e deixa só a logo">Esconder escritório</button><button class="bt" id="minimizar-tudo" title="Minimiza as janelas (de novo: volta com elas)">Minimizar janelas</button><button class="bt" id="centralizar">Centralizar escritório</button><button class="bt" id="organizar">Organizar janelas</button><button class="bt" id="tela-cheia">Tela cheia</button></div>
+    <label class="chave" title="Quando um agente começa a trabalhar, a janela dele abre sozinha"><input id="auto" type="checkbox" checked> Abrir o agente quando ele começar</label>
+    <div class="menu-botoes">
+      <button class="bt-icone" id="ver-escritorio" title="Esconder o escritório (modo foco)" aria-label="Esconder o escritório"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <button class="bt-icone" id="minimizar-tudo" title="Minimizar janelas (de novo: volta com elas)" aria-label="Minimizar janelas"><svg viewBox="0 0 24 24"><path d="M4 18h16M8 7h8v6H8z"/></svg></button>
+      <button class="bt-icone" id="organizar" title="Organizar janelas" aria-label="Organizar janelas"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></button>
+      <button class="bt-icone" id="centralizar" title="Centralizar o escritório" aria-label="Centralizar o escritório"><svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <button class="bt-icone" id="tela-cheia" title="Tela cheia" aria-label="Tela cheia"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    </div>
   </div>
 </div>
 
 <div id="central" class="central" hidden><h3>Notificações</h3><div id="central-lista"></div></div>
 
-<footer class="barra-tarefas">
-  <button id="iniciar" class="iniciar" title="Iniciar"><img src="/web/logo-marfim.svg" alt="Iniciar"></button>
-  <div id="fixados" class="fixados"></div>
+<footer class="dock" aria-label="Dock">
+  <button id="iniciar" class="iniciar" title="Iniciar (tecla Windows)" aria-label="Iniciar"><img src="/web/logo-marfim.svg" alt=""></button>
+  <i class="divisor"></i>
   <div id="abertas" class="abertas"></div>
-  <div class="bandeja">
-    <button id="trabalhando" class="trabalhando" title="Agentes trabalhando agora"><i></i><span>0</span></button>
-    <button id="sino" class="sino" title="Notificações">
-      <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><em hidden></em>
-    </button>
-    <div id="relogio" class="relogio"><b></b><small></small></div>
-  </div>
+  <i class="divisor"></i>
+  <div id="fixados" class="fixados"></div>
 </footer>
 <script>window.CIELLO_TOKEN = "__CIELLO_TOKEN__";</script>
 <script src="/web/vendor/xterm/xterm.js"></script>
