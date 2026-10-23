@@ -24,6 +24,7 @@ Os botões das janelas só rodam a lista fixa de ACOES abaixo, e só a partir de
 Os formulários (cliente, pagamento, extrato, lead, funil, Instagram, anúncios) operam sem o Claude: operacao.py.
 """
 import argparse
+import html
 import json
 import os
 import re
@@ -46,6 +47,8 @@ sys.path.insert(0, str(AQUI.parent))
 import status  # noqa: E402
 import atendimento  # noqa: E402
 import briefing  # noqa: E402
+import calendario  # noqa: E402
+import conexoes  # noqa: E402
 import carteira  # noqa: E402
 import conteudo  # noqa: E402
 import decisoes  # noqa: E402
@@ -57,8 +60,10 @@ import atexit  # noqa: E402
 
 import estudio_voz  # noqa: E402
 import operacao  # noqa: E402
+import piloto  # noqa: E402
 import plano  # noqa: E402
 import sdr  # noqa: E402
+import social  # noqa: E402
 import terminal  # noqa: E402
 from nucleo import persistencia  # noqa: E402
 from nucleo import websocket  # noqa: E402
@@ -93,10 +98,13 @@ ACOES = {
     "ganchos": ("Ranking de ganchos", "pesquisador-mercado", ["central/ganchos.py", "ranking"]),
     "relatorio": ("Relatório semanal", "analista", ["central/relatorio.py"]),
     "verificar": ("Verificação do assistente", "sistema", ["central/verificar.py", "--rapido"]),
+    "piloto": ("Rodada do piloto automático", "postagem", ["central/piloto.py", "rodar"]),
+    "sincronizar": ("Sincronizar as redes", "analista", ["central/social.py", "sincronizar"]),
     "voz_instalar": ("Instalar a voz (Kokoro e Chatterbox, uns 3 GB)", "produtor-video", ["-m", "pip", "install", "-r", "central/requirements-voz.txt"]),
 }
 execucoes = {}
 trava = threading.Lock()
+PORTA_ATUAL = [3200]  # o login do Google/TikTok volta para esta porta
 
 
 # ---------------------------------------------------------------- leitura dos dados
@@ -325,6 +333,20 @@ def app_rumo():
     return {"meta": metas.calcular(), "taxas_padrao": {k: v[1] for k, v in metas.TAXAS.items()}, **decisoes.para_janela()}
 
 
+def app_conexoes():
+    return conexoes.para_janela(social.historico_por_provedor())
+
+
+def app_redes():
+    """Rede social: piloto (fila e diário), calendário do mês com a previsão, comentários e resultados."""
+    hoje = financeiro.hoje()
+    prox = (hoje.replace(day=1) + __import__("datetime").timedelta(days=32)).replace(day=1)
+    return {"piloto": piloto.para_janela(), "calendario": calendario.mes(hoje.year, hoje.month, hoje),
+            "calendario_proximo": calendario.mes(prox.year, prox.month, hoje), "comentarios": social.caixa(),
+            "aguardando": social.caixa(estado="responder_no_app"), "resultados": social.resultados(),
+            "conexoes": {pid: e for pid, e in conexoes.estados().items()}, "redes": conexoes.redes(), "nomes_redes": conexoes.REDES}
+
+
 def app_concorrentes():
     cfg = ler_json(RAIZ / "comercial" / "concorrentes.json", {"concorrentes": []})
     return {"relatorio": ultimo_md("concorrentes-*.md"), "concorrentes": [c["nome"] for c in cfg["concorrentes"]]}
@@ -334,7 +356,7 @@ def app_tendencias():
     return {"relatorio": ultimo_md("20??-??-??*.md")}
 
 
-APPS = {"escritorio": app_escritorio, "rumo": app_rumo, "voz": estudio_voz.estado, "video": app_video, "atendimento": app_atendimento, "plano": plano.para_janela, "briefing": app_briefing, "financeiro": app_financeiro, "comercial": app_comercial,
+APPS = {"escritorio": app_escritorio, "conexoes": app_conexoes, "redes": app_redes, "rumo": app_rumo, "voz": estudio_voz.estado, "video": app_video, "atendimento": app_atendimento, "plano": plano.para_janela, "briefing": app_briefing, "financeiro": app_financeiro, "comercial": app_comercial,
         "conteudo": app_conteudo, "concorrentes": app_concorrentes, "tendencias": app_tendencias,
         "anuncios": lambda: {"campanhas": campanhas(), "resumo": kpis()["anuncios"]}}
 
@@ -425,6 +447,30 @@ def operar(op, dados):
         if op == "cont_legenda_salvar":
             return conteudo.salvar_legenda(post, dados.get("texto", ""))
         return conteudo.marcar_agendado(post, str(dados.get("quando") or ""), "Publicado" if dados.get("publicado") else "Agendado")
+    if op == "conexao_salvar":
+        return conexoes.salvar_credenciais(str(dados.get("provedor")), dados)
+    if op == "conexao_checar":
+        return conexoes.checar(str(dados.get("provedor")))
+    if op == "conexao_desconectar":
+        return conexoes.desconectar(str(dados.get("provedor")))
+    if op == "conexao_rede":
+        return conexoes.configurar_rede(str(dados.get("rede")), dados.get("ativa"), dados.get("via"))
+    if op == "oauth_inicio":
+        return conexoes.oauth_inicio(str(dados.get("provedor")), f"http://127.0.0.1:{PORTA_ATUAL[0]}")
+    if op == "piloto_config":
+        return piloto.configurar(dados)
+    if op == "calendario_config":
+        return calendario.configurar(dados)
+    if op in ("envio_segurar", "envio_aprovar", "envio_tentar"):
+        f = {"envio_segurar": piloto.segurar, "envio_aprovar": piloto.aprovar, "envio_tentar": piloto.tentar_de_novo}[op]
+        return f(str(dados.get("post")), str(dados.get("rede")))
+    if op == "comentario_responder":
+        return social.responder(str(dados.get("rede")), str(dados.get("id")), str(dados.get("texto") or ""))
+    if op == "comentario_marcar":
+        return social.marcar(str(dados.get("rede")), str(dados.get("id")), str(dados.get("estado")))
+    if op == "social_exportar":
+        destino = social.exportar(social.dados.estado("exportacao", financeiro.hoje().isoformat()))
+        return {"ok": True, "saida": f"Histórico exportado em CSV: {destino}"}
     if op == "meta_config":
         return metas.configurar(dados)
     if op == "decisao_salvar":
@@ -526,6 +572,19 @@ class Painel(BaseHTTPRequestHandler):
         finally:
             t.largar(conexao.enviar)
 
+    def _oauth(self, pid):
+        """O Google ou o TikTok voltam para cá depois do login: troca o código pelo token e guarda no cofre."""
+        q = {k: v[0] for k, v in urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).items()}
+        if q.get("error"):
+            r = {"ok": False, "saida": f"login cancelado ({q.get('error_description') or q['error']})"}
+        else:
+            r = conexoes.oauth_retorno(pid, q.get("code", ""), q.get("state", ""))
+        cor = "#1F8A4C" if r["ok"] else "#C8442F"
+        corpo = (f"<!doctype html><meta charset=utf-8><title>Ciello OS</title><body style='font:16px sans-serif;background:#F8F4E8;"
+                 f"display:grid;place-items:center;height:90vh'><div style='text-align:center'><h2 style='color:{cor}'>"
+                 f"{'Conectado!' if r['ok'] else 'Não deu certo'}</h2><p>{html.escape(r['saida'])}</p><p>Pode fechar esta aba e voltar ao Ciello OS.</p></div>")
+        return self._enviar(corpo.encode("utf-8"), "text/html; charset=utf-8")
+
     def do_GET(self):
         if not self._local():
             return
@@ -567,6 +626,8 @@ class Painel(BaseHTTPRequestHandler):
             return self._json(kpis())
         if caminho == "/api/equipe":
             return self._json(equipe())
+        if caminho.startswith("/oauth/") and caminho[7:] in conexoes.PROVEDORES:
+            return self._oauth(caminho[7:])
         if caminho.startswith("/api/app/") and caminho[9:] in APPS:
             return self._json(APPS[caminho[9:]]())
         if caminho.startswith("/api/execucao/"):
@@ -654,6 +715,7 @@ def main():
     ap.add_argument("--sem-escritorio", action="store_true", help="não liga o escritório de agentes")
     a = ap.parse_args()
     global sala
+    PORTA_ATUAL[0] = a.porta
     srv = ThreadingHTTPServer(("127.0.0.1", a.porta), Painel)
     url = f"http://127.0.0.1:{a.porta}"
     print("Ciello OS em", url, "(Ctrl+C para sair)")

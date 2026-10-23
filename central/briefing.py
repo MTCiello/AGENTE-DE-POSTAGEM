@@ -155,6 +155,34 @@ def coletar(ref):
     except (OSError, ValueError, KeyError):
         pass
 
+    # rede social: conexão caída, post esperando você, erro de publicação, comentário que só você responde
+    try:
+        import conexoes
+        import dados
+        import social
+        for c in conexoes.caidas():
+            add(89, "postagem", f"A conexão {c['nome']} caiu ({c['mensagem'][:90]}): Conexões → Checar ou reconectar. Os posts dessa rede esperam na fila")
+        con = dados.banco()
+        hoje_ = ref.isoformat()
+        esperando = con.execute("SELECT COUNT(*) FROM envios WHERE estado='aguardando_aprovacao' AND quando>=?", (hoje_,)).fetchone()[0]
+        if esperando:
+            add(68, "postagem", f"{esperando} post(s) esperando o seu ok para ir ao ar: Rede social → Piloto")
+        erros = con.execute("SELECT post, rede, erro FROM envios WHERE estado IN ('erro','perdido') AND quando>=?",
+                            ((ref - dt.timedelta(days=3)).isoformat(),)).fetchall()
+        if erros:
+            add(77, "postagem", f"{len(erros)} publicação(ões) com erro ({erros[0]['post'][11:]} no {conexoes.REDES.get(erros[0]['rede'], erros[0]['rede'])}: "
+                f"{(erros[0]['erro'] or '')[:70]}): Rede social → Piloto → Tentar de novo")
+        para_voce = [c for c in social.caixa(con) if c["categoria"] in ("pergunta", "outro") and not c["sugestao"]]
+        if para_voce:
+            add(44, "sucesso-cliente", f"{len(para_voce)} comentário(s) que só você responde (ex.: @{para_voce[0]['autor']}: \"{para_voce[0]['texto'][:50]}\"): Rede social → Comentários")
+        for r in con.execute("SELECT p.texto, p.rede, a.multiplicador FROM avaliacoes a JOIN publicacoes p USING (rede, id_ext) WHERE a.dia=? AND a.veredito='acima'",
+                             (hoje_,)).fetchall()[:1]:
+            add(28, "analista", f"Post acima da média ({str(r['multiplicador']).replace('.', ',')}x) no {conexoes.REDES.get(r['rede'], r['rede'])}: \"{(r['texto'] or '')[:60]}\". "
+                "O roteirista já vai repetir o padrão: Rede social → Resultados")
+        con.close()
+    except Exception:  # noqa: BLE001  o Bom dia nunca cai por causa da rede social
+        pass
+
     retrato = ultimo_arquivo(RAIZ / "metricas", "20??-??-??.json")
     dias = idade(retrato, ref)
     if dias is None or dias >= 7:

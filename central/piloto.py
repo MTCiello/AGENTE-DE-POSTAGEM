@@ -208,6 +208,9 @@ def publicar_fila(con, c, agora: dt.datetime) -> dict:
                 continue
             quando = f"{p['data']}T{cal['horarios'][rede]}"
             e = _envio(con, p["post"], rede)
+            if not e and rede == "instagram" and p["etapas"]["agendado"]:  # a rotina semanal (ou você) já agendou: não duplica
+                _salvar_envio(con, p["post"], rede, estado="agendado", quando=quando, via="historico", erro="registrado no historico.md")
+                continue
             if e and (e["estado"] in FINAIS or e["tentativas"] >= c["max_tentativas"]):
                 continue
             if c["modo"] == "aprovar" and (not e or e["estado"] != "aprovado"):
@@ -308,7 +311,13 @@ def rodar(agora: dt.datetime | None = None, con=None, produzir_videos=True) -> d
         registrar("rodada", "pausado: só guardei números e comentários")
         return out
     faltam = roteiros_que_faltam(agora.date(), c)
-    if faltam:
+    ultimo_pedido = dados.estado("piloto-roteiros.txt")
+    try:
+        recente = agora - dt.datetime.fromisoformat(ultimo_pedido.read_text().strip()) < dt.timedelta(hours=6)
+    except (OSError, ValueError):
+        recente = False
+    if faltam and not recente:  # no máximo um pedido de roteiros a cada 6 horas, mesmo se o Claude falhar
+        ultimo_pedido.write_text(agora.isoformat(timespec="minutes"))
         r = pedir_roteiros(faltam)
         registrar("roteiros", f"{len(faltam)} pedido(s): {r['saida'][-200:]}", ok=r["ok"])
         out["roteiros"] = {"pedidos": len(faltam), "ok": r["ok"]}
@@ -351,7 +360,18 @@ def main():
     ap.add_argument("acao", choices=["rodar", "estado"])
     a = ap.parse_args()
     if a.acao == "rodar":
-        r = rodar()
+        trava = dados.estado("piloto.trava")
+        try:
+            if dt.datetime.now() - dt.datetime.fromisoformat(trava.read_text().strip()) < dt.timedelta(hours=3):
+                print("outra rodada do piloto ainda está trabalhando (render ou Claude): esta fica para a próxima hora")
+                return
+        except (OSError, ValueError):
+            pass
+        trava.write_text(dt.datetime.now().isoformat(timespec="seconds"))
+        try:
+            r = rodar()
+        finally:
+            trava.unlink(missing_ok=True)
         print(json.dumps({k: v for k, v in r.items() if k != "sincronizacao"}, ensure_ascii=False, indent=1, default=str))
     else:
         print(f"modo: {MODOS[config()['modo']]}")

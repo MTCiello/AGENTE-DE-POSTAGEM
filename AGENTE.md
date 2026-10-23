@@ -59,3 +59,7 @@ Cadastrar como **concorrentes no Metricool** (API oficial, sem risco para a cont
 ## Orçamento de créditos vidIQ (plano atual: 150/mês)
 - Narração e montagem agora são locais (`central/`), então o vidIQ fica **só para pesquisa**: outlier search 5 + reels dos perfis 5 cada (~25 por semana).
 - Se o saldo (`vidiq_balance`) não cobrir, pesquise com WebSearch e com os perfis de referência abertos no navegador, e avise o Mateus.
+
+## Piloto automático (no PC)
+
+O Ciello OS roda este procedimento sozinho, de hora em hora (`central/piloto.py`, janela **Rede social**), publicando no Instagram, TikTok e YouTube Shorts pelo provedor escolhido em **Conexões**. Como conectar cada rede e o que depende de auditoria: `docs/rede-social.md`. Se a rotina semanal na nuvem também rodar, o piloto respeita o que já está como agendado no `historico.md`.

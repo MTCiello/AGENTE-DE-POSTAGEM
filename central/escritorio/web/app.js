@@ -22,6 +22,8 @@ const SVG = {
   engrenagem: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   pino: '<path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/>',
   play: '<path d="M7 5v14l11-7z"/>',
+  redes: '<circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M8.3 10.8l7.4-3.6M8.3 13.2l7.4 3.6"/>',
+  conexoes: '<path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0z"/><path d="M12 16v5"/>',
   alvo: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
   balao: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
   video: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/>',
@@ -32,6 +34,8 @@ const icone = (n, vb = 24) => `<svg viewBox="0 0 ${vb} ${vb}">${SVG[n] || SVG.ag
 
 // ------------------------------------------------------------------ apps
 const APPS = {
+  redes: { titulo: 'Rede social', icone: 'redes', cor: 'linear-gradient(135deg,#F07A9B,#7B3FE4)', w: 960, h: 720, render: renderRedes },
+  conexoes: { titulo: 'Conexões', icone: 'conexoes', cor: 'linear-gradient(135deg,#6FB0D8,#2F6A99)', w: 900, h: 700, render: renderConexoes },
   objetivos: { titulo: 'Objetivos e esteiras', icone: 'alvo', cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', w: 900, h: 700, render: renderObjetivos, cada: 3000 },
   atendimento: { titulo: 'Atendimento', icone: 'balao', cor: 'linear-gradient(135deg,#4CC6D1,#1E8C99)', w: 760, h: 680, render: renderAtendimento, estatico: true },
   video: { titulo: 'Estúdio de Vídeo', icone: 'video', cor: 'linear-gradient(135deg,#8E6BD8,#4B2F99)', w: 900, h: 720, render: renderVideo, estatico: true },
@@ -48,8 +52,8 @@ const APPS = {
   verificar: { titulo: 'Verificação', icone: 'verificar', cor: 'linear-gradient(135deg,#5BC0A0,#2D8C70)', acao: 'verificar' },
 };
 // menu Iniciar por objetivo: o que você quer fazer agora
-const GRUPOS = [['Criar', ['video', 'conteudo', 'voz', 'tendencias', 'concorrentes']], ['Vender', ['comercial', 'atendimento', 'anuncios']],
-  ['Gerir', ['briefing', 'financeiro']], ['Equipe e sistema', ['equipe', 'atividade', 'verificar']]];
+const GRUPOS = [['Criar', ['redes', 'video', 'conteudo', 'voz', 'tendencias', 'concorrentes']], ['Vender', ['comercial', 'atendimento', 'anuncios']],
+  ['Gerir', ['briefing', 'financeiro']], ['Equipe e sistema', ['conexoes', 'equipe', 'atividade', 'verificar']]];
 
 const NOMES = { 'chefe-gabinete': 'Chefe de Gabinete', 'pesquisador-mercado': 'Pesquisador de Mercado', roteirista: 'Roteirista', 'produtor-video': 'Produtor de Vídeo',
   'produtor-imagem': 'Produtor de Imagem', postagem: 'Postagem', analista: 'Analista', 'gestor-anuncios': 'Gestor de Anúncios', sdr: 'SDR', closer: 'Closer',
@@ -624,18 +628,19 @@ async function abrirAcao(chave, aba, fn) {
   await desenhar(w, true);
   if (fn && w.fns && w.fns[fn]) w.fns[fn]({});
 }
-const ATALHOS = [['financeiro', 'cobranca', 'Cobrança e pós-venda'], ['comercial', 'hoje', 'Comercial de hoje'], ['conteudo', 'producao', 'Produção de conteúdo'], ['video', '', 'Estúdio de Vídeo'],
+const ATALHOS = [['redes', 'piloto', 'Rede social'], ['financeiro', 'cobranca', 'Cobrança e pós-venda'], ['comercial', 'hoje', 'Comercial de hoje'], ['conteudo', 'producao', 'Produção de conteúdo'], ['video', '', 'Estúdio de Vídeo'],
   ['financeiro', 'plano', 'Plano do ano'], ['voz', '', 'Estúdio de Voz'], ['objetivos', '', 'Esteiras da equipe']];
 // cada pendência do Bom dia leva para a janela e a aba certas: pelo "Janela → Aba" do texto ou por uma pista
 const DESTINOS = {
   Financeiro: ['financeiro', { 'Visão geral': 'geral', Clientes: 'clientes', 'Cobrança e pós-venda': 'cobranca', Lançamentos: 'lancamentos', 'Plano do ano': 'plano', 'Metas e decisões': 'rumo', 'Gerar faturas': 'geral' }],
   Comercial: ['comercial', { Hoje: 'hoje', Leads: 'leads', 'Buscar leads': 'buscar' }], Conteúdo: ['conteudo', { Produção: 'producao', Instagram: 'instagram', Análise: 'analise' }],
-  Atendimento: ['atendimento', {}], 'Estúdio de Vídeo': ['video', {}], 'Estúdio de Voz': ['voz', {}],
+  Atendimento: ['atendimento', {}], 'Estúdio de Vídeo': ['video', {}], 'Estúdio de Voz': ['voz', {}], Conexões: ['conexoes', {}],
+  'Rede social': ['redes', { Piloto: 'piloto', Comentários: 'comentarios', 'Calendário do mês': 'calendario', Resultados: 'resultados' }],
 };
 const PISTAS = [[/Retrato semanal/, ['conteudo', 'instagram']], [/Radar de tendências/, ['tendencias', '']], [/[Cc]oncorrente/, ['concorrentes', '']], [/Fila com/, ['comercial', 'buscar']],
   [/^Post de|post\(s\) com data passada/, ['conteudo', 'producao']], [/follow-up|lead\(s\) quente|[Dd]emo /, ['comercial', 'hoje']], [/Teste grátis/, ['financeiro', 'clientes']], [/espera sua aprovação/, ['equipe', '']]];
 function destinoDoTexto(texto) {
-  const m = String(texto).match(/(Financeiro|Comercial|Conteúdo|Atendimento|Estúdio de Vídeo|Estúdio de Voz)(?:\s*→\s*([A-Za-zÀ-ÿ\- ]+?))?(?=\s*(?:→|[:,.()]|$))/);
+  const m = String(texto).match(/(Financeiro|Comercial|Conteúdo|Atendimento|Estúdio de Vídeo|Estúdio de Voz|Rede social|Conexões)(?:\s*→\s*([A-Za-zÀ-ÿ\- ]+?))?(?=\s*(?:→|[:,.()]|$))/);
   if (m) { const [app, abasApp] = DESTINOS[m[1]]; return [app, (m[2] && abasApp[m[2].trim()]) || '']; }
   const p = PISTAS.find(([re]) => re.test(texto));
   return p ? p[1] : null;
@@ -1183,6 +1188,133 @@ async function renderConteudo(j) {
   j.corpo.innerHTML = `<div class="pagina"><h1>Conteúdo e Instagram</h1><p class="sub">@ciellotec${i ? ` · retrato de ${ddmm(i.data)}` : ''}</p>${SEM_CLAUDE}
   <div class="acoes topo"><button class="bt pri" data-fn="retrato">Anotar números do Instagram</button><button class="bt" data-acao="relatorio">Relatório semanal</button><button class="bt" data-abrir="voz">Estúdio de Voz</button></div>
   ${abas(j, [['producao', 'Produção', d.quadro.filter((q) => !q.pronto && q.dias >= 0).length || ''], ['instagram', 'Instagram'], ['analise', 'Análise']])}${j.aba === 'instagram' ? insta : j.aba === 'analise' ? analise : producao + rodapeProducao}</div>`;
+}
+
+// ------------------------------------------------------------------ apps: conexões (central/conexoes.py)
+const ESTADO_ENVIO = { na_fila: ['', 'na fila'], aguardando_aprovacao: ['esperando', 'esperando você'], aprovado: ['pronto', 'aprovado'], agendado: ['trabalhando', 'agendado'],
+  publicado: ['trabalhando', 'publicado'], erro: ['erro', 'erro'], segurado: ['parado', 'segurado'], perdido: ['erro', 'passou da hora'], cancelado: ['parado', 'cancelado'],
+  'na fila': ['', 'na fila'], 'em produção': ['esperando', 'em produção'], '—': ['parado', '—'], 'sem registro': ['parado', 'sem registro'] };
+const chipEnvio = (estado, titulo = '') => { const [c, r] = ESTADO_ENVIO[estado] || ['', estado]; return `<span class="chip ${c}" title="${esc(titulo)}">${esc(r)}</span>`; };
+const quandoBr = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)} ${iso.slice(11, 16)}` : '');
+async function renderConexoes(j) {
+  const d = await api('/api/app/conexoes');
+  const porId = Object.fromEntries(d.provedores.map((p) => [p.id, p]));
+  j.fns = {
+    conectar: ({ id }) => { const p = porId[id];
+      dialogo(j, { titulo: `Conectar · ${p.nome}`, texto: `${p.ajuda}${p.limite ? ` Atenção: ${p.limite}` : ''}`,
+        campos: p.campos.map((c) => ({ nome: c.nome, rotulo: c.rotulo, valor: c.segredo ? '' : (p.preenchidos[c.nome] || c.padrao || ''), dica: c.ajuda || '',
+          exemplo: c.segredo && p.preenchidos[c.nome] ? `guardado (${p.preenchidos[c.nome]}): vazio mantém` : '', obrigatorio: !p.preenchidos[c.nome] && !c.padrao })),
+        botao: p.oauth ? 'Salvar' : 'Salvar e checar', extra: p.oauth ? `<p class="sub">Depois de salvar, clique em <b>Entrar</b> no cartão. Endereço de retorno para cadastrar no app: <code>${esc(location.origin)}/oauth/${esc(id)}</code></p>` : '',
+        enviar: (x) => operar('conexao_salvar', { ...x, provedor: id }) }); },
+    entrar: async ({ id }) => { const r = await operar('oauth_inicio', { provedor: id });
+      if (!r.ok) return aviso({ titulo: 'Não deu', texto: r.saida, cor: '#C8442F' });
+      window.open(r.url, '_blank', 'noopener'); aviso({ titulo: 'Login aberto no navegador', texto: 'Entre na conta e autorize. Depois volte aqui e clique em Checar.', cor: '#3A5582' }); },
+    checar: ({ id }) => rapido('conexao_checar', { provedor: id }, 'Conexão checada'),
+    desconectar: ({ id }) => { if (confirm(`Desconectar ${porId[id].nome}? A senha sai do cofre. O histórico (posts, números e comentários) continua guardado no seu PC.`)) rapido('conexao_desconectar', { provedor: id }, 'Desconectado'); },
+    exportar: () => rapido('social_exportar', {}, 'Histórico exportado'),
+  };
+  j.fns.mudarRede = ({ rede, campo }, el) => { operar('conexao_rede', campo === 'ativa' ? { rede, ativa: el.value === 'sim' } : { rede, via: el.value }).then((r) => { if (!r.ok) aviso({ titulo: 'Não deu', texto: r.saida, cor: '#C8442F' }); }); };
+  const situacao = (p) => { const e = p.estado || {};
+    if (!e.conectado && !(p.id === 'claude')) return '<span class="chip parado">não conectado</span>';
+    if (e.ok === false) return `<span class="chip erro" title="${esc(e.mensagem || '')}">caiu${e.caiu_em ? ` em ${quandoBr(e.caiu_em)}` : ''}</span>`;
+    if (e.ok) return `<span class="chip trabalhando">conectado</span>`;
+    return '<span class="chip">não checado</span>'; };
+  const redes = Object.entries(d.redes).map(([rede, r]) => {
+    const opcoes = d.provedores.filter((p) => p.publica.includes(rede));
+    return `<tr><td><b>${esc(d.nomes_redes[rede])}</b></td><td><select data-mudar="mudarRede" data-rede="${rede}" data-campo="ativa"><option value="sim" ${r.ativa ? 'selected' : ''}>ligada</option><option value="nao" ${r.ativa ? '' : 'selected'}>desligada</option></select></td>
+      <td><select data-mudar="mudarRede" data-rede="${rede}" data-campo="via"><option value="">— escolha —</option>${opcoes.map((p) => `<option value="${p.id}" ${r.via === p.id ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></td>
+      <td>${r.via ? situacao(porId[r.via]) : '<small class="neutro">sem provedor: não publica</small>'}</td></tr>`; }).join('');
+  const cartao = (p) => { const e = p.estado || {}; const h = p.historico || {};
+    return `<div class="cartao conexao"><div class="cab-conexao"><b>${esc(p.nome)}</b>${situacao(p)}${e.conta ? `<small class="neutro">${esc(e.conta)}</small>` : ''}</div>
+      <p class="sub" style="margin:4px 0">${esc(p.ajuda)}${p.limite ? ` <span class="neutro">· ${esc(p.limite)}</span>` : ''}</p>
+      ${e.ok === false ? `<div class="linha-item achado alto"><small style="white-space:normal">${esc(e.mensagem || '')}</small></div>` : ''}
+      <small class="neutro">Redes: ${p.redes.map((r) => d.nomes_redes[r]).join(', ')}${e.ultima_checagem ? ` · checado em ${quandoBr(e.ultima_checagem)}` : ''}
+        · guardado no PC: ${h.publicacoes || 0} publicações, ${h.comentarios || 0} comentários${h.desde ? ` desde ${ddmm(h.desde)}` : ''}${h.ultima_sync ? ` · última sincronização ${quandoBr(h.ultima_sync)}` : ''}</small>
+      <div class="acoes-linha" style="margin-top:8px">${p.campos.length ? `<button class="bt mini ${e.conectado ? '' : 'pri'}" data-fn="conectar" data-id="${p.id}">${e.conectado ? 'Editar' : 'Conectar'}</button>` : ''}
+        ${p.oauth ? `<button class="bt mini ${p.logado ? '' : 'pri'}" data-fn="entrar" data-id="${p.id}">${p.logado ? 'Entrar de novo' : `Entrar com ${p.id === 'youtube' ? 'o Google' : 'o TikTok'}`}</button>` : ''}
+        <button class="bt mini" data-fn="checar" data-id="${p.id}">Checar agora</button>${e.conectado && p.campos.length ? `<button class="bt mini" data-fn="desconectar" data-id="${p.id}">Desconectar</button>` : ''}</div></div>`; };
+  j.corpo.innerHTML = `<div class="pagina"><h1>Conexões</h1><p class="sub">Metricool, Instagram, YouTube e TikTok. Tudo o que vem deles é copiado para o seu PC: se um provedor cair ou for desconectado, você não perde histórico nem trabalho, e os posts esperam na fila até a conexão voltar.</p>
+  ${d.cofre_protegido ? '' : '<div class="faixa">Neste sistema as senhas ficam só codificadas (sem a proteção do Windows). No seu PC com Windows elas são cifradas.</div>'}
+  <h2>Por onde cada rede publica</h2><table class="tab"><tr><th>Rede</th><th>Piloto</th><th>Publica por</th><th>Situação</th></tr>${redes}</table>
+  <h2>Provedores</h2><div class="grade2">${d.provedores.map(cartao).join('')}</div>
+  <div class="acoes"><button class="bt pri" data-acao="sincronizar">Sincronizar agora</button><button class="bt" data-fn="exportar" title="Tudo em CSV, em estado/exportacao">Exportar histórico (CSV)</button></div></div>`;
+}
+
+// ------------------------------------------------------------------ apps: rede social (piloto, calendário, comentários, resultados)
+const CATEGORIA = { lead: ['erro', 'quer comprar'], pergunta: ['esperando', 'pergunta'], elogio: ['trabalhando', 'elogio'], outro: ['', 'outro'], spam: ['parado', 'spam'] };
+const VEREDITO = { acima: ['trabalhando', 'acima da média'], 'na média': ['', 'na média'], abaixo: ['erro', 'abaixo da média'] };
+async function renderRedes(j) {
+  const d = await api('/api/app/redes'); const P = d.piloto; const C = j.proximoMes ? d.calendario_proximo : d.calendario; const c = P.config;
+  const nomeRede = (r) => d.nomes_redes[r] || r;
+  j.fns = {
+    modo: ({ m }) => rapido('piloto_config', { modo: m }, 'Piloto'),
+    ajustes: () => dialogo(j, { titulo: 'Ajustes do piloto', texto: 'O piloto roda de hora em hora pelo Agendador do Windows (agendar.cmd). Estes ajustes valem já na próxima rodada.',
+      campos: [{ nome: 'antecedencia_dias', rotulo: 'Produzir com quantos dias de antecedência', tipo: 'numero', valor: c.antecedencia_dias, meia: true },
+        { nome: 'envio_antecedencia_h', rotulo: 'Agendar no provedor quantas horas antes', tipo: 'numero', valor: c.envio_antecedencia_h, meia: true, dica: 'até essa hora dá para Segurar o post' },
+        { nome: 'responder', rotulo: 'Comentários', tipo: 'escolha', opcoes: [['elogios_e_faq', 'Responder elogios e perguntas do FAQ sozinho'], ['elogios', 'Responder só elogios'], ['nunca', 'Nunca responder sozinho']], valor: c.responder },
+        { nome: 'modelo_video', rotulo: 'Modelo do vídeo', tipo: 'escolha', opcoes: [['escuro', 'Escuro'], ['claro', 'Claro']], valor: c.modelo_video, meia: true }],
+      enviar: (x) => operar('piloto_config', x) }),
+    segurar: ({ post, rede }) => rapido('envio_segurar', { post, rede }, 'Segurado'),
+    aprovar: ({ post, rede }) => rapido('envio_aprovar', { post, rede }, 'Aprovado'),
+    tentar: ({ post, rede }) => rapido('envio_tentar', { post, rede }, 'De volta à fila'),
+    calConfig: () => { const DIAS = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'];
+      dialogo(j, { titulo: 'Calendário', texto: 'Em quais dias sai post e o horário de cada rede. O mesmo vídeo vai para todas as redes ligadas.',
+        campos: [{ nome: 'dias', rotulo: 'Dias com post', tipo: 'marcar', opcoes: DIAS, valor: C.config.dias.map((x) => DIAS[x]) },
+          ...Object.keys(d.nomes_redes).map((r) => ({ nome: `hora_${r}`, rotulo: `Horário · ${nomeRede(r)}`, valor: C.config.horarios[r], meia: true })),
+          { nome: 'limite_metricool', rotulo: 'Posts por mês no seu plano do Metricool', tipo: 'numero', valor: C.config.limite_metricool, meia: true, dica: 'grátis: 20 · 0 = sem limite' }],
+        enviar: (x) => operar('calendario_config', { ...x, dias: x.dias.map((s) => DIAS.indexOf(s)) }) }); },
+    responder: ({ i }) => { const k = d.comentarios[+i]; const t = $(`.resp-${i}`, j.corpo).value.trim(); rapido('comentario_responder', { rede: k.rede, id: k.id_ext, texto: t }, 'Comentário'); },
+    marcarCom: ({ i, estado, lista }) => { const k = d[lista || 'comentarios'][+i]; rapido('comentario_marcar', { rede: k.rede, id: k.id_ext, estado }, 'Comentário'); },
+    copiarResp: ({ i }) => copiar(d.aguardando[+i].resposta),
+  };
+  const caidas = P.caidas.length ? `<div class="lista">${P.caidas.map((x) => `<div class="linha-item achado alto"><span class="chip erro">caiu</span><div class="cresce"><b>${esc(x.nome)}</b><small style="white-space:normal">${esc(x.mensagem)} · os posts dessa rede esperam na fila</small></div><button class="bt mini" data-abrir="conexoes">Conexões</button></div>`).join('')}</div>` : '';
+  const semRede = !Object.values(d.redes).some((r) => r.ativa && r.via);
+  let corpo;
+  if (j.aba === 'calendario') {
+    const prev = C.previsao;
+    j.fns.trocarMes = () => { j.proximoMes = !j.proximoMes; desenhar(j, true); };
+    corpo = `<div class="acoes" style="margin-top:0"><button class="bt mini" data-fn="trocarMes">${j.proximoMes ? '◀ Este mês' : 'Próximo mês ▶'}</button><button class="bt mini" data-fn="calConfig">Dias e horários</button></div>
+    <div class="kpis">${Object.entries(prev.redes).map(([r, p]) => `<div class="kpi"><small>${esc(nomeRede(r))} · ${p.posts_planejados} posts</small><strong>${p.views_previstas != null ? num(p.views_previstas) : '—'}</strong>
+      <em class="neutro">${p.views_previstas != null ? `views previstas (mediana ${num(p.mediana_views)}/post)` : 'sem histórico para prever'}${p.seguidores_fim_mes != null ? ` · ${num(p.seguidores_fim_mes)} seguidores no fim do mês` : ''}</em></div>`).join('') || '<div class="vazio">Ligue uma rede em Conexões.</div>'}
+      ${prev.limite_metricool ? `<div class="kpi"><small>Metricool no mês</small><strong>${prev.posts_metricool} de ${prev.limite_metricool}</strong><em class="${prev.posts_metricool > prev.limite_metricool ? 'ruim' : 'bom'}">posts pelo seu plano</em></div>` : ''}</div>
+    ${prev.avisos.length ? `<div class="lista" style="margin-top:8px">${prev.avisos.map((a) => `<div class="linha-item achado medio"><small style="white-space:normal">${esc(a)}</small></div>`).join('')}</div>` : ''}
+    <h2>${['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'][C.mes - 1]} de ${C.ano}</h2>
+    <table class="tab cal"><tr><th>Dia</th><th>Post</th>${Object.keys(C.redes).map((r) => `<th>${esc(nomeRede(r))}</th>`).join('')}</tr>${C.dias.map((x) => `<tr class="${x.passado ? 'passado' : ''}">
+      <td><b>${ddmm(x.data)}</b> <small class="neutro">${x.dia_semana}</small></td>
+      <td>${x.post ? `${esc(x.post.titulo)} <span class="chip">${esc(C.pilares[x.post.pilar] || x.post.pilar)}</span>${x.post.pronto || x.post.final ? '' : ` <small class="neutro">falta: ${esc(x.post.falta.map((e) => C.etapas[e] || e).join(', '))}</small>`}`
+        : `<small class="neutro">vazio${x.sugestao ? ` · sugestão: ${esc(C.pilares[x.sugestao])}` : ''}</small>`}</td>
+      ${Object.keys(C.redes).map((r) => `<td>${chipEnvio(x.redes[r].estado, x.redes[r].erro)} <small class="neutro">${esc(x.redes[r].hora)}</small>${x.redes[r].url ? ` <a href="${esc(x.redes[r].url)}" target="_blank" rel="noopener"><small>ver</small></a>` : ''}</td>`).join('')}</tr>`).join('')}</table>
+    <p class="sub">Uso dos pilares (4 semanas + mês): ${Object.entries(C.uso_pilares).map(([k, n]) => `${esc(C.pilares[k])} ${n}`).join(' · ')}. Os dias vazios recebem o pilar menos usado; o piloto pede o roteiro ao Claude com essa sugestão.</p>`;
+  } else if (j.aba === 'comentarios') {
+    corpo = `<p class="sub" style="margin-top:0">Comentários das redes conectadas. Quem quer comprar vira lead no Comercial; elogios e perguntas do FAQ o piloto responde sozinho (ajuste em Piloto → Ajustes).</p>
+    ${d.comentarios.map((k, i) => `<div class="cartao msg"><div class="cab"><b>@${esc(k.autor)}</b> <span class="chip ${CATEGORIA[k.categoria]?.[0] || ''}">${esc(CATEGORIA[k.categoria]?.[1] || k.categoria)}</span> <small class="neutro">${esc(nomeRede(k.rede))} · ${quandoBr(k.data)}</small></div>
+      <blockquote>${esc(k.texto)}</blockquote><textarea class="resp-${i}" rows="2" placeholder="Sua resposta">${esc(k.sugestao)}</textarea>
+      <div class="acoes-linha"><button class="bt pri" data-fn="responder" data-i="${i}">Responder</button>${k.categoria !== 'lead' ? `<button class="bt" data-fn="marcarCom" data-i="${i}" data-estado="lead">É lead</button>` : ''}<button class="bt" data-fn="marcarCom" data-i="${i}" data-estado="ignorado">Ignorar</button></div></div>`).join('') || '<div class="vazio">Nenhum comentário novo. Eles chegam a cada sincronização.</div>'}
+    ${d.aguardando.length ? `<h2>Responder pelo app (${d.aguardando.length})</h2><p class="sub">Esta rede não deixa responder pela API (o TikTok, por exemplo). A resposta está pronta: copie e cole no app.</p>
+      <div class="lista">${d.aguardando.map((k, i) => `<div class="linha-item"><div class="cresce"><b>@${esc(k.autor)}</b> <small class="neutro">${esc(nomeRede(k.rede))}</small><small style="white-space:normal">${esc(k.texto)} → ${esc(k.resposta)}</small></div>
+        <button class="bt mini" data-fn="copiarResp" data-i="${i}">Copiar</button><button class="bt mini" data-fn="marcarCom" data-lista="aguardando" data-i="${i}" data-estado="respondido">Já respondi</button></div>`).join('')}</div>` : ''}`;
+  } else if (j.aba === 'resultados') {
+    corpo = `<p class="sub" style="margin-top:0">Cada post, 7 dias depois, contra a mediana dos 10 anteriores da mesma rede. O resultado entra sozinho na biblioteca de ganchos: o roteirista passa a repetir o que funcionou no seu perfil.</p>
+    <table class="tab"><tr><th>Data</th><th>Rede</th><th>Post</th><th>Views</th><th>Resultado</th><th>Salv.</th><th>Comp.</th></tr>${d.resultados.map((r) => `<tr><td>${ddmm(r.data)}</td><td>${esc(nomeRede(r.rede))}</td>
+      <td>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc((r.texto || '').slice(0, 70))}</a>` : esc((r.texto || '').slice(0, 70))}</td><td>${num(r.views || 0)}</td>
+      <td>${r.veredito ? `<span class="chip ${VEREDITO[r.veredito][0]}">${esc(VEREDITO[r.veredito][1])} ${String(r.multiplicador).replace('.', ',')}x</span>` : `<small class="neutro">${(Date.now() - new Date(r.data.slice(0, 10))) / 864e5 < 7 ? 'menos de 7 dias' : 'sem base (precisa de 3 posts antes)'}</small>`}</td>
+      <td>${r.salvamentos ?? '—'}</td><td>${r.compartilhamentos ?? '—'}</td></tr>`).join('') || '<tr><td colspan="7">Sem posts sincronizados ainda: conecte um provedor e clique em Sincronizar.</td></tr>'}</table>`;
+  } else {
+    const acoesEnvio = (e) => `${['na_fila', 'aguardando_aprovacao', 'aprovado', 'erro'].includes(e.estado) ? `<button class="bt mini" data-fn="segurar" data-post="${esc(e.post)}" data-rede="${e.rede}" title="Não vai ao ar nesta rede">Segurar</button>` : ''}
+      ${e.estado === 'aguardando_aprovacao' ? `<button class="bt mini pri" data-fn="aprovar" data-post="${esc(e.post)}" data-rede="${e.rede}">Aprovar</button>` : ''}
+      ${['erro', 'perdido', 'segurado'].includes(e.estado) ? `<button class="bt mini" data-fn="tentar" data-post="${esc(e.post)}" data-rede="${e.rede}">Tentar de novo</button>` : ''}`;
+    corpo = `${caidas}<div class="modos">${Object.entries(P.modos).map(([k, r]) => `<button class="modo ${c.modo === k ? 'on' : ''}" data-fn="modo" data-m="${k}"><b>${esc(r)}</b><small>${{ automatico: 'pesquisa, produz e publica sozinho; você pode segurar qualquer post', aprovar: 'prepara tudo e espera o seu ok em cada post', pausado: 'não produz nem publica; números e comentários continuam' }[k]}</small></button>`).join('')}</div>
+    ${semRede ? '<div class="faixa">Nenhuma rede tem por onde publicar. <button class="bt mini pri" data-abrir="conexoes">Abrir Conexões</button></div>' : ''}
+    ${P.ia ? '' : '<div class="faixa">Claude Code não encontrado: o piloto produz e publica, mas não escreve roteiros novos sozinho.</div>'}
+    <div class="acoes"><button class="bt pri" data-acao="piloto">${icone('play')} Rodar agora</button><button class="bt" data-fn="ajustes">Ajustes</button><button class="bt" data-abrir="conexoes">Conexões</button></div>
+    <h2>Fila de publicação (${P.fila.length})</h2><table class="tab"><tr><th>Quando</th><th>Rede</th><th>Post</th><th>Situação</th><th></th></tr>${P.fila.map((e) => `<tr><td>${quandoBr(e.quando)}</td><td>${esc(nomeRede(e.rede))}</td>
+      <td>${esc(e.post.slice(11).replace(/-/g, ' '))}${e.erro ? `<br><small class="${e.estado === 'erro' ? 'ruim' : 'neutro'}">${esc(e.erro)}</small>` : ''}</td><td>${chipEnvio(e.estado)}${e.url ? ` <a href="${esc(e.url)}" target="_blank" rel="noopener"><small>ver</small></a>` : ''}</td>
+      <td class="acoes-linha">${acoesEnvio(e)}</td></tr>`).join('') || '<tr><td colspan="5">Nada na fila. O piloto coloca aqui cada post pronto, em cada rede ligada.</td></tr>'}</table>
+    <h2>O que o piloto fez</h2><div class="lista">${P.diario.slice(0, 25).map((x) => `<div class="linha-item ${x.ok ? '' : 'achado alto'}"><small class="neutro" style="min-width:110px">${quandoBr(x.quando)}</small><div class="cresce"><small style="white-space:normal;color:var(--tinta)"><b>${esc(x.evento)}</b> · ${esc(x.detalhe)}</small></div></div>`).join('') || '<p class="sub">Ainda não rodou. Clique em Rodar agora ou rode o agendar.cmd para ele rodar de hora em hora.</p>'}</div>`;
+  }
+  const novos = d.comentarios.length;
+  j.corpo.innerHTML = `<div class="pagina"><h1>Rede social</h1><p class="sub">Piloto ${esc(P.modos[c.modo])} · ${Object.entries(d.redes).filter(([, r]) => r.ativa && r.via).map(([r]) => nomeRede(r)).join(', ') || 'nenhuma rede ligada'}</p>
+  ${abas(j, [['piloto', 'Piloto', P.fila.filter((e) => ['aguardando_aprovacao', 'erro'].includes(e.estado)).length || ''], ['calendario', 'Calendário do mês'], ['comentarios', 'Comentários', novos || ''], ['resultados', 'Resultados']])}${corpo}</div>`;
 }
 
 // ------------------------------------------------------------------ apps: tendências e concorrentes

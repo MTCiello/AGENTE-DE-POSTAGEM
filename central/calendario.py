@@ -96,8 +96,8 @@ def mes(ano: int, m: int, ref: dt.date | None = None, con=None) -> dict:
         d = dt.date(ano, m, n)
         p = posts.get(d.isoformat())
         slot = d.weekday() in c["dias"]
-        if not slot and not p:
-            continue
+        if not p and (not slot or d < ref):
+            continue  # dia sem post: só os que ainda vão chegar
         item = {"data": d.isoformat(), "dia_semana": DIAS_SEMANA[d.weekday()], "passado": d < ref, "slot": slot, "post": None, "redes": {}}
         if p:
             item["post"] = {"post": p["post"], "titulo": p["titulo"], "pronto": p["pronto"], "falta": p["falta"], "pilar": pilar_do_roteiro(p),
@@ -108,11 +108,11 @@ def mes(ano: int, m: int, ref: dt.date | None = None, con=None) -> dict:
             item["sugestao"] = sugerido
         for rede in redes:
             e = env.get((p["post"], rede)) if p else None
-            item["redes"][rede] = {"hora": c["horarios"][rede], "estado": (e or {}).get("estado") or ("—" if not p else "na fila" if d >= ref else "sem registro"),
+            item["redes"][rede] = {"hora": c["horarios"][rede], "estado": (e or {}).get("estado") or ("—" if not p else "sem registro" if d < ref else "na fila" if p["pronto"] or p["etapas"]["final"] else "em produção"),
                                    "url": (e or {}).get("url", ""), "erro": (e or {}).get("erro", "")}
         dias.append(item)
     return {"ano": ano, "mes": m, "dias": dias, "redes": redes, "nomes_redes": conexoes.REDES, "pilares": NOMES_PILARES,
-            "uso_pilares": usados, "config": c, "previsao": previsao(ano, m, dias, redes, con, ref)}
+            "uso_pilares": usados, "config": c, "etapas": conteudo.ROTULOS, "previsao": previsao(ano, m, dias, redes, con, ref)}
 
 
 def _tendencia(con, rede, ref):
@@ -137,7 +137,7 @@ def previsao(ano, m, dias, redes, con, ref) -> dict:
     for rede, info in redes.items():
         vals = [r[0] for r in con.execute("SELECT views FROM publicacoes WHERE rede=? AND views IS NOT NULL ORDER BY data DESC LIMIT 10", (rede,))]
         med = statistics.median(vals) if len(vals) >= 3 else None
-        planejados = sum(1 for d in dias if d["slot"] or d["post"])
+        planejados = sum(1 for d in dias if (d["post"] if d["passado"] else d["slot"] or d["post"]))  # dia passado sem post não conta
         feitos = con.execute("SELECT COUNT(*), COALESCE(SUM(views),0) FROM publicacoes WHERE rede=? AND substr(data,1,7)=?",
                              (rede, f"{ano}-{m:02d}")).fetchone()
         seg, por_dia = _tendencia(con, rede, ref)

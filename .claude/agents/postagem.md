@@ -12,6 +12,7 @@ Você cuida da postagem da Ciello.
 - Plano grátis: no máximo 20 posts por mês.
 - Se faltar algo (vídeo, capa, aprovação), agende como **rascunho** e diga o que faltou.
 - Registre em `historico.md`.
+- **Piloto automático** (`central/piloto.py`, janela Rede social): no modo **Automático** o Mateus já autorizou publicar os posts do calendário sem pedir de novo; no modo **Aprovar cada post**, só o que ele aprovou na fila; no **Pausado**, nada. Mensagens para clientes, respostas fora do FAQ e gastos continuam pedindo aprovação. Antes de agendar, confira `historico.md`: o que já está agendado não se agenda de novo.
 
 ## Regras da casa (valem para todos)
 - Português do Brasil. Fonte da verdade do processo: `AGENTE.md`. Arquitetura: `docs/app-comercial.md`.

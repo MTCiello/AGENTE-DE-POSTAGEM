@@ -115,6 +115,13 @@ class TestePiloto(Base):
         piloto.rodar(dt.datetime(2026, 11, 4, 10, 7), self.con)
         self.assertEqual(self.envios()["youtube"]["estado"], "agendado")  # 12h no YouTube: fica agendado lá
 
+    def test_nao_duplica_o_que_ja_foi_agendado(self):
+        conteudo.marcar_agendado(POST, "04/11 10h", "Agendado")
+        piloto.rodar(dt.datetime(2026, 11, 4, 10, 5), self.con)
+        e = self.envios()["instagram"]
+        self.assertEqual((e["estado"], e["via"]), ("agendado", "historico"))
+        self.assertFalse(any("media_publish" in q.full_url for q in self.http.pedidos))
+
     def test_conexao_caida_guarda_na_fila(self):
         self.http.rotas["/17841"] = urllib.error.HTTPError("x", 401, "x", {}, io.BytesIO(b"expired"))
         piloto.rodar(dt.datetime(2026, 11, 4, 10, 5), self.con)
@@ -135,6 +142,8 @@ class TestePiloto(Base):
         self.assertEqual(len(self.pedidos_ia), 1)
         self.assertIn("2026-11-11", self.pedidos_ia[0])  # a próxima quarta, sem roteiro
         self.assertNotIn(f"- {POST[:10]}", self.pedidos_ia[0])  # a de 04/11 já tem
+        piloto.rodar(dt.datetime.combine(AMANHA, dt.time(10)), self.con, produzir_videos=False)
+        self.assertEqual(len(self.pedidos_ia), 1)  # uma hora depois não pede de novo
 
     def test_comentarios_lead_e_elogio(self):
         social.guardar(self.con, {"comentarios": [{"rede": "instagram", "id_ext": "c1", "autor": "lojadalia", "texto": "Quanto custa? Tenho interesse"},
@@ -159,7 +168,7 @@ class TesteCalendario(Base):
         self.assertIn(vazio["sugestao"], calendario.PILARES)
         self.assertNotEqual(vazio["sugestao"], "negocio")  # o pilar já usado fica por último
         prev = r["previsao"]["redes"]["instagram"]
-        self.assertEqual((prev["posts_planejados"], prev["mediana_views"], prev["views_previstas"]), (13, 115.0, 1495))
+        self.assertEqual((prev["posts_planejados"], prev["mediana_views"], prev["views_previstas"]), (12, 115.0, 1380))  # 02/11 já passou sem post: não conta
         self.assertGreater(prev["seguidores_fim_mes"], 63)
         self.assertTrue(any("YouTube" in a for a in r["previsao"]["avisos"]))  # sem histórico ainda
         self.assertFalse(calendario.configurar({"hora_tiktok": "25:00"})["ok"])
@@ -169,7 +178,7 @@ class TesteCalendario(Base):
         conexoes.configurar_rede("youtube", via="claude")
         calendario.configurar({"dias": "0,1,2,3,4", "limite_metricool": "20"})
         r = calendario.mes(2026, 11, AMANHA, self.con)
-        self.assertEqual(r["previsao"]["posts_metricool"], 42)
+        self.assertEqual(r["previsao"]["posts_metricool"], 40)  # 20 dias úteis restantes × 2 redes
         self.assertTrue(any("permite 20" in a for a in r["previsao"]["avisos"]))
 
 
