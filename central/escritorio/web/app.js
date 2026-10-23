@@ -169,7 +169,9 @@ function abrir(chave, dados = {}) {
   const j = { chave, def, el, corpo: $('.conteudo', el), dados, min: false, max: false, prev: null, timer: null };
   janelas.set(chave, j);
   posicionar(j, g);
-  if (g.max) maximizar(j);
+  // tela de notebook (até 1440 px): na 1ª vez a janela abre maximizada, um app por vez; depois vale o tamanho que você deixou
+  const notebook = !SALVO.geo[chave] && W < 1440 && !/^(term|exec):/.test(chave); // terminal e execução continuam em janela
+  if (g.max || notebook) maximizar(j);
   ligarJanela(j);
   focar(j);
   desenhar(j);

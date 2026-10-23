@@ -150,3 +150,9 @@ Cada passo tem **Fazer agora**, que abre a janela na aba certa já com o formul�
 **Bug achado na simulação e corrigido:** apertar Enter buscava, mas a tela não mostrava o resultado (a atualização esperava o cursor sair da caixa de texto).
 
 **Testes:** 2 testes novos (busca com as palavras do cliente; completar e acrescentar no FAQ).
+
+### Volta 9 · 23/10 · Tela de notebook (1366x768)
+
+**Simulação:** percorri o menu Iniciar, Bom dia, Financeiro, Comercial, Conteúdo, Estúdio de Vídeo, Atendimento, Objetivos e Estúdio de Voz em 1366x768. Tudo cabe e funciona; as faixas de botões quebram em 2 linhas sem esconder nada.
+
+**Ajuste:** em telas até 1440 px de largura, cada app abre maximizado na 1ª vez (um app por vez, sem arrastar janela). Depois vale o tamanho que você deixar. Terminal e execução continuam em janela.
