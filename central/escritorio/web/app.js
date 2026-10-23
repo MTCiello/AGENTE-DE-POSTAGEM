@@ -1093,6 +1093,21 @@ async function renderConteudo(j) {
     agendei: ({ post }) => { const q = d.quadro.find((x) => x.post === post); dialogo(j, { titulo: `Agendado · ${q.titulo}`, texto: 'Registre aqui quando você agendou o post no Metricool (ou publicou direto no Instagram). Fica no historico.md.',
       campos: [{ nome: 'quando', rotulo: 'Data e hora do post', valor: `${q.data.slice(8, 10)}/${q.data.slice(5, 7)} 10h`, meia: true }, { nome: 'publicado', rotulo: 'Situação', tipo: 'escolha', opcoes: [['', 'Agendado'], ['sim', 'Já publicado']], meia: true }],
       botao: 'Registrar', enviar: (x) => operar('cont_agendado', { post, quando: x.quando, publicado: !!x.publicado }) }); },
+    postar: ({ post }) => {
+      const q = d.quadro.find((x) => x.post === post);
+      const video = `/midia/final/${encodeURIComponent(post)}.mp4`; const capa = q.etapas.capa ? `/midia/capas/${encodeURIComponent(post)}.jpg` : '';
+      dialogo(j, { titulo: `Postar · ${q.titulo}`, texto: 'Tudo o que o Metricool (ou o Instagram) pede num lugar só: baixe o vídeo e a capa, copie a legenda e agende no horário. Depois registre aqui.',
+        campos: [{ nome: 'quando', rotulo: 'Data e hora do post', valor: `${ddmm(q.data)} 10h`, meia: true }, { nome: 'publicado', rotulo: 'Situação', tipo: 'escolha', opcoes: [['', 'Agendei'], ['sim', 'Já publiquei']], meia: true }],
+        extra: `<div class="pacote-post"><div class="midias"><video src="${video}" controls preload="metadata"></video>${capa ? `<img src="${capa}" alt="capa">` : ''}</div>
+          <div class="cresce"><div class="acoes-linha"><a class="bt mini" href="${video}" download>Baixar vídeo</a>${capa ? `<a class="bt mini" href="${capa}" download>Baixar capa</a>` : '<small class="ruim">sem capa ainda</small>'}</div>
+          ${q.legenda ? `<pre class="texto-msg legenda-pacote">${esc(q.legenda)}</pre><button type="button" class="bt mini copiar-pacote">Copiar legenda</button>` : '<p class="sub">Sem legenda ainda: <button type="button" class="bt mini gerar-legenda">Gerar legenda</button></p>'}
+          <p class="sub">Prefere que a equipe agende? <button type="button" class="bt mini agendar-claude">Agendar no Metricool com o Claude</button> (ele te mostra antes e só agenda com o seu ok).</p></div></div>`,
+        botao: 'Registrar', enviar: (x) => operar('cont_agendado', { post, quando: x.quando, publicado: !!x.publicado }) });
+      const dlg = $('.dialogo', j.el);
+      const cp = $('.copiar-pacote', dlg); if (cp) cp.onclick = () => copiar(q.legenda);
+      const gl = $('.gerar-legenda', dlg); if (gl) gl.onclick = () => { $('.cancelar', dlg).click(); j.fns.legenda({ post }); };
+      $('.agendar-claude', dlg).onclick = () => { $('.cancelar', dlg).click(); pedirEquipe(`Use o agente postagem: agende o post ${post} ("${q.titulo}") no Metricool para ${ddmm(q.data)} às 10:00 (America/Sao_Paulo), como Reel do Instagram, com o vídeo midia/final/${post}.mp4, ${capa ? `a capa midia/capas/${post}.jpg` : 'sem capa (avise)'} e a legenda do roteiro (roteiros/${post}.json). Siga o AGENTE.md para a URL do vídeo. Antes de criar, me mostre o resumo (horário, legenda, links) e espere o meu ok. Depois registre no historico.md.`, `Postar ${ddmm(q.data)}`); };
+    },
     produzir: ({ post }) => { const q = d.quadro.find((x) => x.post === post); pedirEquipe(`Termine o post ${post} ("${q.titulo}", vai ao ar em ${ddmm(q.data)}). Falta: ${q.falta.map((e) => (d.etapas.find((x) => x[0] === e) || [e, e])[1]).join(', ')}. Siga o AGENTE.md (narração com a voz do Estúdio de Voz, vídeo final, capa, legenda) e me mostre o vídeo e a legenda antes de agendar. Só agende no Metricool depois que eu aprovar.`, `Post ${ddmm(q.data)}`); },
   };
   const etapaChip = (q, e, rot) => `<span class="etapa-post ${q.etapas[e] ? 'feita' : q.proximo === e ? 'proxima' : ''}" title="${esc(rot)}${q.etapas[e] ? ': feito' : q.proximo === e ? ': próximo passo' : ''}">${q.etapas[e] ? '✓' : ''} ${esc(rot)}</span>`;
@@ -1105,9 +1120,9 @@ async function renderConteudo(j) {
     <div class="etapas-post">${d.etapas.map(([e, r]) => etapaChip(q, e, r)).join('<i>›</i>')}</div>
     <div class="acoes-linha">${q.pronto ? '<span class="chip pronto">pronto e agendado</span>' : `<small class="neutro">Próximo: <b>${esc((d.etapas.find((x) => x[0] === q.proximo) || ['', ''])[1])}</b> com ${esc(nome(q.dono))}</small>`}
       <button class="bt mini" data-fn="legenda" data-post="${esc(q.post)}">${q.etapas.legenda ? 'Ver legenda' : 'Gerar legenda'}</button>
-      ${!q.etapas.agendado ? `<button class="bt mini" data-fn="agendei" data-post="${esc(q.post)}">${q.dias < 0 ? 'Foi publicado?' : 'Já agendei'}</button>` : ''}
+      ${!q.etapas.agendado ? (q.etapas.final && q.dias >= 0 ? `<button class="bt mini pri" data-fn="postar" data-post="${esc(q.post)}" title="Vídeo, capa, legenda e horário num lugar só">Postar</button>` : `<button class="bt mini" data-fn="agendei" data-post="${esc(q.post)}">${q.dias < 0 ? 'Foi publicado?' : 'Já agendei'}</button>`) : ''}
       ${!q.etapas.final && q.dias >= 0 ? `<button class="bt mini" data-abrir="video" title="Gera o vídeo no seu PC, sem o Claude">Gerar no Estúdio</button>` : ''}
-      ${!q.pronto && q.dias >= 0 ? `<button class="bt mini pri" data-fn="produzir" data-post="${esc(q.post)}" title="Abre o Claude com a equipe de conteúdo">Terminar com a equipe</button>` : ''}</div></div>`; }
+      ${!q.pronto && q.dias >= 0 ? `<button class="bt mini ${q.etapas.final ? '' : 'pri'}" data-fn="produzir" data-post="${esc(q.post)}" title="Abre o Claude com a equipe de conteúdo">Terminar com a equipe</button>` : ''}</div></div>`; }
   const rodapeProducao = `<p class="sub">Próximos horários livres (seg, qua e sex às 10h): ${d.horarios.map((h) => ddmm(h)).join(', ')}. Para criar posts novos: <a data-abrir="objetivos" style="cursor:pointer;color:var(--azul-claro)">Objetivos → Semana de conteúdo</a>.</p>`;
   const analise = `<div class="acoes" style="margin-top:12px"><button class="bt pri" data-acao="relatorio">${icone('play')} Gerar o relatório da semana</button><button class="bt" data-fn="retrato">Anotar números novos</button>
     <button class="bt" data-fn="analisar" title="Abre o Claude com o analista">Discutir com o Analista</button></div>

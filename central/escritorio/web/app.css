@@ -384,3 +384,10 @@ details.taxas .tab { margin-top: 6px; }
 /* saúde da carteira */
 .faixa-carteira { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; padding: 10px 14px; background: #fff; border: 1px solid var(--linha); border-radius: 10px; }
 .faixa-carteira b { margin-right: 4px; }
+
+/* pacote para postar */
+.pacote-post { display: flex; gap: 14px; margin-top: 10px; align-items: flex-start; flex-wrap: wrap; }
+.pacote-post .midias { display: flex; gap: 8px; }
+.pacote-post video, .pacote-post img { width: 150px; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 8px; background: #000; border: 1px solid var(--linha); }
+.pacote-post .cresce { flex: 1 1 260px; min-width: 0; }
+.legenda-pacote { max-height: 190px; overflow: auto; margin: 8px 0 6px; }

@@ -263,3 +263,18 @@ O Financeiro mostrava tudo como lançamentos soltos, sem nenhum aviso.
 **Para o Mateus decidir:** vale ter uma **recompensa por indicação** (ex.: um mês grátis para quem indicar e o indicado fechar)? Se sim, registre em Metas e decisões e as mensagens passam a citar.
 
 **Testes:** 2 testes novos (notas, motivos, ações e ordem; registrar conversa melhora a nota).
+
+### Volta 14 · 23/10 · Postar sem caçar arquivo
+
+**Simulação:** com o vídeo final pronto (27/10 e 29/10), agendar no Metricool pedia abrir a pasta midia/final, achar a capa, abrir o roteiro para copiar a legenda e lembrar o horário. O cartão do post só tinha "Já agendei" e "Terminar com a equipe".
+
+**Feito:**
+- **Conteúdo → Produção → Postar** (aparece quando o vídeo final existe e o post ainda não foi agendado). A janela traz:
+  - o vídeo para assistir, com **Baixar vídeo** e **Baixar capa**;
+  - a legenda com **Copiar**, ou **Gerar legenda** se ainda não houver;
+  - a data e hora do post;
+  - **Registrar**: grava "Agendei" ou "Já publiquei" no historico.md;
+  - **Agendar no Metricool com o Claude**, que abre o agente de postagem com tudo preenchido. Ele mostra o resumo e só agenda com o seu ok.
+- "Terminar com a equipe" deixa de ser o botão principal quando o vídeo já está pronto.
+
+Conferido no navegador com os posts reais de 27/10 e 29/10.
