@@ -18,6 +18,7 @@ Visão geral, capturas e instalação no [README principal](../README.md).
 |---|---|
 | [app-comercial.md](app-comercial.md) | Arquitetura do app: do conteúdo até a venda do CRM |
 | [clone-digital.md](clone-digital.md) | Pesquisa do clone digital com modelos abertos |
+| [design.md](design.md) | Sistema visual: letra, cores, janela, dock e menu Iniciar |
 | [qualificacao.md](qualificacao.md) | Bateria de testes e nota de cada função |
 | [../escritorio/README.md](../escritorio/README.md) | O escritório em pixel art: o que mudou em relação ao pixel-agents |
 

@@ -30,6 +30,7 @@ const SVG = {
   video: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/>',
   caixa: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
   microfone: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/>',
+  reticencias: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
   min: '<path d="M2 6h8"/>', max: '<rect x="2" y="2" width="8" height="8"/>', rest: '<rect x="2" y="4" width="6" height="6"/><path d="M4 4V2h6v6H8"/>', fechar: '<path d="M2 2l8 8M10 2l-8 8"/>',
 };
 const icone = (n, vb = 24) => `<svg viewBox="0 0 ${vb} ${vb}">${SVG[n] || SVG.agente}</svg>`;
@@ -57,7 +58,9 @@ const APPS = {
 };
 // menu Iniciar por objetivo: o que você quer fazer agora
 const GRUPOS = [['Criar', ['redes', 'video', 'conteudo', 'voz', 'tendencias', 'concorrentes']], ['Vender', ['comercial', 'atendimento', 'anuncios']],
-  ['Gerir', ['briefing', 'financeiro']], ['Equipe e sistema', ['dados', 'conexoes', 'equipe', 'atividade', 'verificar', 'atualizacoes']]];
+  ['Gerir', ['briefing', 'financeiro', 'objetivos']], ['Sistema', ['dados', 'conexoes', 'equipe', 'atividade', 'verificar', 'atualizacoes']]];
+// no dock, como no Mac: os apps do dia a dia ficam sempre lá; os outros aparecem enquanto estão abertos
+const NO_DOCK = ['briefing', 'financeiro', 'comercial', 'atendimento', 'conteudo', 'video', 'voz', 'tendencias'];
 
 const NOMES = { gerente: 'Gerente', 'pesquisador-mercado': 'Pesquisador de Mercado', roteirista: 'Roteirista', 'produtor-video': 'Produtor de Vídeo',
   'produtor-imagem': 'Produtor de Imagem', postagem: 'Postagem', analista: 'Analista', 'gestor-anuncios': 'Gestor de Anúncios', sdr: 'SDR', closer: 'Closer',
@@ -80,7 +83,8 @@ const num = (n) => (n ?? 0).toLocaleString('pt-BR');
 const nome = (a) => NOMES[a] || a;
 const ddmm = (iso) => iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '';
 const semSelecao = () => { try { window.getSelection().removeAllRanges(); } catch { /* nada selecionado */ } };
-const area = () => ({ w: $('#mesa').clientWidth, h: $('#mesa').clientHeight });
+const DOCK = 84; // o dock flutua sobre o escritório; as janelas param acima dele
+const area = () => ({ w: $('#mesa').clientWidth, h: $('#mesa').clientHeight - DOCK });
 let offline = false;
 
 async function api(caminho, corpo) {
@@ -174,9 +178,10 @@ function abrir(chave, dados = {}) {
   const g = SALVO.geo[chave] || { w: Math.min(def.w, W - 40), h: Math.min(def.h, H - 30), x: Math.max(110, Math.min(W - def.w - 20, 140 + (n * 34) % 260)), y: 18 + (n * 30) % 150 };
   const el = document.createElement('section');
   el.className = 'janela';
-  el.innerHTML = `<header class="barra"><span class="ic" style="background:${def.cor}">${icone(def.icone)}</span><span class="titulo">${esc(def.titulo)}</span>
-    <div class="botoes"><button class="minimizar" title="Minimizar">${icone('min', 12)}</button><button class="maximizar" title="Maximizar">${icone('max', 12)}</button><button class="fechar" title="Fechar">${icone('fechar', 12)}</button></div></header>
-    <div class="conteudo"></div>` + ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map((d) => `<div class="borda ${d}" data-d="${d}"></div>`).join('');
+  el.innerHTML = `<header class="barra"><span class="ic" style="background:${def.cor}">${icone(def.icone)}</span><span class="titulos"><b class="titulo">${esc(def.titulo)}</b><small class="secao"></small></span>
+    <div class="ferramentas"></div>
+    <div class="botoes"><button class="minimizar" title="Minimizar" aria-label="Minimizar">${icone('min', 12)}</button><button class="maximizar" title="Maximizar" aria-label="Maximizar">${icone('max', 12)}</button><button class="fechar" title="Fechar" aria-label="Fechar">${icone('fechar', 12)}</button></div></header>
+    <div class="corpo-janela"><nav class="lateral" hidden></nav><div class="conteudo"></div></div>` + ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map((d) => `<div class="borda ${d}" data-d="${d}"></div>`).join('');
   $('#janelas').appendChild(el);
   const j = { chave, def, el, corpo: $('.conteudo', el), dados, min: false, max: false, prev: null, timer: null };
   janelas.set(chave, j);
@@ -198,8 +203,32 @@ async function desenhar(j, silencioso) {
   const rolagem = j.corpo.scrollTop;
   if (!silencioso) j.corpo.innerHTML = '<div class="pagina"><p class="sub">Carregando…</p></div>';
   try { await j.def.render(j); } catch (e) { if (!silencioso) j.corpo.innerHTML = `<div class="pagina"><div class="vazio">Não consegui carregar: ${esc(e.message || e)}</div></div>`; }
+  arrumar(j);
   j.corpo.scrollTop = rolagem;
 }
+
+// a janela no padrão do sistema: as abas viram a barra lateral e a fila de ações do topo sobe para a barra de título
+// (as 3 primeiras à vista, o resto em "Mais"); os cliques continuam chegando em j.fns porque tudo fica dentro da janela
+function arrumar(j) {
+  const lat = $('.lateral', j.el); const ferr = $('.ferramentas', j.el);
+  const nav = $('.pagina > nav.abas:not(.seg)', j.corpo);
+  lat.hidden = !nav; lat.replaceChildren(...(nav ? [nav] : []));
+  const semClaude = nav && $('.pagina > .sem-claude', j.corpo); if (semClaude) lat.appendChild(semClaude);
+  j.el.classList.toggle('com-lateral', !!nav);
+  const on = nav && $('button.on', nav);
+  $('.secao', j.el).textContent = on ? on.firstChild.textContent.trim() : '';
+  ferr.replaceChildren();
+  const barra = $('.pagina > .acoes.topo', j.corpo); if (!barra) return;
+  const bts = [...barra.children]; barra.remove();
+  const cabem = j.el.offsetWidth >= 1000 ? 3 : j.el.offsetWidth >= 760 ? 2 : 1; // janela estreita: menos botões à vista
+  ferr.append(...bts.slice(0, cabem));
+  if (bts.length > cabem) {
+    ferr.insertAdjacentHTML('beforeend', `<div class="mais"><button class="bt-icone" data-mais title="Mais ações" aria-label="Mais ações" aria-expanded="false">${icone('reticencias')}</button><div class="menu-mais" hidden></div></div>`);
+    $('.menu-mais', ferr).append(...bts.slice(cabem));
+  }
+}
+const fecharMais = (fora) => document.querySelectorAll('.menu-mais:not([hidden])').forEach((m) => { if (!fora || !m.parentElement.contains(fora)) { m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false'); } });
+document.addEventListener('pointerdown', (e) => fecharMais(e.target), true);
 
 function posicionar(j, g) {
   const { w: W, h: H } = area();
@@ -225,7 +254,7 @@ function restaurar(j) { if (j.min) { j.min = false; j.el.classList.remove('min')
 function maximizar(j) {
   if (!j.max) j.prev = geo(j);
   j.max = true; j.el.classList.add('max');
-  Object.assign(j.el.style, { left: '0px', top: '0px', width: '100%', height: '100%' });
+  Object.assign(j.el.style, { left: '0px', top: '0px', width: '100%', height: `calc(100% - ${DOCK}px)` });
   $('.maximizar', j.el).innerHTML = icone('rest', 12); $('.maximizar', j.el).title = 'Restaurar';
 }
 function desmaximizar(j) {
@@ -246,7 +275,7 @@ function fechar(j) {
 
 function zonaEncaixe(ev) {
   const { w: W } = area();
-  if (ev.clientY <= 4) return 'max';
+  if (ev.clientY <= $('#mesa').getBoundingClientRect().top + 4) return 'max';
   if (ev.clientX <= 4) return 'esq';
   if (ev.clientX >= W - 4) return 'dir';
   return null;
@@ -270,10 +299,10 @@ function ligarJanela(j) {
   $('.minimizar', el).onclick = () => minimizar(j);
   $('.maximizar', el).onclick = () => alternarMax(j);
   $('.fechar', el).onclick = () => fechar(j);
-  barra.addEventListener('dblclick', (e) => { if (!e.target.closest('button')) alternarMax(j); });
+  barra.addEventListener('dblclick', (e) => { if (!e.target.closest('button, a, label, input, select, .menu-mais')) alternarMax(j); });
 
   barra.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 || e.target.closest('button')) return;
+    if (e.button !== 0 || e.target.closest('button, a, label, input, select, .menu-mais')) return;
     e.preventDefault(); semSelecao(); document.body.classList.add('arrastando'); // sem seleção de texto enquanto arrasta
     const r = el.getBoundingClientRect(); const mesa = $('#mesa').getBoundingClientRect();
     let ox = e.clientX - r.left; let oy = e.clientY - r.top; const sx = e.clientX; const sy = e.clientY; let andou = false; let zona = null;
@@ -325,6 +354,9 @@ function ligarJanela(j) {
   // caixa de objetivo: Enter manda para a equipe, Shift+Enter quebra a linha
   el.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && e.target.matches('.objetivo-texto') && j.fns && j.fns.mandar) { e.preventDefault(); j.fns.mandar(); } });
   el.addEventListener('click', (e) => {
+    const m = e.target.closest('[data-mais]');
+    if (m) { const lista = m.nextElementSibling; lista.hidden = !lista.hidden; m.setAttribute('aria-expanded', String(!lista.hidden)); return; }
+    if (e.target.closest('.menu-mais')) fecharMais();
     const f = e.target.closest('[data-fn]');
     if (f && f.dataset.fn === 'aba') { e.preventDefault(); j.aba = f.dataset.aba; return desenhar(j, true); }
     if (f && j.fns && j.fns[f.dataset.fn]) { e.preventDefault(); return j.fns[f.dataset.fn](f.dataset, f); }
@@ -349,11 +381,16 @@ const tile = (def, cls = 'tile') => `<span class="${cls}" style="background:${de
 
 function barraTarefas() {
   const vazia = ![...janelas.values()].some((j) => !j.min);
-  $('#fixados').innerHTML = `<button class="fixado ${vazia ? 'ativa' : ''}" id="mostrar-escritorio" title="Mostrar o escritório (minimiza as janelas)">${tile({ cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', icone: 'escritorio' })}</button>`
-    + `<button class="fixado" id="novo-terminal" title="Terminal do Claude Code: abre o Claude na pasta do assistente para ativar os agentes">${tile({ cor: 'linear-gradient(135deg,#3A5582,#13213A)', icone: 'terminal' })}</button>`
-    + `<button class="fixado ${controles ? 'ligada' : ''}" id="engrenagem" title="${controles ? 'Esconder' : 'Mostrar'} os controles do escritório (+ Agente, Layout, Configurações, zoom)"><span class="tile">${icone('engrenagem')}</span></button>`;
-  $('#abertas').innerHTML = [...janelas.values()].map((j) =>
-    `<button class="aberta ${ativa === j && !j.min ? 'ativa' : ''}" data-chave="${esc(j.chave)}" title="${esc(j.def.titulo)}">${tile(j.def)}<span>${esc(j.def.titulo)}</span></button>`).join('');
+  $('#fixados').innerHTML = `<button class="fixado ${vazia ? 'ativa' : ''}" id="mostrar-escritorio" title="Mostrar o escritório (minimiza as janelas)" aria-label="Mostrar o escritório">${tile({ cor: 'linear-gradient(180deg,#F1C95A,#D99A0B)', icone: 'escritorio' })}</button>`
+    + `<button class="fixado" id="novo-terminal" title="Terminal do Claude Code: abre o Claude na pasta do assistente para ativar os agentes" aria-label="Terminal do Claude Code">${tile({ cor: 'linear-gradient(180deg,#3A5582,#13213A)', icone: 'terminal' })}</button>`
+    + `<button class="fixado ${controles ? 'ligada' : ''}" id="engrenagem" title="${controles ? 'Esconder' : 'Mostrar'} os controles do escritório (+ Agente, Layout, Configurações, zoom)" aria-label="Controles do escritório"><span class="tile">${icone('engrenagem')}</span></button>`;
+  const chaves = [...NO_DOCK, ...[...janelas.keys()].filter((k) => !NO_DOCK.includes(k))];
+  $('#abertas').innerHTML = chaves.map((k) => {
+    const j = janelas.get(k); const def = j ? j.def : APPS[k];
+    const cls = [j ? 'aberto' : '', j && ativa === j && !j.min ? 'ativa' : ''].join(' ');
+    return `<button class="aberta ${cls}" data-chave="${esc(k)}" title="${esc(def.titulo)}" aria-label="${esc(def.titulo)}">${tile(def)}</button>`;
+  }).join('');
+  $('#app-ativo').textContent = ativa && !ativa.min ? ativa.def.titulo : 'Ciello OS';
 }
 function cliqueTarefa(e) {
   const b = e.target.closest('[data-chave]'); if (!b) return;
@@ -391,11 +428,13 @@ function desenharMenu(filtro = '') {
   const item = (k) => `<button class="item-app" data-chave="${k}">${tile(APPS[k])}<span>${esc(APPS[k].titulo)}</span></button>`;
   const grupos = GRUPOS.map(([g, ks]) => [g, ks.filter(casa)]).filter(([, ks]) => ks.length);
   const pedir = f.length >= 3 ? `<button class="pedir-equipe" data-pedir="1">${sprite('gerente', 24)}<span><b>Pedir à equipe</b><small>“${esc(filtro.trim())}”</small></span><kbd>Enter</kbd></button>` : '';
-  $('#menu-apps').innerHTML = pedir
-    + (!f ? `<button class="destaque-objetivo" data-chave="objetivos">${tile(APPS.objetivos)}<span><b>O que você quer fazer?</b><small>Escreva um objetivo ou rode uma esteira pronta: a equipe se organiza sozinha.</small></span></button>` : '')
-    + grupos.map(([g, ks]) => `<h4>${g}</h4><div class="grupo-apps">${ks.map(item).join('')}</div>`).join('');
-  $('#menu-equipe').innerHTML = equipeCache.filter((a) => nome(a.nome).toLowerCase().includes(f)).map((a) =>
-    `<button class="item-agente" data-chave="agente:${esc(a.nome)}">${sprite(a.nome, 22)}<div><b>${esc(nome(a.nome))}</b><small>${esc(ROTULO_ESTADO[estadoAgente(a.nome).estado] || 'livre')}</small></div></button>`).join('');
+  $('#menu-apps').innerHTML = pedir + grupos.map(([g, ks]) => `<section><h4>${g}</h4><div class="grupo-apps">${ks.map(item).join('')}</div></section>`).join('');
+  const equipe = equipeCache.filter((a) => nome(a.nome).toLowerCase().includes(f));
+  $('#titulo-equipe').textContent = `Equipe · ${equipeCache.length} agentes`;
+  $('#menu-equipe').innerHTML = equipe.map((a) => {
+    const e = estadoAgente(a.nome).estado || 'parado';
+    return `<button class="item-agente" data-chave="agente:${esc(a.nome)}">${sprite(a.nome, 22)}<b>${esc(nome(a.nome))}</b><small class="estado-${esc(e)}">${esc(ROTULO_ESTADO[e] || 'livre')}</small></button>`;
+  }).join('') || '<p class="sub">Ninguém com esse nome.</p>';
 }
 function fecharMenus() { $('#menu').hidden = true; $('#central').hidden = true; $('#iniciar').classList.remove('on'); }
 $('#iniciar').onclick = (e) => { e.stopPropagation(); const abrirMenu = $('#menu').hidden; fecharMenus(); if (abrirMenu) { desenharMenu(); $('#menu').hidden = false; $('#iniciar').classList.add('on'); $('#busca').value = ''; $('#busca').focus(); } };
@@ -432,7 +471,7 @@ function desenharCentral() {
 function aviso({ titulo, texto = '', agente = null, chave = null, cor = '#E0A81C' }) {
   notificacoes.unshift({ titulo, texto, agente, chave, hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) });
   notificacoes.length = Math.min(notificacoes.length, 40); naoLidas++; contarNaoLidas();
-  const el = document.createElement('div'); el.className = 'aviso'; el.style.borderLeftColor = cor;
+  const el = document.createElement('div'); el.className = 'aviso'; el.style.setProperty('--cor-aviso', cor);
   el.innerHTML = `${agente ? sprite(agente, 26) : ''}<div><b>${esc(titulo)}</b><small>${esc(texto)}</small></div>`;
   el.onclick = () => { if (chave) abrir(chave); el.remove(); };
   $('#avisos').appendChild(el);
@@ -441,8 +480,7 @@ function aviso({ titulo, texto = '', agente = null, chave = null, cor = '#E0A81C
 
 function relogio() {
   const d = new Date();
-  $('#relogio b').textContent = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  $('#relogio small').textContent = d.toLocaleDateString('pt-BR');
+  $('#relogio').textContent = `${d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}  ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
 }
 
 // ------------------------------------------------------------------ agentes ao vivo
@@ -489,7 +527,7 @@ let fundo = { noAr: null, url: '' };
 function papelParede(aviso = '') {
   $('#fundo').innerHTML = `<div class="papel-parede"><img src="/web/logo-marfim.svg" alt=""><b>CIELLO OS</b><span>${esc(EMPRESA.nome || 'escritório de IA')}</span>${aviso}</div>`;
 }
-function botaoEscritorio() { const b = $('#ver-escritorio'); if (b) b.textContent = SALVO.semEscritorio ? 'Mostrar escritório' : 'Esconder escritório'; }
+function botaoEscritorio() { const b = $('#ver-escritorio'); if (b) { const t = SALVO.semEscritorio ? 'Mostrar o escritório' : 'Esconder o escritório (modo foco)'; b.title = t; b.setAttribute('aria-label', t); b.classList.toggle('on', !!SALVO.semEscritorio); } }
 function alternarEscritorio() {
   fecharMenus();
   SALVO.semEscritorio = !SALVO.semEscritorio; salvar(); botaoEscritorio();
@@ -1359,11 +1397,28 @@ async function renderRelatorio(j, qual) {
     semana: () => pedirEquipe(`Crie os 3 reels da semana a partir da pauta do radar mais recente (${d.relatorio.arquivo}), seguindo a rotina /semana. Me mostre os 3 temas e os roteiros para aprovar antes de produzir, e peça confirmação antes de agendar.`, 'Semana de conteúdo'),
     comClaude: () => pedirEquipe(qual === 'tendencias' ? 'Use o pesquisador-mercado: monte o radar de tendências desta semana com busca web, no mesmo formato do radar mais recente em radar/ (pauta sugerida com nota, pilar, assunto e ângulo para pequeno negócio, e fontes). Marque com ⚠️ o que precisa confirmar.' : 'Use o pesquisador-mercado: confira preço, planos e oferta dos concorrentes de comercial/concorrentes.json com busca web e me diga o que mudou e o que isso significa para o preço do ' + PROD() + '.', qual === 'tendencias' ? 'Radar' : 'Concorrentes'),
   };
-  j.corpo.innerHTML = `<div class="pagina"><h1>${titulo}</h1><p class="sub">${sub}${d.relatorio ? ` · <code>${esc(d.relatorio.arquivo)}</code>` : ''}</p>
-  <div class="acoes" style="margin-top:0"><button class="bt pri" data-acao="${acao[0]}">${icone('play')} ${acao[1]}</button><button class="bt" data-fn="comClaude" title="Sem internet no radar? O Claude monta com busca web">Montar com o Claude</button><button class="bt" data-abrir="agente:pesquisador-mercado">Pesquisador</button></div>
-  ${pauta.length ? `<h2>Pauta sugerida</h2><div class="lista">${pauta.map((x, i) => `<div class="linha-item"><span class="chip ${+x.nota >= 75 ? 'pronto' : ''}">${esc(x.nota)}</span><div class="cresce"><b>${esc(x.assunto)}</b><small style="white-space:normal">${esc(x.pilar)} · ${esc(x.angulo)}</small></div><button class="bt mini pri" data-fn="roteiro" data-i="${i}">Virar roteiro</button></div>`).join('')}</div>
-    <div class="acoes"><button class="bt" data-fn="semana">${icone('play')} Fazer os 3 reels da semana com esta pauta</button></div><h2>Relatório completo</h2>` : ''}
-  ${d.relatorio ? `<div class="cartao md" style="margin-top:12px">${md(d.relatorio.texto)}</div>` : '<div class="vazio" style="margin-top:12px">Nenhum relatório ainda.</div>'}</div>`;
+  // nota da pauta: verde a partir de 75, ouro a partir de 65
+  const nota = (n, cls = '') => `<span class="nota ${+n >= 75 ? 'alta' : +n >= 65 ? 'media' : ''} ${cls}">${esc(n)}</span>`;
+  j.fns.ver = ({ i }) => { j.sel = +i; desenhar(j, true); };
+  const topo = `<div class="acoes topo">${pauta.length ? '<button class="bt pri" data-fn="semana">Fazer os 3 reels da semana</button>' : ''}<button class="bt ${pauta.length ? '' : 'pri'}" data-acao="${acao[0]}">${icone('atualizar')} ${acao[1]}</button><button class="bt" data-fn="comClaude" title="Sem internet no radar? O Claude monta com busca web">Montar com o Claude</button><button class="bt" data-abrir="agente:pesquisador-mercado">Pesquisador</button></div>`;
+  const cab = `<h1>${titulo}</h1><p class="sub">${sub}${d.relatorio ? ` · <code>${esc(d.relatorio.arquivo)}</code>` : ''}</p>`;
+  const relatorio = d.relatorio ? `<div class="cartao md">${md(d.relatorio.texto)}</div>` : '<div class="vazio">Nenhum relatório ainda.</div>';
+  if (!pauta.length) { j.corpo.innerHTML = `<div class="pagina">${topo}${cab}${relatorio}</div>`; return; }
+  j.aba = j.aba === 'relatorio' ? 'relatorio' : 'pauta';
+  const seg = `<nav class="abas seg"><button class="${j.aba === 'pauta' ? 'on' : ''}" data-fn="aba" data-aba="pauta">Pauta</button><button class="${j.aba === 'relatorio' ? 'on' : ''}" data-fn="aba" data-aba="relatorio">Relatório completo</button></nav>`;
+  if (j.aba === 'relatorio') { j.corpo.innerHTML = `<div class="pagina">${topo}${cab}${seg}<div style="margin-top:14px">${relatorio}</div></div>`; return; }
+  const sel = Math.min(j.sel || 0, pauta.length - 1); const x = pauta[sel];
+  const confirmar = /⚠/.test(x.assunto);
+  j.corpo.innerHTML = `<div class="pagina larga">${topo}${cab}${seg}
+  <div class="lista-detalhe">
+    <div class="lista-pautas" role="listbox" aria-label="Pauta sugerida">${pauta.map((p, i) => `<button class="item-pauta ${i === sel ? 'on' : ''}" role="option" aria-selected="${i === sel}" data-fn="ver" data-i="${i}">${nota(p.nota)}<span><b>${esc(p.assunto.replace(/⚠️?\s*/g, ''))}</b><small>${esc(p.pilar)}${/⚠/.test(p.assunto) ? ' · confirmar a fonte' : ''}</small></span></button>`).join('')}</div>
+    <article class="detalhe-pauta">
+      <div class="cab-pauta">${nota(x.nota, 'grande')}<div><small>${esc(x.pilar)}</small><h2>${esc(x.assunto.replace(/⚠️?\s*/g, ''))}</h2></div></div>
+      <div class="angulo"><small>Ângulo para pequeno negócio</small><p>${esc(x.angulo)}</p></div>
+      ${confirmar ? '<div class="faixa">As fontes divergem: confirme na fonte oficial antes de roteirizar.</div>' : ''}
+      <div class="acoes"><button class="bt pri" data-fn="roteiro" data-i="${sel}">Virar roteiro</button><button class="bt" data-abrir="agente:pesquisador-mercado">Pedir ao Pesquisador</button></div>
+    </article>
+  </div></div>`;
 }
 
 // ------------------------------------------------------------------ apps: anúncios
