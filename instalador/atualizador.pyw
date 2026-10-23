@@ -15,7 +15,7 @@ import atualizacao  # noqa: E402
 
 AZUL, AZUL_ESCURO, MARFIM, OURO, CARVAO = "#263A59", "#18263C", "#F8F4E8", "#E0A81C", "#161616"
 ICONE = Path(__file__).resolve().parent / "marca" / "ciello.ico"
-CANAIS = {"estavel": "Estável (versões publicadas)", "teste": "Teste (última versão da branch de desenvolvimento)"}
+CANAIS = {"estavel": "Estável (versões publicadas)", "teste": "Teste (último commit da main, antes de virar versão)"}
 
 
 class Janela:

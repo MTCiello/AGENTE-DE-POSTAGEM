@@ -1,7 +1,7 @@
 # Diário noturno do Ciello OS
 
 Loop de evolução que roda enquanto o Mateus dorme: **simular o uso → achar o que trava ou passa despercebido → pesquisar → desenvolver → testar → ajustar a usabilidade → publicar**.
-Regras: só na branch `ccr-75504115-gpanzf`, nada é enviado, agendado ou publicado de verdade, e dados reais (leads, clientes, valores da planilha) nunca entram aqui (o repositório é público). O que é dado seu vai só na conversa.
+Regras: só na branch `main`, nada é enviado, agendado ou publicado de verdade, e dados reais (leads, clientes, valores da planilha) nunca entram aqui (o repositório é público). O que é dado seu vai só na conversa.
 
 ## Resumo para o café
 
