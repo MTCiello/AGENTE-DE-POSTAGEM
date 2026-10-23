@@ -115,7 +115,7 @@ def cmd_checar(a):
     fotos.mkdir(parents=True, exist_ok=True)
     dia = dt.date.today().isoformat()
     L = [f"# Concorrentes · {dia}", "", "O que mudou nas páginas desde a última vigia (preço, plano, oferta).", ""]
-    mudou = erros = 0
+    mudou = erros = abertas = 0
     for c in cfg["concorrentes"]:
         if a.so and c["nome"].lower() not in [s.lower() for s in a.so]:
             continue
@@ -129,6 +129,7 @@ def cmd_checar(a):
                 L += [f"- **{u['rotulo']}**: não consegui abrir ({type(e).__name__}: {str(e)[:80]}) · {u['url']}"]
                 print(f"{c['nome']} · {u['rotulo']} falhou: {e}", file=sys.stderr)
                 continue
+            abertas += 1
             if not arq.exists():
                 arq.write_text(agora, encoding="utf-8")
                 pr = precos(agora)
@@ -150,6 +151,9 @@ def cmd_checar(a):
         if c.get("instagram"):
             L += [f"- Instagram: https://www.instagram.com/{c['instagram']}/ (reels novos entram na biblioteca de ganchos)"]
         L.append("")
+    if erros and not abertas:
+        # nenhuma página abriu (sem internet): não grava um relatório vazio por cima da última vigia boa
+        sys.exit("Nenhuma página abriu (sem internet ou bloqueio de rede). A última vigia continua valendo; tente de novo mais tarde.")
     saida = Path(a.saida)
     saida.mkdir(parents=True, exist_ok=True)
     rel = destino_relatorio(saida, dia)

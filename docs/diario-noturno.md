@@ -98,3 +98,12 @@ _(atualizado no fim da noite)_
 6. leads na fila.
 
 Cada passo tem **Fazer agora**, que abre a janela na aba certa já com o formulário aberto. O passo some da lista quando está feito, e **Esconder** tira o cartão.
+
+### Volta 6 · 23/10 · Tendências e análise de métricas
+
+**Simulação:** rodei o radar e a vigia de concorrentes como no seu PC num dia sem internet (aqui a rede bloqueia). **Bug sério:** com todas as fontes fora, os dois gravavam um relatório vazio por cima do último bom, e as janelas Tendências e Concorrentes passavam a mostrar o vazio.
+
+**Feito:**
+- **Radar e vigia sem internet** não gravam mais nada: avisam "o último continua valendo" e mantêm o relatório bom na tela.
+- **Tendências → Pauta sugerida:** cada assunto do radar vira um item com nota e ângulo, e com o botão **Virar roteiro** (o roteirista confere os fatos antes e salva no próximo horário livre). Também há **Fazer os 3 reels da semana com esta pauta** e **Montar com o Claude**, que monta o radar ou a vigia com busca web quando a rede do PC falhar.
+- **Conteúdo → Análise:** o relatório semanal do Instagram (retenção, salvamentos, compartilhamentos, horário, o que mudar) dentro do OS, com **Gerar o relatório da semana**, **Anotar números novos** e **Discutir com o Analista**.

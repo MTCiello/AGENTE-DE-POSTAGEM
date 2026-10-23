@@ -274,7 +274,13 @@ def app_conteudo():
                       "final": (RAIZ / "midia" / "final" / f"{r.stem}.mp4").exists()})
     quadro = conteudo.quadro()
     return {"instagram": kpis()["instagram"], "posts": posts[::-1], "quadro": quadro, "alertas": conteudo.alertas(quadro),
-            "horarios": conteudo.proximos_horarios(), "etapas": [[e, conteudo.ROTULOS[e]] for e in conteudo.ETAPAS]}
+            "horarios": conteudo.proximos_horarios(), "etapas": [[e, conteudo.ROTULOS[e]] for e in conteudo.ETAPAS],
+            "relatorio": ultimo_relatorio_instagram()}
+
+
+def ultimo_relatorio_instagram():
+    arqs = sorted((RAIZ / "metricas").glob("relatorio-20??-??-??.md"))
+    return {"arquivo": arqs[-1].relative_to(RAIZ).as_posix(), "texto": arqs[-1].read_text(encoding="utf-8")} if arqs else None
 
 
 def ultimo_md(padrao):

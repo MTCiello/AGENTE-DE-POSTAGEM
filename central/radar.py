@@ -274,6 +274,9 @@ def main():
             print(f"{nome:9} falhou: {e}", file=sys.stderr)
 
     ranqueados = pontuar(itens, desde)
+    if not ranqueados and erros:
+        # sem internet (ou todas as fontes fora): não grava um radar vazio por cima do último bom
+        sys.exit("Nenhuma fonte respondeu (sem internet ou bloqueio de rede). O último radar continua valendo; tente de novo mais tarde.")
     a.saida.mkdir(parents=True, exist_ok=True)
     base = a.saida / hoje.isoformat()
     if base.with_suffix(".md").exists():  # nunca sobrescreve um radar do dia (pode ter sido feito à mão)

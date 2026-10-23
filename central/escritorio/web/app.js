@@ -989,6 +989,10 @@ async function renderConteudo(j) {
       ${!q.etapas.agendado ? `<button class="bt mini" data-fn="agendei" data-post="${esc(q.post)}">${q.dias < 0 ? 'Foi publicado?' : 'Já agendei'}</button>` : ''}
       ${!q.pronto && q.dias >= 0 ? `<button class="bt mini pri" data-fn="produzir" data-post="${esc(q.post)}" title="Abre o Claude com a equipe de conteúdo">Terminar com a equipe</button>` : ''}</div></div>`; }
   const rodapeProducao = `<p class="sub">Próximos horários livres (seg, qua e sex às 10h): ${d.horarios.map((h) => ddmm(h)).join(', ')}. Para criar posts novos: <a data-abrir="objetivos" style="cursor:pointer;color:var(--azul-claro)">Objetivos → Semana de conteúdo</a>.</p>`;
+  const analise = `<div class="acoes" style="margin-top:12px"><button class="bt pri" data-acao="relatorio">${icone('play')} Gerar o relatório da semana</button><button class="bt" data-fn="retrato">Anotar números novos</button>
+    <button class="bt" data-fn="analisar" title="Abre o Claude com o analista">Discutir com o Analista</button></div>
+    ${d.relatorio ? `<p class="sub">${esc(d.relatorio.arquivo)} · o que mudar está no fim.</p><div class="cartao md">${md(d.relatorio.texto)}</div>` : '<div class="vazio">Sem relatório ainda. Anote os números do Instagram e clique em <b>Gerar o relatório da semana</b>.</div>'}`;
+  j.fns.analisar = () => pedirEquipe('Use o analista: leia o último retrato em metricas/ e o relatório da semana. Me diga em 5 linhas o que está funcionando, o que parar de fazer e qual gancho testar nos próximos 3 reels, com base nos números (retenção, salvamentos, compartilhamentos) e na biblioteca de ganchos (python central/ganchos.py ranking).', 'Analista');
   const insta = `${i ? `<div class="kpis">${kpi('Seguidores', num(i.seguidores), delta != null ? `${delta >= 0 ? '+' : ''}${delta} na semana` : '', delta >= 0 ? 'bom' : 'ruim')}${kpi('Alcance 30 dias', num(i.alcance))}
   ${kpi('Tempo médio no reel', `${String(i.tempo_medio).replace('.', ',')}s`, 'meta 6s', i.tempo_medio >= 6 ? 'bom' : 'ruim')}${kpi('Salvamentos', `${String(i.salvamentos_pct).replace('.', ',')}%`, 'meta 1%', i.salvamentos_pct >= 1 ? 'bom' : 'ruim')}</div>` : '<div class="vazio">Sem retrato do Instagram ainda. Clique em <b>Anotar números do Instagram</b> (ou rode /segunda no Claude Code).</div>'}
   <h2>Posts · próximos e recentes</h2><div class="posts">${d.posts.map((p) => `<div class="post">${p.capa ? `<img src="${esc(p.capa)}" alt="" loading="lazy">` : '<div class="sem-capa"></div>'}<div><b>${ddmm(p.data)}</b>${esc(p.titulo)}<br>${p.final ? '<span class="chip pronto">vídeo pronto</span>' : '<span class="chip esperando">sem vídeo final</span>'}</div></div>`).join('')}</div>
@@ -996,17 +1000,30 @@ async function renderConteudo(j) {
   <div class="acoes"><button class="bt" data-acao="ganchos">Ranking de ganchos</button><button class="bt" data-abrir="agente:produtor-video">Produtor de vídeo</button><button class="bt" data-abrir="agente:postagem">Postagem</button></div>`;
   j.corpo.innerHTML = `<div class="pagina"><h1>Conteúdo e Instagram</h1><p class="sub">@ciellotec${i ? ` · retrato de ${ddmm(i.data)}` : ''}</p>${SEM_CLAUDE}
   <div class="acoes topo"><button class="bt pri" data-fn="retrato">Anotar números do Instagram</button><button class="bt" data-acao="relatorio">Relatório semanal</button><button class="bt" data-abrir="voz">Estúdio de Voz</button></div>
-  ${abas(j, [['producao', 'Produção', d.quadro.filter((q) => !q.pronto && q.dias >= 0).length || ''], ['instagram', 'Instagram']])}${j.aba === 'instagram' ? insta : producao + rodapeProducao}</div>`;
+  ${abas(j, [['producao', 'Produção', d.quadro.filter((q) => !q.pronto && q.dias >= 0).length || ''], ['instagram', 'Instagram'], ['analise', 'Análise']])}${j.aba === 'instagram' ? insta : j.aba === 'analise' ? analise : producao + rodapeProducao}</div>`;
 }
 
 // ------------------------------------------------------------------ apps: tendências e concorrentes
+// linhas da "Pauta sugerida" do radar (| # | Nota | Pilar | Assunto | Ângulo |) viram itens com botão
+function pautaDoRadar(texto) {
+  return String(texto || '').split('\n').filter((l) => /^\|\s*\d+\s*\|/.test(l)).map((l) => l.replace(/^\||\|$/g, '').split('|').map((c) => c.trim()))
+    .filter((c) => c.length >= 5).map(([n, nota, pilar, assunto, angulo]) => ({ n, nota, pilar, assunto: assunto.replace(/\*\*|`/g, ''), angulo: angulo.replace(/^"|"$/g, '').replace(/`/g, '') }));
+}
 async function renderRelatorio(j, qual) {
   const d = await api(`/api/app/${qual}`);
   const acao = qual === 'tendencias' ? ['radar', 'Rodar o radar agora'] : ['vigia', 'Checar concorrentes agora'];
   const titulo = qual === 'tendencias' ? 'Tendências do nicho' : 'Concorrentes';
   const sub = qual === 'tendencias' ? 'Assuntos em alta nos 5 pilares, com nota de 0 a 100.' : `Vigiando ${esc((d.concorrentes || []).join(', '))}.`;
+  const pauta = qual === 'tendencias' && d.relatorio ? pautaDoRadar(d.relatorio.texto) : [];
+  j.fns = {
+    roteiro: ({ i }) => { const x = pauta[+i]; pedirEquipe(`Use o roteirista: roteiro de reel sobre "${x.assunto}" (pilar ${x.pilar}), com o ângulo "${x.angulo}". Antes, confirme os fatos numa fonte oficial (passo 3 do AGENTE.md); se não der para confirmar, me avise e sugira outro tema da pauta. Siga o formato dos roteiros (gancho de até 9 palavras, 2 a 4 itens, CTA "Salva pra testar depois"), salve em roteiros/ com a data do próximo horário livre e me mostre para aprovar.`, `Roteiro · ${x.assunto.slice(0, 24)}`); },
+    semana: () => pedirEquipe(`Crie os 3 reels da semana a partir da pauta do radar mais recente (${d.relatorio.arquivo}), seguindo a rotina /semana. Me mostre os 3 temas e os roteiros para aprovar antes de produzir, e peça confirmação antes de agendar.`, 'Semana de conteúdo'),
+    comClaude: () => pedirEquipe(qual === 'tendencias' ? 'Use o pesquisador-mercado: monte o radar de tendências desta semana com busca web, no mesmo formato de radar/2026-10-19.md (pauta sugerida com nota, pilar, assunto e ângulo para pequeno negócio, e fontes). Marque com ⚠️ o que precisa confirmar.' : 'Use o pesquisador-mercado: confira preço, planos e oferta dos concorrentes de comercial/concorrentes.json com busca web e me diga o que mudou e o que isso significa para o preço do CIELLO CRM.', qual === 'tendencias' ? 'Radar' : 'Concorrentes'),
+  };
   j.corpo.innerHTML = `<div class="pagina"><h1>${titulo}</h1><p class="sub">${sub}${d.relatorio ? ` · <code>${esc(d.relatorio.arquivo)}</code>` : ''}</p>
-  <div class="acoes" style="margin-top:0"><button class="bt pri" data-acao="${acao[0]}">${icone('play')} ${acao[1]}</button><button class="bt" data-abrir="agente:pesquisador-mercado">Pesquisador</button></div>
+  <div class="acoes" style="margin-top:0"><button class="bt pri" data-acao="${acao[0]}">${icone('play')} ${acao[1]}</button><button class="bt" data-fn="comClaude" title="Sem internet no radar? O Claude monta com busca web">Montar com o Claude</button><button class="bt" data-abrir="agente:pesquisador-mercado">Pesquisador</button></div>
+  ${pauta.length ? `<h2>Pauta sugerida</h2><div class="lista">${pauta.map((x, i) => `<div class="linha-item"><span class="chip ${+x.nota >= 75 ? 'pronto' : ''}">${esc(x.nota)}</span><div class="cresce"><b>${esc(x.assunto)}</b><small style="white-space:normal">${esc(x.pilar)} · ${esc(x.angulo)}</small></div><button class="bt mini pri" data-fn="roteiro" data-i="${i}">Virar roteiro</button></div>`).join('')}</div>
+    <div class="acoes"><button class="bt" data-fn="semana">${icone('play')} Fazer os 3 reels da semana com esta pauta</button></div><h2>Relatório completo</h2>` : ''}
   ${d.relatorio ? `<div class="cartao md" style="margin-top:12px">${md(d.relatorio.texto)}</div>` : '<div class="vazio" style="margin-top:12px">Nenhum relatório ainda.</div>'}</div>`;
 }
 
