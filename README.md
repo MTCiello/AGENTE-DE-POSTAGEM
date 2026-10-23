@@ -1,6 +1,8 @@
 # AGENTE DE POSTAGEM
 
-**Instalar e testar no Windows:** `instalar.cmd` → `testar.cmd` → **`Ciello.cmd`** (o app inteiro numa área de trabalho). Passo a passo em `docs/teste-de-hoje.md`.
+**Instalar no Windows:** baixe o `CielloOS-Setup-<versão>.exe` em [Releases](https://github.com/MTCiello/AGENTE-DE-POSTAGEM/releases): escolhe a pasta, instala todas as dependências e cria o ícone do Ciello OS, que se atualiza sozinho (ver `docs/instalador.md`).
+
+**Instalar e testar pela pasta clonada:** `instalar.cmd` → `testar.cmd` → **`Ciello.cmd`** (o app inteiro numa área de trabalho). Passo a passo em `docs/teste-de-hoje.md`.
 
 Agente semanal de reels da **Ciello** (@ciellotec).
 

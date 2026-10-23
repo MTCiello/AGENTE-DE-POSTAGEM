@@ -28,3 +28,6 @@ escritorio/webview-ui/node_modules/
 # narrações (a sua voz) e rascunhos do Estúdio de Vídeo ficam no PC
 audio/
 midia/estudio/
+
+# saída do instalador (instalador/ciello.iss)
+build/

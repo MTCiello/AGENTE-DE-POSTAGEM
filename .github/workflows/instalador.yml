@@ -1,0 +1,64 @@
+# Compila o instalador do Ciello OS (CielloOS-Setup-<versão>.exe).
+# - Push de tag vX.Y.Z: compila e publica uma Release com o instalador. O atualizador do Ciello OS
+#   (canal estável) enxerga essa Release e oferece a atualização em todos os PCs.
+# - Rodar à mão (Actions > Instalador > Run workflow) ou mexer em instalador/: só compila e deixa o .exe nos artefatos.
+name: Instalador
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths: ["instalador/**", ".github/workflows/instalador.yml", "VERSION"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versão
+        id: versao
+        shell: pwsh
+        run: |
+          $v = (Get-Content VERSION | Select-Object -First 1).Trim()
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME.TrimStart('v') -ne $v) {
+            Write-Error "A tag $env:GITHUB_REF_NAME não bate com o arquivo VERSION ($v). Atualize o VERSION antes de criar a tag."
+            exit 1
+          }
+          "versao=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Testes do atualizador
+        shell: pwsh
+        run: python -m unittest discover -s central/testes -p test_atualizacao.py -v
+
+      - name: Copiar só os arquivos do repositório
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          git archive --format=zip HEAD -o build/app.zip
+          Expand-Archive build/app.zip build/app -Force
+
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
+          & $iscc "/DVersao=${{ steps.versao.outputs.versao }}" "/DFonte=..\build\app" instalador\ciello.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CielloOS-Setup-${{ steps.versao.outputs.versao }}
+          path: build/CielloOS-Setup-*.exe
+
+      - name: Publicar a Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Ciello OS ${{ steps.versao.outputs.versao }}
+          files: build/CielloOS-Setup-*.exe
+          generate_release_notes: true
