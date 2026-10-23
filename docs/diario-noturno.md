@@ -5,11 +5,36 @@ Regras: só na branch `ccr-75504115-gpanzf`, nada é enviado, agendado ou public
 
 ## Resumo para o café
 
-_(atualizado no fim da noite)_
+Foram 17 voltas, todas testadas no navegador com dados de exemplo e publicadas na branch. São 125 testes automáticos, todos passando. A sessão ficou parada das 01h10 às 07h (o processo reiniciou), por isso a noite rendeu menos voltas do que podia.
+
+**O que mudou para você pilotar:**
+- **Bom dia leva até o lugar.** Cada prioridade tem **Abrir** (janela e aba certas) e **Hoje não** (some até amanhã).
+- **Financeiro → Metas e decisões:**
+  - Você diz "12 clientes até junho" e o OS devolve o ritmo da semana: quantas abordagens, demos e testes grátis. Ele avisa no Comercial e no Bom dia quando você fica para trás.
+  - Os furos do plano e as ideias de preço viram decisões: **Discutir** (com o Claude), **Decidir**, **Depois** ou **Não se aplica**.
+  - O que você decide vira "regra da casa", que o financeiro, o closer e o SDR passam a seguir.
+- **Simulador de preço** (Plano do ano): mensalidade, plano anual e taxa de implantação viram, na hora, quantos clientes pagam a conta.
+- **Gastos fixos** (Lançamentos): avisa cobrança em dobro, assinatura que subiu, conta de todo mês que não veio (o serviço pode cair), ferramenta nova e gasto fora do plano.
+- **Saúde da carteira** (Clientes):
+  - cada cliente com nota de 0 a 100 e os motivos;
+  - quanto da receita está em risco;
+  - mensagem pronta (nota baixa, cliente esquecido, pedido de indicação);
+  - botão **Conversei**.
+- **Agenda de demos** (Comercial): data e hora, confirmação pronta, link do Google Agenda, lembrete no dia e "como foi a demo?".
+- **Postar** (Conteúdo): vídeo, capa, legenda e horário num lugar só, para agendar no Metricool. O agendamento pelo Claude só acontece com o seu ok.
+- Antes destas, as voltas 1 a 9 trouxeram: produtos reais no financeiro (teste grátis, site parcelado, hospedagem), plano do ano com auditoria, duas ofertas na prospecção (CRM e site), Estúdio de Vídeo com HyperFrames, atendimento pelo FAQ e o uso em notebook.
+
+**O que passou despercebido e precisa de você:**
+1. **O financeiro do OS está vazio no seu PC.** Sem os clientes cadastrados, cobrança, carteira, meta e MRR não funcionam: é o passo 1 dos Primeiros passos.
+2. **O post de hoje (23/10) não tem vídeo final.** Os de 18, 19, 21 e 23/10 estão como "rascunho no Metricool" no historico.md: confira se foram ao ar.
+3. **6 respostas do FAQ em branco:** celular, fidelidade, WhatsApp Business, quantas pessoas, se perde as conversas e colunas da importação.
+4. **A sua planilha de 2027:** o relatório privado vai junto na conversa, não está no GitHub.
 
 ## Para o Mateus decidir
 
 - **Hospedagem de R$ 90:** é mensal? Considerei mensal. Se for anual, mude em `comercial/produtos.json` (`"mensal": 7.5`, ou me avise para criar o tipo anual).
+- **Recompensa por indicação:** as mensagens para quem deu 9 ou 10 pedem indicação sem prometer nada. Quer dar algo (ex.: um mês grátis se o indicado fechar)? Registre em Metas e decisões.
+- **Taxas do funil:** a meta usa estimativas (15% respondem, 40% viram demo, 50% entram no teste, 60% viram cliente) até haver uns 20 contatos e 5 demos registrados. Se você já sabe os seus números, ponha na meta.
 - **Preços no GitHub:** os preços de lista (CRM, site, hospedagem) ficaram em `comercial/produtos.json`, versionados, porque são os mesmos que vão para todo cliente. Se preferir que fiquem só no PC, eu movo para fora do git.
 
 ## Voltas

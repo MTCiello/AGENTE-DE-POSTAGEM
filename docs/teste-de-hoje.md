@@ -1,4 +1,22 @@
-# Teste de hoje à noite (19/10)
+# Teste de hoje (23/10): o que chegou de madrugada
+
+Atualize a pasta (`git pull` dentro do assistente, ou baixe o ZIP de novo, guardando antes `comercial\`, `financeiro\`, `estado\` e `founder\`). Depois abra o Ciello OS e siga a lista. Uns 30 minutos.
+
+- [ ] **Bom dia:** em uma prioridade, clique em **Abrir** e confira se caiu na janela e na aba certas. Em outra, clique em **Hoje não** e veja se ela some.
+- [ ] **Primeiros passos → Cadastre os clientes que já pagam:** cadastre de verdade os CRMs e as hospedagens que já pagam. Isso liga a cobrança, a carteira e a meta.
+- [ ] **Financeiro → Clientes:** confira a faixa "Saúde da carteira" e a nota de cada cliente (passe o mouse para ver os motivos). Teste **Conversei**.
+- [ ] **Financeiro → Metas e decisões → Definir a meta:** escolha clientes e mês. Confira o "Ritmo da semana" e se ele aparece no topo de **Comercial → Hoje**.
+- [ ] **Metas e decisões → decisões em aberto:** clique em **Discutir** em uma ideia de preço (abre o Claude) e **Decida** outra. Confira em "Regras da casa".
+- [ ] **Plano do ano → Simular preço:** mude a mensalidade e o % no anual e veja quantos clientes pagam a conta.
+- [ ] **Financeiro → Importar extrato** (OFX ou CSV de 2 a 3 meses) e depois **Lançamentos → Gastos fixos:** apareceu algo em dobro, que subiu ou que não veio?
+- [ ] **Comercial → Quentes → Agendar demo:** marque uma demo e confira a mensagem de confirmação e o link do Google Agenda.
+- [ ] **Conteúdo → Produção → Postar** (post de 27/10 ou 29/10): vídeo, capa e legenda num lugar só.
+
+O que travar ou estranhar, me mande um print.
+
+---
+
+# Teste de 19/10 (instalação e verificação)
 
 Roteiro para baixar o assistente no seu PC (Windows) e testar tudo, com foco no **Ciello OS e no escritório novo** (em Python, sem Node). Marque o que deu certo. Se algo falhar, me mande o `estado\verificacao.txt` ou um print da mensagem de erro.
 
