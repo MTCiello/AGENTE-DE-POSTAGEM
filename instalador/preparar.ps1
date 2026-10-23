@@ -1,6 +1,6 @@
 ﻿# Ciello OS: instala tudo o que o assistente e os agentes precisam no Windows.
 # O instalador (CielloOS-Setup.exe) roda este script no fim; também dá para rodar à mão:
-#   powershell -ExecutionPolicy Bypass -File instalador\preparar.ps1 [-Voz] [-SemVideo] [-SemClaude]
+#   powershell -ExecutionPolicy Bypass -File instalador\preparar.ps1 [-Voz] [-SemVideo] [-SemClaude] [-SemPausa]
 # Instala o que faltar: Python 3.12, Git, Node.js, FFmpeg, Claude Code; cria o .venv com as bibliotecas,
 # o gerador de vídeo (Remotion e HyperFrames), o buscador do SDR e, se pedido, o Estúdio de Voz (uns 3 GB).
 # Tudo fica anotado em estado\instalacao.log.
@@ -8,10 +8,13 @@ param(
   [string]$Pasta = (Split-Path -Parent $PSScriptRoot),
   [switch]$Voz,
   [switch]$SemVideo,
-  [switch]$SemClaude
+  [switch]$SemClaude,
+  [switch]$SemPausa
 )
 
 $ErrorActionPreference = 'Continue'
+# Windows PowerShell 5.1 em PC antigo ainda tenta TLS 1.0: python.org, nodejs.org e gyan.dev recusam
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $Host.UI.RawUI.WindowTitle = 'Ciello OS: preparando o seu PC'
@@ -56,9 +59,18 @@ function Adicionar-PathUsuario($dir) {
 function Python312 {
   # o Kokoro e o Chatterbox (voz) ainda não rodam no 3.13: o assistente usa o 3.12
   if (Tem 'py') { & py -3.12 --version *> $null; if ($LASTEXITCODE -eq 0) { return @{ Exe = 'py'; Args = @('-3.12') } } }
-  $local = "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe"
-  if (Test-Path $local) { return @{ Exe = $local; Args = @() } }
+  foreach ($local in @("$env:LOCALAPPDATA\Programs\Python\Python312\python.exe", "$env:ProgramFiles\Python312\python.exe")) {
+    if (Test-Path $local) { return @{ Exe = $local; Args = @() } }
+  }
   return $null
+}
+
+function Terminar($codigo, $msg) {
+  # 0 = pronto; 1 = sem Python 3.12; 2 = o .venv não ficou de pé. O instalador lê o código e oferece tentar de novo.
+  if ($msg) { Write-Host ''; Write-Host $msg -ForegroundColor $(if ($codigo) { 'Red' } else { 'Green' }) }
+  Stop-Transcript | Out-Null
+  if ($codigo -and -not $SemPausa) { Read-Host 'Aperte Enter para fechar' | Out-Null }
+  exit $codigo
 }
 
 Recarregar-Path
@@ -79,13 +91,33 @@ if (-not $py) {
   Recarregar-Path
   $py = Python312
 }
-if (-not $py) {
-  Write-Host 'Não consegui instalar o Python 3.12. Instale pelo site python.org e rode o instalador de novo.' -ForegroundColor Red
-  Stop-Transcript | Out-Null
-  exit 1
-}
+if (-not $py) { Terminar 1 'Não consegui instalar o Python 3.12. Instale pelo site python.org (marque "Add python.exe to PATH") e rode o instalador de novo.' }
 $pyArgs = $py.Args
 Ok "Python: $(& $py.Exe @pyArgs --version)"
+
+# O .venv vem logo depois do Python: é dele que o ícone do Ciello OS depende (.venv\Scripts\pythonw.exe).
+# Se algo opcional mais para baixo falhar, o app abre do mesmo jeito.
+Titulo 'Ambiente Python do assistente (.venv)'
+$venvPy = "$Pasta\.venv\Scripts\python.exe"
+$venvPyw = "$Pasta\.venv\Scripts\pythonw.exe"
+if (Test-Path $venvPy) {
+  $ver = & $venvPy -c "import sys; print(sys.version_info[:2] < (3, 13))"
+  if ($ver -ne 'True') { Write-Host 'O .venv está num Python novo demais (ou quebrado): refazendo no 3.12...'; Remove-Item "$Pasta\.venv" -Recurse -Force }
+}
+if (-not (Test-Path $venvPyw)) {
+  Remove-Item "$Pasta\.venv" -Recurse -Force -ErrorAction SilentlyContinue
+  & $py.Exe @pyArgs -m venv "$Pasta\.venv"
+  if (-not (Test-Path $venvPyw)) {
+    # antivírus ou pasta sincronizada às vezes barram o link do venv: --copies copia o executável
+    Remove-Item "$Pasta\.venv" -Recurse -Force -ErrorAction SilentlyContinue
+    & $py.Exe @pyArgs -m venv --copies "$Pasta\.venv"
+  }
+}
+if (-not (Test-Path $venvPyw)) { Terminar 2 "Não consegui criar o ambiente Python em $Pasta\.venv. Se a pasta está no OneDrive ou em Documentos sincronizados, instale em C:\Ciello\CielloOS." }
+Ok 'Ambiente criado'
+& $venvPy -m pip install --upgrade pip --disable-pip-version-check -q
+& $venvPy -m pip install -r central\requirements.txt --disable-pip-version-check
+if ($LASTEXITCODE -ne 0) { Aviso 'Algumas bibliotecas do Python não instalaram (veja acima).' } else { Ok 'Bibliotecas do Python' }
 
 Titulo 'Git'
 if (Tem 'git') { Ok 'Git já instalado' } elseif (Winget 'Git.Git') { Ok 'Git instalado' } else { Aviso 'Git não instalou (só o Claude Code e o modo de teste usam).' }
@@ -122,23 +154,15 @@ if (-not $SemVideo) {
 if (-not $SemClaude) {
   Titulo 'Claude Code (os agentes de IA)'
   if (Tem 'claude') { Ok 'Claude Code já instalado' } else {
-    try { Invoke-RestMethod https://claude.ai/install.ps1 | Invoke-Expression; Recarregar-Path } catch { Aviso "Claude Code não instalou: $_" }
+    # roda numa janela filha: um "exit" dentro do script do Claude encerrava este aqui antes do .venv
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://claude.ai/install.ps1 | iex"
+    Recarregar-Path
+    if (-not (Tem 'claude')) { Aviso 'Claude Code não instalou agora. Dá para instalar depois pelo Ciello OS, na janela Claude Code.' }
     if (Tem 'claude') { Ok 'Claude Code instalado. Na primeira vez, abra o Ciello OS e faça login na janela Claude Code.' }
   }
 }
 
 # ---------------------------------------------------------------- ambiente do assistente
-Titulo 'Ambiente Python do assistente (.venv)'
-$venvPy = "$Pasta\.venv\Scripts\python.exe"
-if (Test-Path $venvPy) {
-  $ver = & $venvPy -c "import sys; print(sys.version_info[:2] < (3, 13))"
-  if ($ver -ne 'True') { Write-Host 'O .venv está num Python novo demais para a voz: refazendo no 3.12...'; Remove-Item "$Pasta\.venv" -Recurse -Force }
-}
-if (-not (Test-Path $venvPy)) { & $py.Exe @pyArgs -m venv "$Pasta\.venv" }
-& $venvPy -m pip install --upgrade pip --disable-pip-version-check -q
-& $venvPy -m pip install -r central\requirements.txt --disable-pip-version-check
-if ($LASTEXITCODE -ne 0) { Aviso 'Algumas bibliotecas do Python não instalaram (veja acima).' } else { Ok 'Bibliotecas do Python' }
-
 Titulo 'Buscador do Google Maps (SDR)'
 & $venvPy central\sdr.py instalar-scraper
 if ($LASTEXITCODE -ne 0) { Aviso 'O buscador do SDR não baixou agora: o SDR funciona com CSV e o Verificar tenta de novo.' }
@@ -172,6 +196,4 @@ Titulo 'Conferindo'
 
 Write-Host ''
 if ($avisos.Count) { Write-Host "Terminou com $($avisos.Count) aviso(s). O log completo está em estado\instalacao.log" -ForegroundColor Yellow }
-else { Write-Host 'Tudo pronto! Abra o Ciello OS pelo ícone na área de trabalho.' -ForegroundColor Green }
-Stop-Transcript | Out-Null
-exit 0
+Terminar 0 'Tudo pronto! Abra o Ciello OS pelo ícone na área de trabalho.'

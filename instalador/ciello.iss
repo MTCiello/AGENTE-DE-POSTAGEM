@@ -3,6 +3,7 @@
 ;   git archive --format=zip HEAD -o app.zip  e extraia em build\app  (só os arquivos do repositório)
 ;   "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DVersao=1.0.0 /DFonte=..\build\app instalador\ciello.iss
 ; O instalador copia o programa para a pasta escolhida e roda instalador\preparar.ps1, que baixa as dependências.
+; Se o .venv (de onde sai o pythonw.exe dos atalhos) não ficar de pé, ele mostra o motivo e oferece tentar de novo.
 
 #ifndef Versao
   #define Versao "0.0.0"
@@ -77,8 +78,8 @@ Name: "{autoprograms}\Ciello OS\Desinstalar o Ciello OS"; Filename: "{uninstalle
 Name: "{autodesktop}\Ciello OS"; Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\instalador\lancador.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\instalador\marca\ciello.ico"; Comment: "Abrir o Ciello OS"; Tasks: desktopicon
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\instalador\preparar.ps1"" -Pasta ""{app}"" {code:OpcoesPreparar}"; WorkingDir: "{app}"; StatusMsg: "Baixando e instalando as dependências (Python, FFmpeg, Node.js, bibliotecas)... pode levar uns minutos."; Flags: waituntilterminated
-Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\instalador\lancador.pyw"""; WorkingDir: "{app}"; Description: "Abrir o Ciello OS agora"; Flags: postinstall nowait skipifsilent
+; as dependências rodam no [Code] (Preparar), que confere o resultado; aqui só o "Abrir agora"
+Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\instalador\lancador.pyw"""; WorkingDir: "{app}"; Description: "Abrir o Ciello OS agora"; Flags: postinstall nowait skipifsilent; Check: VenvPronto
 
 [UninstallDelete]
 ; o que o instalador baixou depois; os seus dados (estado, comercial, financeiro, founder, audio) ficam na pasta
@@ -94,4 +95,46 @@ begin
   if WizardIsComponentSelected('voz') then Result := Result + ' -Voz';
   if not WizardIsComponentSelected('video') then Result := Result + ' -SemVideo';
   if not WizardIsComponentSelected('claude') then Result := Result + ' -SemClaude';
+end;
+
+function VenvPronto: Boolean;
+begin
+  Result := FileExists(ExpandConstant('{app}\.venv\Scripts\pythonw.exe'));
+end;
+
+function MotivoPreparar(Codigo: Integer): String;
+begin
+  case Codigo of
+    1: Result := 'O Python 3.12 não instalou. Confira a internet ou instale pelo site python.org.';
+    2: Result := 'O ambiente Python (.venv) não foi criado. Pastas no OneDrive e alguns antivírus atrapalham: prefira C:\Ciello\CielloOS.';
+    -1: Result := 'O Windows não deixou abrir o PowerShell.';
+  else
+    Result := 'A preparação parou no meio (código ' + IntToStr(Codigo) + ').';
+  end;
+end;
+
+procedure Preparar;
+var
+  Codigo: Integer;
+  Params: String;
+begin
+  Params := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\instalador\preparar.ps1') +
+            '" -Pasta "' + ExpandConstant('{app}') + '" -SemPausa' + OpcoesPreparar('');
+  repeat
+    WizardForm.StatusLabel.Caption := 'Baixando e instalando as dependências (Python, FFmpeg, Node.js, bibliotecas)... pode levar uns minutos.';
+    if not Exec('powershell.exe', Params, ExpandConstant('{app}'), SW_SHOW, ewWaitUntilTerminated, Codigo) then
+      Codigo := -1;
+    if VenvPronto then
+      Exit;
+  until MsgBox('Não deu para terminar a preparação do Ciello OS.' + #13#10#13#10 + MotivoPreparar(Codigo) + #13#10#13#10 +
+               'Tentar de novo agora?', mbError, MB_RETRYCANCEL) <> IDRETRY;
+  MsgBox('O Ciello OS foi copiado, mas ainda falta preparar o Python.' + #13#10 +
+         'Quando quiser, abra no menu Iniciar: Ciello OS > Reinstalar dependências.' + #13#10#13#10 +
+         'O que aconteceu fica anotado em ' + ExpandConstant('{app}\estado\instalacao.log'), mbInformation, MB_OK);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    Preparar;
 end;
