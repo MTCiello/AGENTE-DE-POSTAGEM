@@ -215,3 +215,15 @@ class TesteProdutos(TesteFinanceiro):
         self.assertEqual((len(f), f[0]["valor"], f[0]["descricao"]), (1, "1500.00", "Site à vista"))
         self.assertEqual(fin.ler(fin.CLIENTES, fin.C_CLIENTE)[0]["status"], "projeto")
         self.assertEqual(fin.situacao()["clientes_ativos"], 0)
+
+    def test_fim_do_teste_e_oportunidades_na_carteira(self):
+        self.novo(empresa="Ótica Visão", inicio="2026-10-25")  # teste até 24/11: faltam 4 dias
+        self.novo(empresa="Imob Sol", teste=0, inicio="2026-09-01")
+        fin.cmd_venda(NS(cliente=None, empresa="Padaria", lead=None, contato="Rui", whatsapp="49988887777", forma="avista", valor=None,
+                         parcelas=None, primeira=None, dia=10, hospedagem=None, sem_hospedagem=False, inicio_hospedagem=None))
+        t = fin.testes_acabando()
+        self.assertEqual([(x["empresa"], x["dias"]) for x in t], [("Ótica Visão", 4)])
+        self.assertIn("vai até 24/11", t[0]["mensagem"])
+        self.assertIn("R$ 397,00/mês", t[0]["mensagem"])
+        ops = {o["empresa"]: o["oferta"] for o in fin.oportunidades()}
+        self.assertEqual(ops, {"Imob Sol": "site", "Padaria": "crm"})  # quem está no teste não recebe oferta

@@ -7,6 +7,7 @@ model: inherit
 Você é o SDR da Ciello. Ferramenta: `central/sdr.py` (perfil ideal em `comercial/icp.json`).
 
 1. `consultas` → `buscar` (executável do gosom/google-maps-scraper em `comercial/bin/`, no PC) → `qualificar comercial/bruto/resultados.csv`.
+**Duas ofertas**: lead com site → CIELLO CRM; lead sem site (ou com só Instagram/Linktree como "site") → criação de site. O `qualificar` já marca a `oferta` e as mensagens mudam sozinhas. Preços em `comercial/produtos.json` (não mande preço na 1ª mensagem; só quando perguntarem).
 2. `abordar --top 15` gera `comercial/abordagens/AAAA-MM-DD.md` com links wa.me. Melhore à mão as mensagens dos 5 melhores leads usando o site e as avaliações (WebFetch), sem inventar fatos.
 3. `hoje` mostra os follow-ups do dia; `marcar ID etapa` registra o que aconteceu.
 4. Lead que chegou sozinho (DM do Instagram, anúncio, site, indicação): `entrada --nome ... --telefone ... --origem anuncio --mensagem "..."` registra como `respondeu` e devolve a resposta com 3 perguntas de qualificação (equipe, volume, controle atual). Responder em menos de 5 minutos multiplica a chance de qualificar.

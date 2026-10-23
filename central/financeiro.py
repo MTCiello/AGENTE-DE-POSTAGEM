@@ -621,6 +621,55 @@ def cmd_nps(a):
         print(f"{c['empresa']}: NPS {a.nota} (neutro)")
 
 
+def msg_fim_teste(c, assinatura):
+    nome = (c.get("contato") or "").split(" ")[0] or "tudo bem"
+    fim = data(c["teste_ate"])
+    passou = fim < hoje()
+    return (f"Oi, {nome}! Aqui é {assinatura}, da Ciello. O teste grátis do CIELLO CRM de vocês {'terminou' if passou else 'vai até'} {fim:%d/%m}. "
+            f"Como está sendo para a equipe? Se fizer sentido seguir, eu deixo tudo ativo: fica {reais(float(c['valor_mensal']))}/mês, "
+            f"todo dia {c['dia_vencimento']}. Se quiser ajustar alguma coisa antes, me fala que eu resolvo.")
+
+
+def testes_acabando(ref=None, dias=7):
+    """Clientes no teste grátis que acabam em até `dias` (ou já acabaram), com a mensagem de fechamento pronta."""
+    ref = ref or hoje()
+    assinatura = config()["assinatura"]
+    out = []
+    for c in ler(CLIENTES, C_CLIENTE):
+        if c["status"] == "teste" and c["teste_ate"] and (data(c["teste_ate"]) - ref).days <= dias:
+            msg = msg_fim_teste(c, assinatura)
+            out.append({"cliente_id": c["id"], "empresa": c["empresa"], "teste_ate": c["teste_ate"], "dias": (data(c["teste_ate"]) - ref).days,
+                        "valor": float(c["valor_mensal"] or 0), "mensagem": msg, "link": link_wa(c["whatsapp"], msg)})
+    return sorted(out, key=lambda t: t["dias"])
+
+
+def oportunidades():
+    """Vender o 2º produto para quem já é cliente: CRM para quem tem site, site para quem tem CRM."""
+    assinatura = config()["assinatura"]
+    por_empresa = {}
+    for c in ler(CLIENTES, C_CLIENTE):
+        if c["status"] in ("ativo", "projeto", "teste"):  # quem está no teste entra para não receber oferta antes de decidir
+            por_empresa.setdefault(sem_acento(c["empresa"]).strip(), []).append(c)
+    out = []
+    for cs in por_empresa.values():
+        planos = {c["plano"] or "crm" for c in cs}
+        if any(x["status"] == "teste" for x in cs):
+            continue
+        c = cs[0]
+        nome = (c.get("contato") or "").split(" ")[0] or "tudo bem"
+        if "crm" in planos and not planos & {"hospedagem", "site"}:
+            msg = (f"Oi, {nome}! Aqui é {assinatura}, da Ciello. Uma ideia: com o CRM organizando o WhatsApp, um site com o botão do WhatsApp "
+                   f"traz mais conversa para a equipe atender. Fazemos em até 7 dias úteis. Quer que eu te mostre 2 exemplos?")
+            out.append({"cliente_id": c["id"], "empresa": c["empresa"], "oferta": "site", "porque": "tem o CRM e ainda não tem site com a Ciello",
+                        "mensagem": msg, "link": link_wa(c["whatsapp"], msg)})
+        elif planos & {"hospedagem", "site"} and "crm" not in planos:
+            msg = (f"Oi, {nome}! Aqui é {assinatura}, da Ciello. O site de vocês está trazendo contatos pelo WhatsApp? "
+                   f"Se a conversa se perde entre as pessoas da equipe, o CIELLO CRM organiza tudo num lugar só. Dá pra testar 30 dias grátis.")
+            out.append({"cliente_id": c["id"], "empresa": c["empresa"], "oferta": "crm", "porque": "tem site com a Ciello e ainda não usa o CRM",
+                        "mensagem": msg, "link": link_wa(c["whatsapp"], msg)})
+    return out
+
+
 # ---------------------------------------------------------------- números do negócio
 
 def mrr_em(clientes, dia):

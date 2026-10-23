@@ -45,13 +45,27 @@ ICP = PASTA / "icp.json"
 LEADS = PASTA / "leads.csv"
 BLOQUEIO = PASTA / "nao-contatar.txt"
 CAMPOS = ["id", "empresa", "segmento", "cidade", "telefone", "whatsapp", "site", "email", "nota_google", "avaliacoes",
-          "pontos", "dor_citada", "maps", "etapa", "ultimo_contato", "proximo_contato", "tentativas", "origem", "obs"]
+          "pontos", "dor_citada", "maps", "etapa", "ultimo_contato", "proximo_contato", "tentativas", "origem", "obs", "oferta"]
 CADENCIA = [2, 5, 10]  # dias depois do contato anterior; depois da 3ª tentativa sem resposta, vira "frio"
 ETAPAS = ["novo", "contatado", "respondeu", "demo", "proposta", "cliente", "perdido", "frio", "nao_contatar"]
 # Reclamações de atendimento nas avaliações: é a dor exata que o CRM resolve.
 DOR_ATENDIMENTO = re.compile(
     r"demor\w*|n[aã]o respond\w*|sem resposta|n[aã]o retorn\w*|sem retorno|nunca retorn\w*|n[aã]o atend\w*|"
     r"vácuo|vacuo|ningu[eé]m (me )?respond\w*|esquec\w+|atendimento (p[eé]ssimo|ruim|horr[ií]vel|demorado)|whats\w*", re.I)
+
+
+# "site" que na verdade é rede social ou página de links: para a Ciello, essa empresa não tem site
+SEM_SITE_DE_VERDADE = re.compile(r"instagram\.com|facebook\.com|fb\.com|wa\.me|whatsapp\.com|linktr\.ee|linktree|bio\.link|beacons\.ai|"
+                                 r"tiktok\.com|ifood\.com|goo\.gl|g\.page|business\.site|negocio\.site", re.I)
+
+
+def tem_site(l) -> bool:
+    return bool((l.get("site") or "").strip()) and not SEM_SITE_DE_VERDADE.search(l.get("site") or "")
+
+
+def oferta(l) -> str:
+    """O que oferecer primeiro: quem não tem site (ou só tem Instagram) → site; quem tem → CIELLO CRM."""
+    return l.get("oferta") or ("crm" if tem_site(l) else "site")
 
 
 def icp():
@@ -253,6 +267,7 @@ def cmd_qualificar(a):
                 "nota_google": r.get("review_rating") or "", "avaliacoes": r.get("review_count") or 0, "dor_citada": trecho_dor(textos),
                 "maps": maps, "etapa": "novo", "tentativas": 0, "origem": "Google Maps (dado público)"}
         lead["pontos"] = pontuar(lead, cfg["segmentos"].get(seg, {}).get("prioridade", 2), textos)
+        lead["oferta"] = oferta(lead)
         if lead["pontos"] < a.minimo or not fone:
             continue
         leads.append(lead)
@@ -276,6 +291,15 @@ def link_wa(fone, texto):
 def primeira_mensagem(l, cfg, assinatura):
     seg = cfg["segmentos"].get(l["segmento"], {})
     nome = l["empresa"].split(" - ")[0].strip()
+    if oferta(l) == "site":
+        so_rede = (l.get("site") or "").strip() and not tem_site(l)
+        gancho = ("Vi que hoje vocês aparecem no Google só com o Instagram. Quem procura pelo Google quer ver um site com serviços, "
+                  "endereço e um botão de WhatsApp, e acaba indo no concorrente que tem." if so_rede else
+                  "Procurei vocês no Google e não encontrei um site. Quem pesquisa antes de comprar acaba indo no concorrente que aparece com site.")
+        return (f"Oi, tudo bem? Aqui é {assinatura}, da Ciello, de Chapecó. {gancho}\n\n"
+                f"A gente faz sites profissionais para empresas da região, no ar em até 7 dias úteis, com o WhatsApp de vocês em destaque. "
+                f"Posso te mandar 2 exemplos de sites que fizemos para a {nome} ter uma ideia?\n\n"
+                f"(Se não fizer sentido, me avisa que não mando mais.)")
     if l["dor_citada"]:
         gancho = (f"Vi nas avaliações do Google de vocês alguém comentando sobre demora no retorno. "
                   f"Isso é muito comum quando o atendimento fica espalhado no WhatsApp de cada um.")
@@ -289,11 +313,18 @@ def primeira_mensagem(l, cfg, assinatura):
 
 def seguimento(l, n):
     nome = l["empresa"].split(" - ")[0].strip()
-    textos = [
-        f"Oi! Passando de novo sobre o CIELLO CRM para a {nome}. Quer que eu mande um vídeo de 1 minuto mostrando como funciona?",
-        f"Oi! Uma pergunta rápida: hoje quantas pessoas atendem o WhatsApp da {nome}? Pergunto porque é aí que o CRM mais ajuda.",
-        f"Oi! Vou parar de insistir 🙂 Se em algum momento quiserem organizar o atendimento do WhatsApp, é só me chamar. Abraço!",
-    ]
+    if oferta(l) == "site":
+        textos = [
+            f"Oi! Passando de novo sobre o site da {nome}. Te mando os 2 exemplos por aqui mesmo? Leva 1 minuto pra ver.",
+            f"Oi! Uma pergunta rápida: hoje quando alguém procura a {nome} no Google, o que aparece? Pergunto porque é aí que o site mais ajuda.",
+            f"Oi! Vou parar de insistir 🙂 Se em algum momento quiserem um site para a {nome}, é só me chamar. Abraço!",
+        ]
+    else:
+        textos = [
+            f"Oi! Passando de novo sobre o CIELLO CRM para a {nome}. Quer que eu mande um vídeo de 1 minuto mostrando como funciona?",
+            f"Oi! Uma pergunta rápida: hoje quantas pessoas atendem o WhatsApp da {nome}? Pergunto porque é aí que o CRM mais ajuda.",
+            f"Oi! Vou parar de insistir 🙂 Se em algum momento quiserem organizar o atendimento do WhatsApp, é só me chamar. Abraço!",
+        ]
     return textos[min(n, len(textos)) - 1]
 
 
@@ -307,7 +338,7 @@ def cmd_abordar(a):
     L = [f"# Abordagens de {hoje}", "", "Clique, revise e envie do seu WhatsApp. Depois: `python central/sdr.py marcar ID contatado`.", ""]
     for l in leads[: a.top]:
         msg = primeira_mensagem(l, cfg, a.assinatura)
-        L += [f"## #{l['id']} · {l['empresa']} · {l['pontos']} pts", "",
+        L += [f"## #{l['id']} · {l['empresa']} · {l['pontos']} pts · oferta: {'site' if oferta(l) == 'site' else 'CRM'}", "",
               f"{l['segmento']} · {l['cidade']} · nota {l['nota_google'] or '?'} ({l['avaliacoes']} avaliações) · [Maps]({l['maps']})"
               + (f" · [site]({l['site']})" if l["site"] else ""), ""]
         if l["dor_citada"]:
@@ -427,7 +458,7 @@ def cmd_crm(a):
             for col, campo in mapa.items():
                 v = l.get(campo, "")
                 if campo == "obs":
-                    v = "; ".join(x for x in [f"{l['pontos']} pts", l["segmento"], f"dor: {l['dor_citada']}" if l["dor_citada"] else "", l.get("obs", "")] if x)
+                    v = "; ".join(x for x in [f"{l['pontos']} pts", l["segmento"], f"oferta: {oferta(l)}", f"dor: {l['dor_citada']}" if l["dor_citada"] else "", l.get("obs", "")] if x)
                 linha.append(v)
             w.writerow(linha)
     print(f"{len(leads)} leads -> {destino}" + ("" if mapa_arq.exists() else "  (colunas genéricas; ajuste em comercial/crm_colunas.json)"))

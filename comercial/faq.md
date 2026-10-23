@@ -4,7 +4,10 @@ Base do **sucesso-cliente** (dúvidas de clientes) e do **closer** (objeções).
 Trechos entre ⟨ ⟩ ainda faltam: preencher com o Mateus.
 
 ## Planos e pagamento
-- **Quanto custa?** ⟨planos e preços⟩. 30 dias grátis, sem cartão.
+- **Quanto custa o CRM?** R$ 397/mês, uso ilimitado e com apoio comercial. 30 dias grátis para testar, sem cartão.
+- **Quanto custa um site?** R$ 1.500 à vista ou 12x de R$ 137,90, mais R$ 90/mês de hospedagem. No ar em até 7 dias úteis, com até 2 rodadas de ajustes.
+- **Como funciona o site?** 1) conversa sobre o negócio, 2) proposta com escopo, prazo e valor (você aprova antes), 3) construção com até 2 rodadas de ajustes, 4) site publicado, hospedagem ativa e domínio configurado.
+(Preços de lista em `comercial/produtos.json`: se mudar lá, atualize aqui.)
 - **Tem fidelidade?** ⟨sim/não⟩. Cancela quando quiser pelo WhatsApp.
 - **Como pago?** Pix ou boleto, todo mês no dia escolhido.
 - **Atrasei o pagamento, e agora?** Sem problema: me chama que eu reenvio o Pix. O acesso só é pausado depois de 14 dias.

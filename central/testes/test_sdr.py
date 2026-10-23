@@ -106,6 +106,26 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class TesteDuasOfertas(TesteSDR):
+    """CRM para quem tem site; site para quem não tem (ou só tem Instagram)."""
+
+    def test_oferta_e_mensagem_por_lead(self):
+        leads = {l["empresa"]: l for l in self.qualificar()}
+        self.assertEqual(leads["Imobiliária Sol"]["oferta"], "crm")
+        self.assertEqual(leads["Pet Feliz"]["oferta"], "site")
+        cfg = sdr.icp()
+        self.assertIn("CIELLO CRM", sdr.primeira_mensagem(leads["Imobiliária Sol"], cfg, "Mateus"))
+        msg = sdr.primeira_mensagem(leads["Pet Feliz"], cfg, "Mateus")
+        self.assertIn("não encontrei um site", msg)
+        self.assertIn("7 dias úteis", msg)
+        self.assertIn("Google", sdr.seguimento(leads["Pet Feliz"], 2))
+        so_insta = {**leads["Imobiliária Sol"], "oferta": "", "site": "https://www.instagram.com/imobsol"}
+        self.assertEqual(sdr.oferta(so_insta), "site")
+        self.assertIn("só com o Instagram", sdr.primeira_mensagem(so_insta, cfg, "Mateus"))
+        self.assertEqual(sdr.oferta({"site": "https://linktr.ee/x"}), "site")
+        self.assertEqual(sdr.oferta({"site": "https://sol.com.br"}), "crm")
+
+
 class TesteInstalarScraper(unittest.TestCase):
     ASSETS = [{"name": n, "size": 3, "browser_download_url": f"https://exemplo/{n}"} for n in (
         "google-maps-scraper-1.9.2-darwin-amd64", "google-maps-scraper-1.9.2-linux-amd64",

@@ -330,3 +330,4 @@ label.bt { cursor: pointer; }
 .barras-plano i { width: 70%; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #F1C95A, #D99A0B); }
 .barras-plano i.falta { background: linear-gradient(180deg, #E9826C, #C8442F); } .barras-plano i.ok { background: linear-gradient(180deg, #5BC08A, #1F8A4C); }
 .barras-plano u { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--azul); text-decoration: none; }
+.chip.oferta-site { background: #F3E8FB; color: #7A3FA8; } .chip.oferta-crm { background: #E6EDF8; color: var(--azul); }

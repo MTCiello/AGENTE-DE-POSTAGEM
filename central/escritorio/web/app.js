@@ -842,6 +842,9 @@ async function renderComercial(j) {
     perdido: ({ id }) => marcar(id, 'perdido', 'Marcado como perdido'),
     copiar: ({ i, lista }) => copiar(d[lista][+i].mensagem),
     filtrar: (_, el) => { j.filtro[el.name] = el.value; pintarLeads(); },
+    virou: ({ id, empresa }) => rapido('fin_converter', { id }, `${empresa} virou cliente`),
+    desistiu: ({ id }) => rapido('fin_cancelar', { id, motivo: 'não continuou depois do teste grátis' }, 'Teste encerrado'),
+    ofereci: ({ chave }) => { SALVO.ofertas = { ...(SALVO.ofertas || {}), [chave]: Date.now() }; salvar(); desenhar(j, true); },
     consultas: () => dialogo(j, { titulo: 'O que buscar no Google Maps', texto: 'Escolha os segmentos e as cidades. Depois clique em "Buscar no Google Maps" (leva alguns minutos e roda no seu PC).',
       campos: [{ nome: 'segmentos', rotulo: 'Segmentos', tipo: 'marcar', opcoes: d.segmentos, valor: d.segmentos.slice(0, 3) }, { nome: 'cidades', rotulo: 'Cidades', tipo: 'marcar', opcoes: d.cidades, valor: d.cidades.slice(0, 1) }],
       botao: 'Gerar as buscas', enviar: formOp('sdr_consultas') }),
@@ -851,17 +854,23 @@ async function renderComercial(j) {
       botao: 'Importar', enviar: ({ arquivo, ...o }) => enviarArquivo('leads', arquivo, o) }),
     crm: () => dialogo(j, { titulo: 'Exportar para o CIELLO CRM', texto: 'Gera a planilha para importar no CRM (em comercial/, fora do git).', campos: [{ nome: 'todos', rotulo: 'Incluir os leads ainda não contatados', tipo: 'sim' }], botao: 'Exportar', enviar: formOp('sdr_crm') }),
   };
+  // "Já ofereci" esconde a oportunidade por 60 dias (fica guardado neste PC)
+  const oferecida = (o) => Date.now() - ((SALVO.ofertas || {})[`${o.cliente_id}:${o.oferta}`] || 0) < 60 * 864e5;
+  d.oportunidades = d.oportunidades.filter((o) => !oferecida(o));
   const barra = `<div class="acoes topo"><button class="bt pri" data-fn="entrada">+ Lead que chegou</button><button class="bt" data-fn="planilha">Importar planilha</button><button class="bt" data-fn="crm">Exportar para o CRM</button><button class="bt" data-abrir="agente:sdr">SDR</button><button class="bt" data-abrir="agente:closer">Closer</button></div>`;
-  const msgCartao = (l, i, lista, extra) => `<div class="cartao msg"><div class="cab"><b>${esc(l.empresa)}</b> <small class="neutro">${esc([l.segmento, l.cidade, l.pontos && `${l.pontos} pts`, extra].filter(Boolean).join(' · '))}</small>
+  const chipOferta = (l) => `<span class="chip ${l.oferta === 'site' ? 'oferta-site' : 'oferta-crm'}" title="O que oferecer primeiro">${l.oferta === 'site' ? 'oferta: site' : 'oferta: CRM'}</span>`;
+  const msgSimples = (x, i, lista, titulo, botoes) => `<div class="cartao msg"><div class="cab"><b>${titulo}</b></div><pre class="texto-msg">${esc(x.mensagem)}</pre>
+    <div class="acoes-linha">${wa(x.link)}<button class="bt" data-fn="copiar" data-lista="${lista}" data-i="${i}">Copiar</button>${botoes}</div></div>`;
+  const msgCartao = (l, i, lista, extra) => `<div class="cartao msg"><div class="cab"><b>${esc(l.empresa)}</b> ${chipOferta(l)} <small class="neutro">${esc([l.segmento, l.cidade, l.pontos && `${l.pontos} pts`, extra].filter(Boolean).join(' · '))}</small>
     ${l.maps ? `<a href="${esc(l.maps)}" target="_blank" rel="noopener"><small>Maps</small></a>` : ''}</div>${l.dor_citada ? `<blockquote>“…${esc(l.dor_citada)}…”</blockquote>` : ''}
     <pre class="texto-msg">${esc(l.mensagem)}</pre><div class="acoes-linha">${l.link ? wa(l.link) : `<small class="neutro">fixo: ligar ${esc(l.telefone)}</small>`}<button class="bt" data-fn="copiar" data-lista="${lista}" data-i="${i}">Copiar</button>
     <button class="bt pri" data-fn="enviei" data-id="${l.id}">Enviei</button>${lista === 'followups' ? `<button class="bt" data-fn="respondeu" data-id="${l.id}">Respondeu</button>` : ''}<button class="bt" data-fn="perdido" data-id="${l.id}" title="Não tem interesse">Perdido</button></div></div>`;
 
   function linhasLeads() {
     const t = j.filtro.texto.toLowerCase();
-    const lista = d.leads.filter((l) => (!j.filtro.etapa || l.etapa === j.filtro.etapa) && (!t || [l.empresa, l.segmento, l.cidade, l.telefone, l.obs].join(' ').toLowerCase().includes(t)));
+    const lista = d.leads.filter((l) => (!j.filtro.etapa || l.etapa === j.filtro.etapa) && (!j.filtro.oferta || l.oferta === j.filtro.oferta) && (!t || [l.empresa, l.segmento, l.cidade, l.telefone, l.obs].join(' ').toLowerCase().includes(t)));
     return `<p class="sub">${lista.length} de ${d.leads.length} leads${lista.length > 300 ? ' (mostrando 300)' : ''}</p><table class="tab"><tr><th>#</th><th>Empresa</th><th>Pts</th><th>Etapa</th><th>Próximo contato</th><th></th></tr>${lista.slice(0, 300).map((l) => `<tr>
-      <td>${esc(l.id)}</td><td><b>${esc(l.empresa)}</b><br><small class="neutro">${esc([l.segmento, l.cidade, l.obs].filter(Boolean).join(' · '))}</small></td><td>${esc(l.pontos)}</td><td>${etapaSel(l)}</td>
+      <td>${esc(l.id)}</td><td><b>${esc(l.empresa)}</b> ${chipOferta(l)}<br><small class="neutro">${esc([l.segmento, l.cidade, l.obs].filter(Boolean).join(' · '))}</small></td><td>${esc(l.pontos)}</td><td>${etapaSel(l)}</td>
       <td>${l.proximo_contato ? `<span class="${l.proximo_contato <= d.hoje ? 'ruim' : ''}">${ddmm(l.proximo_contato)}</span>` : '—'}</td>
       <td class="acoes-linha">${l.telefone ? `<a class="bt mini" href="${esc(zap(l.telefone))}" target="_blank" rel="noopener" title="${esc(l.telefone)}">WhatsApp</a>` : ''}<button class="bt mini" data-fn="anotar" data-id="${l.id}">Anotar</button></td></tr>`).join('')}</table>`;
   }
@@ -870,7 +879,8 @@ async function renderComercial(j) {
   let corpo;
   if (j.aba === 'leads') {
     corpo = `<div class="filtros"><input name="texto" placeholder="Buscar empresa, cidade, telefone…" value="${esc(j.filtro.texto)}" data-mudar="filtrar">
-      <select name="etapa" data-mudar="filtrar"><option value="">todas as etapas</option>${d.etapas.map((e) => `<option value="${e}" ${e === j.filtro.etapa ? 'selected' : ''}>${esc(ROTULO_ETAPA[e])}</option>`).join('')}</select></div><div class="lista-leads">${linhasLeads()}</div>`;
+      <select name="etapa" data-mudar="filtrar"><option value="">todas as etapas</option>${d.etapas.map((e) => `<option value="${e}" ${e === j.filtro.etapa ? 'selected' : ''}>${esc(ROTULO_ETAPA[e])}</option>`).join('')}</select>
+      <select name="oferta" data-mudar="filtrar"><option value="">CRM e site</option><option value="crm" ${j.filtro.oferta === 'crm' ? 'selected' : ''}>oferta: CRM</option><option value="site" ${j.filtro.oferta === 'site' ? 'selected' : ''}>oferta: site</option></select></div><div class="lista-leads">${linhasLeads()}</div>`;
   } else if (j.aba === 'buscar') {
     corpo = `<p class="sub">Prospecção ativa sem o Claude: o buscador gratuito do Google Maps roda no seu PC, e cada empresa ganha uma nota de 0 a 100.</p>
     <div class="passos"><ol>
@@ -888,11 +898,14 @@ async function renderComercial(j) {
     corpo = `<div class="grade2"><div class="cartao"><h2 style="margin-top:0">Funil</h2><div class="funil">${d.funil.etapas.map((e, i) => `<div><span>${esc(e.etapa)}</span><i style="width:${Math.max(2, 100 * e.n / topo)}%"></i><b>${e.n}</b><small>${i && d.funil.etapas[i - 1].n ? Math.round(100 * e.n / d.funil.etapas[i - 1].n) + '%' : ''}</small></div>`).join('')}</div></div>
     <div class="cartao"><h2 style="margin-top:0">Quentes · responder hoje</h2><div class="lista">${d.quentes.map((l) => `<div class="linha-item"><div class="cresce"><b>${esc(l.empresa)}</b><small>${esc([l.segmento, l.cidade, l.obs].filter(Boolean).join(' · '))}</small></div>
       ${l.telefone ? `<a class="bt mini wa" href="${esc(zap(l.telefone))}" target="_blank" rel="noopener">WhatsApp</a>` : ''}${etapaSel(l)}</div>`).join('') || '<p class="sub">Ninguém esperando resposta.</p>'}</div></div></div>
+    ${d.testes.length ? `<h2>Teste grátis acabando (${d.testes.length})</h2>${d.testes.map((t, i) => msgSimples(t, i, 'testes', `${esc(t.empresa)} <span class="chip ${t.dias <= 2 ? 'erro' : 'esperando'}">${t.dias < 0 ? `acabou há ${-t.dias} dia(s)` : t.dias === 0 ? 'acaba hoje' : `faltam ${t.dias} dias`}</span> <small class="neutro">${brl(t.valor)}/mês</small>`,
+      `<button class="bt pri" data-fn="virou" data-id="${t.cliente_id}" data-empresa="${esc(t.empresa)}">Virou cliente</button><button class="bt" data-fn="desistiu" data-id="${t.cliente_id}">Desistiu</button>`)).join('')}` : ''}
     <h2>Follow-ups de hoje (${d.followups.length})</h2>${d.followups.map((l, i) => msgCartao(l, i, 'followups', `tentativa ${+l.tentativas + 1}`)).join('') || '<p class="sub">Nenhum follow-up para hoje.</p>'}
-    <h2>Abordar · melhores leads novos (${d.abordar.length})</h2>${d.abordar.map((l, i) => msgCartao(l, i, 'abordar')).join('') || '<p class="sub">Fila vazia: busque mais leads na aba Buscar leads.</p>'}`;
+    <h2>Abordar · melhores leads novos (${d.abordar.length})</h2>${d.abordar.map((l, i) => msgCartao(l, i, 'abordar')).join('') || '<p class="sub">Fila vazia: busque mais leads na aba Buscar leads.</p>'}
+    ${d.oportunidades.length ? `<h2>Vender para quem já é cliente (${d.oportunidades.length})</h2><p class="sub">Quem já confia na Ciello compra o 2º produto mais fácil do que um lead novo.</p>${d.oportunidades.map((o, i) => msgSimples(o, i, 'oportunidades', `${esc(o.empresa)} <span class="chip ${o.oferta === 'site' ? 'oferta-site' : 'oferta-crm'}">oferta: ${o.oferta === 'site' ? 'site' : 'CRM'}</span> <small class="neutro">${esc(o.porque)}</small>`, `<button class="bt" data-fn="ofereci" data-chave="${o.cliente_id}:${o.oferta}" title="Some da lista por 60 dias">Já ofereci</button>`)).join('')}` : ''}`;
   }
   j.corpo.innerHTML = `<div class="pagina"><h1>Comercial</h1><p class="sub">${d.funil ? `${num(d.funil.total)} leads · ${num(d.funil.perdidos)} perdidos ou frios` : 'Prospecção, follow-up e fechamento do CIELLO CRM.'}</p>${SEM_CLAUDE}${barra}
-  ${abas(j, [['hoje', 'Hoje', d.followups.length + d.quentes.length || ''], ['leads', 'Leads', d.leads.length], ['buscar', 'Buscar leads']])}${corpo}</div>`;
+  ${abas(j, [['hoje', 'Hoje', d.followups.length + d.quentes.length + d.testes.length || ''], ['leads', 'Leads', d.leads.length], ['buscar', 'Buscar leads']])}${corpo}</div>`;
 }
 
 // ------------------------------------------------------------------ apps: conteúdo

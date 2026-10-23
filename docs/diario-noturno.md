@@ -45,3 +45,19 @@ _(atualizado no fim da noite)_
 - A participação de um produto passava de 100% ("118% da receita vem do CRM") porque os cancelamentos entravam num lado da conta e não no outro.
 
 **Testes:** 6 testes novos do plano; todos passam.
+
+### Volta 3 · 23/10 · Prospecção com duas ofertas e clientela
+
+**Simulação:** entrei no Comercial como você numa terça de manhã, com um cliente terminando o teste grátis e leads sem site na fila.
+- O SDR oferecia CRM até para empresa sem site, e um "site" que era só o Instagram contava como site.
+- Quem estava acabando o teste só aparecia no Financeiro.
+- Ninguém lembrava de vender o 2º produto para quem já é cliente.
+
+**Feito:**
+- **Duas ofertas no SDR:** lead com site recebe a oferta do CRM; lead sem site, ou com Instagram, Linktree ou iFood no lugar do site, recebe a de site. Cada oferta tem a sua 1ª mensagem e o seu follow-up ("Procurei vocês no Google e não encontrei um site…", "no ar em até 7 dias úteis", "posso te mandar 2 exemplos?").
+  - A oferta aparece como selo em cada lead e dá para filtrar a lista por ela.
+- **Comercial → Hoje → Teste grátis acabando:** quem termina o teste em até 7 dias aparece com a mensagem de fechamento pronta, o link do WhatsApp e os botões **Virou cliente** e **Desistiu**.
+- **Vender para quem já é cliente:** cliente de CRM sem site recebe a oferta de site; cliente de site sem CRM recebe a do teste do CRM. Cada um vem com a mensagem pronta. **Já ofereci** tira o cliente da lista por 60 dias. Quem está no teste fica de fora.
+- **FAQ** com os preços reais e o passo a passo do site (o mesmo do seu material: 7 dias úteis, até 2 rodadas de ajustes). Os agentes SDR e Closer foram atualizados.
+
+**Testes:** 2 testes novos (as ofertas e mensagens; fim do teste e oportunidades na carteira).

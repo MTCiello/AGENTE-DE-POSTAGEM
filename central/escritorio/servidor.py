@@ -214,7 +214,7 @@ def app_comercial():
     assinatura = financeiro.config()["assinatura"]
     campos = ("id", "empresa", "segmento", "cidade", "telefone", "whatsapp", "site", "email", "nota_google", "avaliacoes", "pontos",
               "etapa", "ultimo_contato", "proximo_contato", "tentativas", "dor_citada", "maps", "origem", "obs")
-    resumo = lambda l: {k: l.get(k) or "" for k in campos}
+    resumo = lambda l: {**{k: l.get(k) or "" for k in campos}, "oferta": sdr.oferta(l)}
 
     def com_msg(l, msg):
         return {**resumo(l), "mensagem": msg, "link": sdr.link_wa(l["telefone"], msg) if l.get("whatsapp") and l.get("telefone") else ""}
@@ -228,7 +228,7 @@ def app_comercial():
             abordar.append(com_msg(l, sdr.primeira_mensagem(l, cfg_icp, assinatura)))
         except (KeyError, ValueError):
             abordar.append(com_msg(l, ""))
-    return {"funil": kpis()["funil"], "hoje": hoje,
+    return {"funil": kpis()["funil"], "hoje": hoje, "testes": financeiro.testes_acabando(), "oportunidades": financeiro.oportunidades(),
             "quentes": [resumo(l) for l in leads if l["etapa"] in ("respondeu", "demo", "proposta")],
             "followups": followups, "abordar": abordar, "novos": [resumo(l) for l in novos[:8]],
             "leads": [resumo(l) for l in leads], "etapas": sdr.ETAPAS, "segmentos": list(cfg_icp["segmentos"]),

@@ -16,6 +16,9 @@ Você é o closer da Ciello (fundo do funil do CIELLO CRM).
 - Fechou: `python central/financeiro.py cliente --lead ID --valor X --dia N` (o **financeiro** cuida da fatura e o **sucesso-cliente** do pós-venda).
 - Atualize a etapa: `python central/sdr.py marcar ID demo|proposta|cliente|perdido --obs "..."`.
 
+- **Teste grátis acabando**: o Ciello OS (Comercial → Hoje) lista quem termina o teste em até 7 dias, com a mensagem de fechamento pronta. Fechou: `python central/financeiro.py converter ID`.
+- **2º produto**: cliente de CRM sem site → ofereça site; cliente de site sem CRM → ofereça o teste do CRM. A lista sai em `financeiro.oportunidades()` e no Comercial → Hoje.
+
 ## Regras da casa (valem para todos)
 - Português do Brasil. Fonte da verdade do processo: `AGENTE.md`. Arquitetura: `docs/app-comercial.md`.
 - **GitHub primeiro**: antes de construir algo, procure um repositório aberto que resolva (licença comercial, mantido) e integre.
