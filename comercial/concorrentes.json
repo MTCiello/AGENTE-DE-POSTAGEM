@@ -1,0 +1,14 @@
+{
+ "_sobre": "Concorrentes que a vigia (central/vigia.py) acompanha. Cada URL é baixada, vira texto e é comparada com a versão anterior: preço, plano e oferta novos aparecem no relatório. 'inicio'/'fim' (opcionais) recortam só o trecho que interessa. 'conferir': true = endereço ainda não testado no seu PC; se der 404, troque a URL.",
+ "concorrentes": [
+  {"nome": "Agendor", "instagram": "agendor", "anuncios": "Agendor",
+   "urls": [{"rotulo": "preços CRM", "url": "https://www.agendor.com.br/planos-precos/crm"},
+            {"rotulo": "preços Agendor Chat (WhatsApp)", "url": "https://www.agendor.com.br/planos-precos/agendor-chat"}]},
+  {"nome": "RD Station CRM", "instagram": "resultadosdigitais", "anuncios": "RD Station",
+   "urls": [{"rotulo": "planos", "url": "https://www.rdstation.com/planos/crm/encontre-seu-plano-ideal/"}]},
+  {"nome": "Kommo", "instagram": "kommo.brasil", "anuncios": "Kommo",
+   "urls": [{"rotulo": "preços", "url": "https://www.kommo.com/br/precos/", "conferir": true}]},
+  {"nome": "PipeRun", "instagram": "piperuncrm", "anuncios": "PipeRun",
+   "urls": [{"rotulo": "preços", "url": "https://crmpiperun.com/precos/", "conferir": true}]}
+ ]
+}

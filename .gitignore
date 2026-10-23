@@ -1,3 +1,36 @@
 __pycache__/
 *.wav
 frames/
+reels/node_modules/
+reels/public/clone/*.mp4
+
+# dados de leads (telefone, nome) nunca vão para o repositório público
+comercial/leads.csv
+comercial/abordagens/
+comercial/bruto/
+comercial/crm-*.csv
+comercial/nao-contatar.txt
+
+# plano de negócio, preços e margens (founder skills) ficam fora do repositório público
+founder/*
+!founder/idea.md
+comercial/bin/
+estado/
+.venv/
+
+# financeiro (clientes, faturas, extrato) fica no PC: só as regras de categoria vão para o git
+financeiro/*
+!financeiro/categorias.json
+
+# escritório (fork do pixel-agents): dependências de build ficam fora; o build compilado vai para o git
+escritorio/webview-ui/node_modules/
+
+# narrações (a sua voz) e rascunhos do Estúdio de Vídeo ficam no PC
+audio/
+midia/estudio/
+
+# resultados dos testes da tela (allure) são gerados a cada rodada
+escritorio/allure-results/
+
+# saída do instalador (instalador/ciello.iss)
+build/
