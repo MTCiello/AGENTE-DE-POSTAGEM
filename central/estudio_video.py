@@ -11,6 +11,7 @@ Passos (`gerar` faz todos):
   python central/estudio_video.py montar 2026-10-29-comandos-plano     # só o projeto (para abrir no Studio do HyperFrames)
   python central/estudio_video.py usar 2026-10-29-comandos-plano --modelo escuro
   python central/estudio_video.py modelos
+  python central/estudio_video.py renderizar estado/estudio/<pasta> midia/estudio/<post>-<estilo>.mp4   # projeto feito à mão (estilos da galeria)
 
 Funciona com qualquer roteiro de roteiros/ (campos usados: type, say, kicker/tag, lines/title/text, items/answer/cards).
 """
@@ -344,7 +345,14 @@ def main():
             s.add_argument("--motor", help="motor da narração (padrão: o do Estúdio de Voz)")
             s.add_argument("--rascunho", action="store_true", help="render rápido (qualidade draft)")
     sub.add_parser("modelos")
+    s = sub.add_parser("renderizar", help="renderiza um projeto HyperFrames já montado (o Claude usa nos estilos da galeria)")
+    s.add_argument("pasta", type=Path)
+    s.add_argument("saida", type=Path)
+    s.add_argument("--rascunho", action="store_true", help="render rápido (qualidade draft)")
     a = ap.parse_args()
+    if a.cmd == "renderizar":
+        renderizar(a.pasta.resolve(), a.saida.resolve(), "draft" if a.rascunho else "looks")
+        return
     if a.cmd == "modelos":
         for k, m in MODELOS.items():
             print(f"{k:8} {m['nome']}: {m['descricao']}")

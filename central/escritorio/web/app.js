@@ -41,7 +41,7 @@ const APPS = {
   conexoes: { titulo: 'Conexões', icone: 'conexoes', cor: 'linear-gradient(135deg,#6FB0D8,#2F6A99)', ux: 'lista', w: 900, h: 700, render: renderConexoes },
   objetivos: { titulo: 'Gerente · objetivos e esteiras', icone: 'alvo', cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', ux: 'estudio', w: 900, h: 700, render: renderObjetivos, cada: 3000 },
   atendimento: { titulo: 'Atendimento', icone: 'balao', cor: 'linear-gradient(135deg,#4CC6D1,#1E8C99)', ux: 'lista', w: 760, h: 680, render: renderAtendimento, estatico: true },
-  video: { titulo: 'Estúdio de Vídeo', icone: 'video', cor: 'linear-gradient(135deg,#8E6BD8,#4B2F99)', ux: 'estudio', w: 900, h: 720, render: renderVideo, estatico: true },
+  video: { titulo: 'Estúdio de Vídeo', icone: 'video', cor: 'linear-gradient(135deg,#8E6BD8,#4B2F99)', ux: 'estudio', w: 1120, h: 760, render: renderVideo, estatico: true },
   voz: { titulo: 'Estúdio de Voz', icone: 'microfone', cor: 'linear-gradient(135deg,#E9826C,#B5442F)', ux: 'estudio', w: 780, h: 700, render: renderVoz, estatico: true },
   briefing: { titulo: 'Bom dia', icone: 'sol', cor: 'linear-gradient(135deg,#F7A35C,#E0722F)', ux: 'leitura', w: 640, h: 660, render: renderBriefing },
   financeiro: { titulo: 'Financeiro', icone: 'financeiro', cor: 'linear-gradient(135deg,#3CC285,#1F8A4C)', ux: 'painel', w: 900, h: 680, render: renderFinanceiro },
@@ -1461,11 +1461,40 @@ async function renderAnuncios(j) {
 }
 
 // ------------------------------------------------------------------ apps: estúdio de vídeo (central/estudio_video.py, HyperFrames)
+// Duas seções: Roteiros (o modelo rápido roda no PC, sem o Claude) e a Galeria de estilos (Opus 98 e a biblioteca
+// do lemo-opuscar, em reels/estilos/): você escolhe um estilo e o Claude produz o reel nele (central/estilos.py)
 async function renderVideo(j) {
   const d = await api('/api/app/video');
   j.modelo = j.modelo || 'escuro';
   j.gerando = j.gerando || {};
-  const m = d.modelos;
+  j.colecao = j.colecao || 'opus98';
+  j.busca = j.busca || ''; j.grupo = j.grupo || '';
+  const m = d.modelos; const E = d.estilos;
+  const nomeRascunho = (k) => (m[k] ? `Rascunho ${m[k].nome.split(' ')[1] || m[k].nome}` : 'Rascunho no estilo');
+  const acompanhar = (post, r) => {
+    j.gerando[post] = { linha: 'começando…' }; desenhar(j, true);
+    const timer = setInterval(async () => {
+      let ex; try { ex = await api(`/api/execucao/${encodeURIComponent(r.execucao)}`); } catch { return; }
+      const linhas = (ex.saida || '').trim().split('\n').filter((l) => !/^\s|^\[(init|Browser|INFO|HyperFrames)/.test(l));
+      j.gerando[post] = { linha: linhas.slice(-1)[0] || 'trabalhando…' };
+      if (ex.terminou) {
+        clearInterval(timer); delete j.gerando[post]; silenciar('produtor-video', false);
+        aviso(ex.codigo === 0 ? { titulo: 'Vídeo pronto', texto: 'Confira a prévia e clique em Usar como vídeo final.', cor: '#1F8A4C' } : { titulo: 'O vídeo não saiu', texto: linhas.slice(-1)[0] || '', cor: '#C8442F' });
+      }
+      const lin = $(`[data-progresso="${post}"]`, j.corpo); if (lin && !ex.terminou) lin.textContent = j.gerando[post].linha; else desenhar(j, true);
+    }, 1500);
+  };
+  const lista = () => (j.colecao === 'opus98' ? E.opus98 : E.biblioteca);
+  const achar = (id) => E.opus98.find((x) => x.id === id) || E.biblioteca.find((x) => x.id === id);
+  const visiveis = () => {
+    const f = j.busca.trim().toLowerCase();
+    return lista().filter((x) => (!j.grupo || (x.capitulo || x.familia) === j.grupo)
+      && (!f || [x.nome, x.nome_en, x.filme, x.ano, ...(x.tecnicas || []), ...(x.usos || [])].join(' ').toLowerCase().includes(f)));
+  };
+  const cartaoEstilo = (x) => `<button class="estilo ${j.estilo === x.id ? 'on' : ''}" data-fn="estilo" data-id="${esc(x.id)}" aria-pressed="${j.estilo === x.id}">
+      ${x.imagem ? `<img src="${esc(x.imagem)}" alt="" loading="lazy">` : '<span class="sem-imagem"></span>'}
+      <b>${esc(x.nome)}</b><small>${x.filme ? `${esc(x.ano)} · ${esc(x.filme)}` : esc(x.familia)}</small></button>`;
+  const pintarGrade = () => { const g = $('.grade-estilos', j.corpo); if (g) g.innerHTML = visiveis().map(cartaoEstilo).join('') || '<div class="vazio">Nenhum estilo com esse filtro.</div>'; };
   j.fns = {
     modelo: ({ m: k }) => { j.modelo = k; desenhar(j, true); },
     novo: () => dialogo(j, { titulo: 'Novo roteiro', texto: 'Escreva como você falaria. Cada linha vira uma cena com título e legenda. Sem o Claude: o vídeo sai com a voz escolhida no Estúdio de Voz.',
@@ -1479,35 +1508,76 @@ async function renderVideo(j) {
       silenciar('produtor-video', true);
       const r = await operar('video_gerar', { post, modelo: j.modelo, rascunho: rascunho === '1' });
       if (!r.ok) { silenciar('produtor-video', false); return aviso({ titulo: 'Não deu', texto: r.saida, cor: '#C8442F' }); }
-      j.gerando[post] = { linha: 'começando…' }; desenhar(j, true);
-      const timer = setInterval(async () => {
-        let ex; try { ex = await api(`/api/execucao/${encodeURIComponent(r.execucao)}`); } catch { return; }
-        const linhas = (ex.saida || '').trim().split('\n').filter((l) => !/^\s|^\[(init|Browser|INFO|HyperFrames)/.test(l));
-        j.gerando[post] = { linha: linhas.slice(-1)[0] || 'trabalhando…' };
-        if (ex.terminou) {
-          clearInterval(timer); delete j.gerando[post]; silenciar('produtor-video', false);
-          aviso(ex.codigo === 0 ? { titulo: 'Vídeo pronto', texto: 'Confira a prévia e clique em Usar como vídeo final.', cor: '#1F8A4C' } : { titulo: 'O vídeo não saiu', texto: linhas.slice(-1)[0] || '', cor: '#C8442F' });
-        }
-        const lin = $(`[data-progresso="${post}"]`, j.corpo); if (lin && !ex.terminou) lin.textContent = j.gerando[post].linha; else desenhar(j, true);
-      }, 1500);
+      acompanhar(post, r);
     },
-    usar: async ({ post }) => { const r = await rapido('video_usar', { post, modelo: j.modelo }, 'Vídeo final atualizado'); if (r.ok) desenhar(j, true); },
+    usar: async ({ post, modelo }) => { const r = await rapido('video_usar', { post, modelo: modelo || j.modelo }, 'Vídeo final atualizado'); if (r.ok) desenhar(j, true); },
+    // galeria
+    colecao: ({ c }) => { j.colecao = c; j.grupo = ''; desenhar(j, true); },
+    buscar: (_, el) => { j.busca = el.value; pintarGrade(); },
+    grupo: (_, el) => { j.grupo = el.value; pintarGrade(); },
+    estilo: ({ id }) => { j.estilo = id; desenhar(j, true); },
+    escolherPara: ({ post }) => { j.aba = 'estilos'; j.postEstilo = post; desenhar(j, true); },
+    produzir: async () => {
+      const x = achar(j.estilo); if (!x) return;
+      const post = ($('[name=post-estilo]', j.corpo) || {}).value || '';
+      const tema = post ? '' : (($('[name=tema-estilo]', j.corpo) || {}).value || '').trim();
+      if (!post && !tema) return aviso({ titulo: 'Falta o roteiro', texto: 'Escolha um roteiro ou escreva o tema do vídeo.', cor: '#E0A81C' });
+      const r = await operar('video_estilo', { estilo: x.id, post, tema, data: d.proximos[0] || '' });
+      if (!r.ok) return aviso({ titulo: 'Não deu', texto: r.saida, cor: '#C8442F' });
+      j.postEstilo = post;
+      abrirTerminal({ prompt: r.prompt, titulo: `Vídeo · ${x.nome.slice(0, 28)}` });
+    },
   };
+  const secoes = abas(j, [['roteiros', 'Roteiros', d.posts.length], ['estilos', 'Galeria de estilos', E.opus98.length + E.biblioteca.length]]);
+
+  if (j.aba === 'estilos') {
+    const grupos = j.colecao === 'opus98' ? E.capitulos.map((c) => [c.id, `${c.nome} (${c.anos})`]) : E.familias.map((f) => [f, f]);
+    const x = achar(j.estilo);
+    const postSel = j.postEstilo || '';
+    const detalhe = x ? `<aside class="detalhe-estilo">
+        ${x.imagem ? `<img src="${esc(x.imagem)}" alt="Quadro do estilo ${esc(x.nome)}">` : ''}
+        <div><small>${x.filme ? `Opus 98 · nº ${+x.id.slice(4)} · feito para ${esc(x.filme)} (${esc(x.ano)})` : `Biblioteca · ${esc(x.familia)}`}</small>
+          <h2>${esc(x.nome)}</h2><p class="sub" style="margin:2px 0 0">${esc(x.nome_en)}</p></div>
+        <div class="chips-estilo">${x.filme ? `<span class="chip">${esc(x.tom)}</span>${x.tecnicas.map((t) => `<span class="chip">${esc(t)}</span>`).join('')}`
+          : x.usos.map((u) => `<span class="chip">${esc(u)}</span>`).join('')}</div>
+        <div class="produzir">
+          <label>Roteiro<select name="post-estilo"><option value="">Roteiro novo sobre o tema abaixo</option>${d.posts.map((p) => `<option value="${esc(p.post)}" ${p.post === postSel ? 'selected' : ''}>${ddmm(p.data)} · ${esc(p.titulo)}</option>`).join('')}</select></label>
+          <label>Tema (se for um roteiro novo)<input name="tema-estilo" placeholder="Ex.: como responder clientes no WhatsApp com IA"></label>
+          <button class="bt pri" data-fn="produzir">${icone('play')} Produzir com o Claude</button>
+          <small class="neutro">O Claude segue o guia do estilo, usa a narração do Estúdio de Voz e deixa um rascunho aqui para você aprovar. Nada é publicado.</small>
+        </div></aside>`
+      : '<aside class="detalhe-estilo vazio-estilo"><p class="sub">Escolha um estilo para ver os detalhes e mandar produzir.</p></aside>';
+    j.corpo.innerHTML = `<div class="pagina larga">${secoes}<h1>Galeria de estilos</h1>
+      <p class="sub">Os 98 estilos do OPUSCAR 98 (um para cada vencedor do Oscar de Melhor Filme) e a biblioteca do <a href="https://github.com/lemomo-ai/lemo-opuscar" target="_blank" rel="noopener">lemo-opuscar</a>. Escolha um e o Claude produz o reel nele.</p>
+      <nav class="abas seg"><button class="${j.colecao === 'opus98' ? 'on' : ''}" data-fn="colecao" data-c="opus98">Opus 98 <em>${E.opus98.length}</em></button><button class="${j.colecao === 'biblioteca' ? 'on' : ''}" data-fn="colecao" data-c="biblioteca">Biblioteca <em>${E.biblioteca.length}</em></button></nav>
+      <div class="filtros"><input name="busca" placeholder="Buscar estilo, filme ou técnica" value="${esc(j.busca)}" data-mudar="buscar">
+        <select name="grupo" data-mudar="grupo"><option value="">${j.colecao === 'opus98' ? 'todas as épocas' : 'todas as famílias'}</option>${grupos.map(([k, r]) => `<option value="${esc(k)}" ${k === j.grupo ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></div>
+      <div class="galeria-estilos"><div class="grade-estilos" role="list"></div>${detalhe}</div>
+      <p class="sub creditos">Estilos e quadros: LemoLab, <a href="https://github.com/lemomo-ai/lemo-opuscar" target="_blank" rel="noopener">lemo-opuscar</a> (código MIT, imagens CC BY 4.0).</p></div>`;
+    pintarGrade();
+    return;
+  }
+
   const cartao = (p) => {
     const tem = p.rascunhos[j.modelo]; const g = j.gerando[p.post];
+    const est = p.estilo; const temEst = est && p.rascunhos[est.id];
     const chip = (ok, r) => `<span class="etapa-post ${ok ? 'feita' : ''}">${ok ? '✓ ' : ''}${r}</span>`;
-    return `<div class="cartao post-video"><div class="post-cab"><b>${ddmm(p.data)}</b> <span>${esc(p.titulo)}</span></div>
-      <div class="etapas-post">${chip(p.etapas.roteiro, 'Roteiro')}<i>›</i>${chip(p.narracao, 'Narração')}<i>›</i>${chip(tem, `Rascunho ${esc(m[j.modelo].nome.split(' ')[1])}`)}<i>›</i>${chip(p.etapas.final, 'Vídeo final')}</div>
-      ${tem ? `<video class="previa" controls preload="metadata" src="/midia/estudio/${encodeURIComponent(p.post)}-${j.modelo}.mp4?v=${Date.now()}"></video>` : ''}
+    const previa = (k) => `<video class="previa" controls preload="metadata" src="/midia/estudio/${encodeURIComponent(p.post)}-${encodeURIComponent(k)}.mp4?v=${Date.now()}"></video>`;
+    return `<div class="cartao post-video"><div class="post-cab"><b>${ddmm(p.data)}</b> <span>${esc(p.titulo)}</span>${est ? `<span class="chip">Estilo: ${esc(est.nome)}</span>` : ''}</div>
+      <div class="etapas-post">${chip(p.etapas.roteiro, 'Roteiro')}<i>›</i>${chip(p.narracao, 'Narração')}<i>›</i>${chip(tem || temEst, est ? 'Rascunho no estilo' : nomeRascunho(j.modelo))}<i>›</i>${chip(p.etapas.final, 'Vídeo final')}</div>
+      ${tem || temEst ? `<div class="previas">${tem ? previa(j.modelo) : ''}${temEst ? previa(est.id) : ''}</div>` : ''}
       <div class="acoes-linha">${g ? `<span class="girando"></span><small class="neutro" data-progresso="${esc(p.post)}">${esc(g.linha)}</small>`
         : `<button class="bt pri" data-fn="gerar" data-post="${esc(p.post)}" ${d.hyperframes ? '' : 'disabled'}>${icone('play')} ${tem ? 'Gerar de novo' : 'Gerar vídeo'}</button>
            <button class="bt" data-fn="gerar" data-post="${esc(p.post)}" data-rascunho="1" ${d.hyperframes ? '' : 'disabled'} title="Qualidade menor, sai mais rápido">Rascunho rápido</button>
-           ${tem ? `<button class="bt" data-fn="usar" data-post="${esc(p.post)}" title="Copia para midia/final/ (o que vai para o Instagram)">Usar como vídeo final</button>` : ''}`}</div></div>`;
+           <button class="bt" data-fn="escolherPara" data-post="${esc(p.post)}" title="Escolher um estilo da galeria para o Claude produzir">${est ? 'Trocar o estilo' : 'Escolher estilo'}</button>
+           ${tem ? `<button class="bt" data-fn="usar" data-post="${esc(p.post)}" title="Copia para midia/final/ (o que vai para o Instagram)">Usar como vídeo final</button>` : ''}
+           ${temEst ? `<button class="bt" data-fn="usar" data-post="${esc(p.post)}" data-modelo="${esc(est.id)}" title="Copia o vídeo no estilo para midia/final/">Usar o do estilo</button>` : ''}`}</div></div>`;
   };
-  j.corpo.innerHTML = `<div class="pagina"><h1>Estúdio de Vídeo</h1><p class="sub">Roteiro → narração com a voz do Estúdio de Voz (agora: <b>${esc(d.voz)}</b>) → vídeo com a marca da empresa, legenda e trilha. Feito no seu PC com o HyperFrames.</p>${SEM_CLAUDE}
-    ${d.hyperframes ? '' : '<div class="faixa">O motor de vídeo (HyperFrames) ainda não está instalado. Rode o <b>instalar.cmd</b> de novo: ele instala em reels/.</div>'}
-    <div class="acoes topo"><button class="bt pri" data-fn="novo">+ Novo roteiro</button><button class="bt" data-abrir="voz">Estúdio de Voz</button><button class="bt" data-abrir="objetivos" title="Os agentes escrevem os roteiros">Pedir roteiros à equipe</button></div>
-    <h2>Modelo</h2><div class="modelos">${Object.entries(m).map(([k, x]) => `<button class="modelo ${j.modelo === k ? 'on' : ''}" data-fn="modelo" data-m="${k}"><span class="amostra" style="background:${x.fundo}"><i style="color:${x.texto}">Título</i><i style="color:${x.ouro}">em destaque</i></span><b>${esc(x.nome)}</b><small>${esc(x.descricao)}</small></button>`).join('')}</div>
+  j.corpo.innerHTML = `<div class="pagina">${secoes}<h1>Estúdio de Vídeo</h1><p class="sub">Roteiro → narração com a voz do Estúdio de Voz (agora: <b>${esc(d.voz)}</b>) → vídeo com a marca da empresa, legenda e trilha. Feito no seu PC com o HyperFrames.</p>${SEM_CLAUDE}
+    ${d.hyperframes ? '' : '<div class="faixa"><span>O motor de vídeo (HyperFrames) ainda não está instalado. Rode o <b>instalar.cmd</b> de novo: ele instala em reels/.</span></div>'}
+    <div class="acoes topo"><button class="bt pri" data-fn="novo">+ Novo roteiro</button><button class="bt" data-fn="aba" data-aba="estilos">Galeria de estilos</button><button class="bt" data-abrir="voz">Estúdio de Voz</button><button class="bt" data-abrir="objetivos" title="Os agentes escrevem os roteiros">Pedir roteiros à equipe</button></div>
+    <h2>Modelo rápido</h2><div class="modelos">${Object.entries(m).map(([k, x]) => `<button class="modelo ${j.modelo === k ? 'on' : ''}" data-fn="modelo" data-m="${k}"><span class="amostra" style="background:${x.fundo}"><i style="color:${x.texto}">Título</i><i style="color:${x.ouro}">em destaque</i></span><b>${esc(x.nome)}</b><small>${esc(x.descricao)}</small></button>`).join('')}
+      <button class="modelo" data-fn="aba" data-aba="estilos"><span class="amostra mosaico">${E.opus98.filter((x) => x.imagem).slice(0, 4).map((x) => `<img src="${esc(x.imagem)}" alt="" loading="lazy">`).join('')}</span><b>Mais ${E.opus98.length + E.biblioteca.length} estilos</b><small>Opus 98 e a biblioteca: o Claude produz o vídeo no estilo que você escolher</small></button></div>
     <h2>Roteiros</h2><div class="quadro-posts">${d.posts.map(cartao).join('') || '<div class="vazio">Nenhum roteiro. Clique em <b>+ Novo roteiro</b>.</div>'}</div></div>`;
 }
 
