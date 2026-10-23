@@ -1,12 +1,16 @@
 # Compila o instalador do Ciello OS (CielloOS-Setup-<versão>.exe).
-# - Push de tag vX.Y.Z: compila e publica uma Release com o instalador. O atualizador do Ciello OS
-#   (canal estável) enxerga essa Release e oferece a atualização em todos os PCs.
-# - Rodar à mão (Actions > Instalador > Run workflow) ou mexer em instalador/: só compila e deixa o .exe nos artefatos.
+# - Mudou o VERSION na main (ou push de tag vX.Y.Z): compila e publica a Release vX.Y.Z com o instalador.
+#   O atualizador do Ciello OS (canal estável) enxerga essa Release e oferece a atualização em todos os PCs.
+# - Rodar à mão (Actions > Instalador > Run workflow) na main: publica a versão do VERSION se ela ainda não
+#   tiver Release; em outra branch, ou se já tiver, só compila.
+# - PR que mexe em instalador/: só compila e deixa o .exe nos artefatos.
 name: Instalador
 
 on:
   push:
     tags: ["v*"]
+    branches: [main]
+    paths: ["VERSION"]
   pull_request:
     paths: ["instalador/**", ".github/workflows/instalador.yml", "VERSION"]
   workflow_dispatch:
@@ -30,6 +34,10 @@ jobs:
             exit 1
           }
           "versao=$v" >> $env:GITHUB_OUTPUT
+          $existe = git ls-remote --tags origin "refs/tags/v$v"
+          $publicar = ($env:GITHUB_REF_TYPE -eq 'tag') -or ($env:GITHUB_REF -eq 'refs/heads/main' -and -not $existe -and $env:GITHUB_EVENT_NAME -ne 'pull_request')
+          "publicar=$($publicar.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          Write-Host "Versão $v · publicar Release: $publicar"
 
       - name: Testes do atualizador
         shell: pwsh
@@ -56,9 +64,11 @@ jobs:
           path: build/CielloOS-Setup-*.exe
 
       - name: Publicar a Release
-        if: github.ref_type == 'tag'
+        if: steps.versao.outputs.publicar == 'true'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.versao.outputs.versao }}
+          target_commitish: ${{ github.sha }}
           name: Ciello OS ${{ steps.versao.outputs.versao }}
           files: build/CielloOS-Setup-*.exe
           generate_release_notes: true

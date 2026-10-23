@@ -37,10 +37,10 @@ No menu Iniciar, na pasta **Ciello OS**, também ficam: **Atualizações do Ciel
 
 ## Para publicar uma versão nova
 
-1. Mude o número no arquivo `VERSION` (ex.: `1.1.0`) e faça o commit.
-2. Crie e envie a tag: `git tag v1.1.0 && git push origin v1.1.0`.
-3. O GitHub Actions (`.github/workflows/instalador.yml`) roda os testes, compila o `CielloOS-Setup-1.1.0.exe` com o
-   Inno Setup e publica a Release. A partir daí, todos os PCs no canal estável veem a atualização.
+1. Mude o número no arquivo `VERSION` (ex.: `1.1.0`) e leve o commit para a `main`.
+2. O GitHub Actions (`.github/workflows/instalador.yml`) roda os testes, compila o `CielloOS-Setup-1.1.0.exe` com o
+   Inno Setup, cria a tag `v1.1.0` e publica a Release. A partir daí, todos os PCs no canal estável veem a atualização.
+   (Criar a tag na mão, `git tag v1.1.0 && git push origin v1.1.0`, também publica.)
 
 Para só gerar o `.exe` sem publicar: **Actions → Instalador → Run workflow** (o arquivo sai em *Artifacts*).
 
