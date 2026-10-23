@@ -17,7 +17,9 @@ from pathlib import Path
 AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parent
 sys.path.insert(0, str(AQUI))
+import conteudo  # noqa: E402
 import financeiro  # noqa: E402
+import plano  # noqa: E402
 import status  # noqa: E402
 
 LEADS = RAIZ / "comercial" / "leads.csv"
@@ -89,11 +91,31 @@ def coletar(ref):
     if fila < 15:
         add(50, "sdr", f"Fila com {fila} lead(s) novo(s): gerar mais (consultas → buscar → qualificar)")
 
-    for rot in sorted((RAIZ / "roteiros").glob("20??-??-??-*.json")):
-        quando = financeiro.data(rot.name[:10])
-        faltam = (quando - ref).days
-        if 0 <= faltam <= 7 and not (RAIZ / "midia" / "final" / f"{rot.stem}.mp4").exists():
-            add(80 if faltam <= 2 else 60, "produtor-video", f"Post de {quando:%d/%m} ({rot.stem[11:]}) ainda sem vídeo final")
+    # conteúdo: post perto de sair sem vídeo, pronto sem agendar, rascunho esquecido, semana com poucos posts
+    for alerta in conteudo.alertas(conteudo.quadro(raiz=RAIZ, ref=ref), ref):
+        dono = "postagem" if ("agendado" in alerta or "publicação" in alerta) else ("roteirista" if "meta é 3" in alerta else "produtor-video")
+        add(80 if "sai em" in alerta else 62 if "publicação" in alerta else 48, dono, alerta)
+
+    # o que costuma passar despercebido no financeiro
+    clientes = financeiro.ler(financeiro.CLIENTES, financeiro.C_CLIENTE)
+    ativos = [c for c in clientes if c["status"] == "ativo" and float(c["valor_mensal"] or 0)]
+    mes = ref.strftime("%Y-%m")
+    faturas = financeiro.ler(financeiro.FATURAS, financeiro.C_FATURA)
+    if ativos and ref.day >= 1 and not any(f["competencia"] == mes and not f["descricao"].startswith("Site") for f in faturas):
+        add(82, "financeiro", f"As faturas de {ref:%m/%Y} ainda não foram geradas ({len(ativos)} assinatura(s)): Financeiro → Gerar faturas")
+    sem_zap = [c["empresa"] for c in ativos if not (c.get("whatsapp") or "").strip()]
+    if sem_zap:
+        add(35, "financeiro", f"Cliente(s) sem WhatsApp cadastrado, sem como cobrar ou mandar pós-venda: {', '.join(sem_zap[:3])}")
+    ops = financeiro.oportunidades()
+    if ops:
+        add(38, "closer", f"{len(ops)} cliente(s) prontos para o 2º produto (site ou CRM): Comercial → Hoje → Vender para quem já é cliente")
+    try:
+        p = plano.ler()
+        if p["negocios"] or p["custos"]:
+            for a in [a for a in plano.auditar(p) if a["nivel"] == "alto"][:2]:
+                add(58, "financeiro", f"Plano {p['ano']}: {a['titulo']}. {a['detalhe']}")
+    except (OSError, ValueError, KeyError):
+        pass
 
     retrato = ultimo_arquivo(RAIZ / "metricas", "20??-??-??.json")
     dias = idade(retrato, ref)

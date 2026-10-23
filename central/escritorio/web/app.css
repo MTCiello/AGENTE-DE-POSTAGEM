@@ -331,3 +331,22 @@ label.bt { cursor: pointer; }
 .barras-plano i.falta { background: linear-gradient(180deg, #E9826C, #C8442F); } .barras-plano i.ok { background: linear-gradient(180deg, #5BC08A, #1F8A4C); }
 .barras-plano u { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--azul); text-decoration: none; }
 .chip.oferta-site { background: #F3E8FB; color: #7A3FA8; } .chip.oferta-crm { background: #E6EDF8; color: var(--azul); }
+
+/* ------------------------------------------------------------ quadro de produção de conteúdo */
+.quadro-posts { display: flex; flex-direction: column; gap: 8px; }
+.post-linha { display: flex; flex-direction: column; gap: 8px; } .post-linha.pronto { opacity: .75; }
+.post-cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; } .post-cab span { font-weight: 600; }
+.etapas-post { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; } .etapas-post i { font-style: normal; color: var(--cinza); }
+.etapa-post { padding: 3px 9px; border-radius: 11px; font-size: 11.5px; background: #F1ECDF; color: var(--cinza); }
+.etapa-post.feita { background: #E3F5EA; color: var(--verde); font-weight: 600; }
+.etapa-post.proxima { background: #FDF1D6; color: #8A5E00; font-weight: 600; outline: 1px dashed #D99A0B; }
+.passados { margin-top: 14px; } .passados summary { cursor: pointer; font: 600 11px Oswald, sans-serif; letter-spacing: 3px; text-transform: uppercase; color: var(--azul); margin-bottom: 8px; }
+
+/* ------------------------------------------------------------ bom dia como painel de entrada */
+.objetivo.compacto { display: flex; gap: 8px; align-items: flex-start; margin-top: 0; padding: 10px; }
+.objetivo.compacto textarea { margin: 0; min-height: 36px; resize: none; }
+.atalhos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 10px 0 4px; }
+.atalho { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--linha); border-radius: 9px; background: #fff; text-align: left; font-size: 12px; font-weight: 600; color: var(--tinta); }
+.atalho:hover { border-color: var(--ouro); background: #FFFBEF; }
+.atalho .tile { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; flex: none; }
+.atalho .tile svg { width: 15px; height: 15px; fill: none; stroke: #fff; stroke-width: 1.9; }

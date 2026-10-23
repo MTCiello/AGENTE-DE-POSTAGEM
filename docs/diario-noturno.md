@@ -61,3 +61,26 @@ _(atualizado no fim da noite)_
 - **FAQ** com os preços reais e o passo a passo do site (o mesmo do seu material: 7 dias úteis, até 2 rodadas de ajustes). Os agentes SDR e Closer foram atualizados.
 
 **Testes:** 2 testes novos (as ofertas e mensagens; fim do teste e oportunidades na carteira).
+
+### Volta 4 · 23/10 · Painel de entrada e produção de conteúdo
+
+**Simulação:** abri o OS como na sexta de manhã: "o que eu faço agora e o que está escapando?". Três problemas:
+- O Bom dia mostrava as prioridades, mas sem como agir dali.
+- O conteúdo não tinha onde ver em que etapa cada post estava.
+- Os posts que ficaram como rascunho no Metricool simplesmente sumiam da vista.
+
+**Feito:**
+- **Conteúdo → Produção:** cada post da agenda com as 7 etapas (roteiro, narração, vídeo, final, capa, legenda, agendado), o próximo passo e quem faz.
+  - **Gerar legenda:** um rascunho sai das falas do roteiro (gancho, valor, chamada, hashtags), sem o Claude. Você edita e salva.
+  - **Já agendei / Foi publicado?:** registra no historico.md.
+  - **Terminar com a equipe:** chama os agentes só para o que falta e pede a sua aprovação antes de agendar.
+  - Também lista os próximos horários livres (seg, qua e sex às 10h).
+- **Alertas de conteúdo:** post que sai em até 2 dias sem vídeo final, post pronto e não agendado, posts com data passada sem registro de publicação, semana com menos de 3 posts e o limite de 20 posts do Metricool grátis.
+- **Bom dia como painel de entrada:** a caixa "o que você quer que a equipe faça hoje?" (Enter manda) e atalhos que abrem a janela já na aba certa (Cobrança, Comercial de hoje, Produção de conteúdo, Plano do ano, Estúdio de Voz, Esteiras).
+- **O Bom dia passou a apontar o que costuma passar despercebido:** faturas do mês não geradas, cliente sem WhatsApp cadastrado, clientes prontos para o 2º produto, furos graves do plano do ano e os alertas de conteúdo.
+
+**Bugs achados na simulação e corrigidos:**
+- Com o vídeo final pronto, a etapa "vídeo" ainda aparecia pendente.
+- O plano vazio dizia "te paga em 12 de 12 meses". Agora mostra 3 passos para montar o plano.
+
+**Testes:** 2 testes novos do quadro de conteúdo; os 91 passam.

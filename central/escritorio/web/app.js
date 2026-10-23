@@ -304,6 +304,8 @@ function ligarJanela(j) {
   // campos com data-mudar: o select avisa ao escolher, a caixa de busca a cada letra
   const mudou = (e) => { const f = e.target.closest('[data-mudar]'); if (f && j.fns && j.fns[f.dataset.mudar] && (e.type === 'change') === (f.tagName === 'SELECT')) j.fns[f.dataset.mudar](f.dataset, f); };
   el.addEventListener('change', mudou); el.addEventListener('input', mudou);
+  // caixa de objetivo: Enter manda para a equipe, Shift+Enter quebra a linha
+  el.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && e.target.matches('.objetivo-texto') && j.fns && j.fns.mandar) { e.preventDefault(); j.fns.mandar(); } });
   el.addEventListener('click', (e) => {
     const f = e.target.closest('[data-fn]');
     if (f && f.dataset.fn === 'aba') { e.preventDefault(); j.aba = f.dataset.aba; return desenhar(j, true); }
@@ -607,14 +609,25 @@ function abas(j, lista) {
 }
 
 // ------------------------------------------------------------------ apps: bom dia
+// abre uma janela já na aba certa (atalhos do Bom dia)
+function abrirAba(chave, aba) { const w = abrir(chave); if (w) { w.aba = aba; desenhar(w, true); } }
+const ATALHOS = [['financeiro', 'cobranca', 'Cobrança e pós-venda'], ['comercial', 'hoje', 'Comercial de hoje'], ['conteudo', 'producao', 'Produção de conteúdo'],
+  ['financeiro', 'plano', 'Plano do ano'], ['voz', '', 'Estúdio de Voz'], ['objetivos', '', 'Esteiras da equipe']];
 async function renderBriefing(j) {
   const d = await api('/api/app/briefing');
+  j.fns = {
+    mandar: () => { const t = $('.objetivo-texto', j.corpo); if (t.value.trim()) { pedirEquipe(t.value); t.value = ''; } else t.focus(); },
+    atalho: ({ chave, aba }) => (aba ? abrirAba(chave, aba) : abrir(chave)),
+  };
+  const texto = $('.objetivo-texto', j.corpo)?.value || '';
   const h = new Date().getHours(); const saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
   const data = new Date(`${d.data}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   const dono = (x) => (NOMES[x.dono] && x.dono !== 'Mateus') ? `<a data-abrir="agente:${esc(x.dono)}" style="cursor:pointer">${sprite(x.dono, 16)} ${esc(nome(x.dono))}</a>` : `${esc(nome(x.dono))}`;
   const top = d.itens.slice(0, 3); const resto = d.itens.slice(3);
   j.corpo.innerHTML = `<div class="saudacao"><img src="/web/logo-marfim.svg" alt=""><div><h1>${saud}, Mateus</h1><p>${esc(data)}</p></div></div>
-  <div class="pagina"><h2>As 3 prioridades de hoje</h2><div class="lista">${top.map((x, i) => `<div class="prioridade"><span class="num">${i + 1}</span><div class="txt md">${md(x.texto).replace(/^<p>|<\/p>$/g, '')}<small>com ${dono(x)}</small></div></div>`).join('') || '<div class="vazio">Nada urgente. Bom dia para gravar conteúdo ou prospectar.</div>'}</div>
+  <div class="pagina"><div class="objetivo compacto"><textarea class="objetivo-texto" rows="1" placeholder="O que você quer que a equipe faça hoje? (Enter manda)">${esc(texto)}</textarea><button class="bt pri" data-fn="mandar">${icone('play')} Mandar</button></div>
+  <div class="atalhos">${ATALHOS.map(([c, a, r]) => `<button class="atalho" data-fn="atalho" data-chave="${c}" data-aba="${a}">${tile(APPS[c])}<span>${esc(r)}</span></button>`).join('')}</div>
+  <h2>As 3 prioridades de hoje</h2><div class="lista">${top.map((x, i) => `<div class="prioridade"><span class="num">${i + 1}</span><div class="txt md">${md(x.texto).replace(/^<p>|<\/p>$/g, '')}<small>com ${dono(x)}</small></div></div>`).join('') || '<div class="vazio">Nada urgente. Bom dia para gravar conteúdo ou prospectar.</div>'}</div>
   <h2>Números</h2><div class="cartao md">${md(d.numeros.join('\n'))}</div>
   ${resto.length ? `<h2>Pendências</h2><div class="lista">${resto.map((x) => `<div class="linha-item"><div class="cresce md">${md(x.texto).replace(/^<p>|<\/p>$/g, '')}</div><small>${dono(x)}</small></div>`).join('')}</div>` : ''}
   <div class="acoes"><button class="bt pri" data-acao="briefing">${icone('play')} Atualizar briefing</button><button class="bt" data-acao="placar">Placar da semana</button><button class="bt" data-abrir="equipe">Equipe</button></div></div>`;
@@ -785,12 +798,19 @@ function planoCorpo(j, pl) {
     discutir: () => pedirEquipe(`Discuta comigo o plano ${p.ano} da Ciello como o agente financeiro. Rode \`python central/plano.py\`, leia o resultado (financeiro/relatorios/plano-${p.ano}.md e financeiro/plano.json) e comece pelos pontos marcados como importantes. Para cada um: o que significa na prática, 2 caminhos possíveis com os números, e a sua recomendação. Depois proponha 3 regras simples para a empresa seguir (ex.: quando cobrar implantação, quanto separar por mês, quando contratar) e um plano de implantação em etapas para os próximos 90 dias. Use /founder-cfo e /founder-pricing se ajudar. Não mude o plano nem os preços sem a minha aprovação.`, 'Financeiro · plano'),
     planilha: () => pedirEquipe(`Use o agente financeiro: leia no Google Drive a aba "NEGÓCIOS CIELLO" da planilha "CONTROLE PESSOAL" (só os números da empresa; nada pessoal, CPF ou conta). Monte financeiro/plano.json no formato do central/plano.py (negocios: cliente, produto, tipo mensal|parcelas|unico, valor, parcelas, inicio AAAA-MM, fim, status fechado|negociando|talvez; custos: item, valor, frequencia mensal|anual|unico, mes, categoria). Me mostre a lista antes de gravar, junte com o que já está no plano sem duplicar, e aponte o que na planilha parece errado ou faltando.`, 'Financeiro · planilha'),
   });
-  return `<div class="faixa-plano"><div><b>Plano ${esc(p.ano)}</b> · ${esc((pl.regimes[p.regime] || {}).nome || 'regime de imposto não informado')} · você precisa de ${brl(p.pro_labore)}/mês</div>
+  if (!p.negocios.length && !p.custos.length) {
+    return `<div class="passos"><h2>Monte o plano ${esc(p.ano)} em 3 passos</h2><ol>
+      <li><button class="bt pri" data-fn="trazerClientes">Trazer os clientes do Financeiro</button> as assinaturas de hoje entram como negócios fechados. Depois, <button class="bt" data-fn="negocio">+ Negócio</button> para cada negociação (fechado, negociando ou talvez).</li>
+      <li><button class="bt" data-fn="custo">+ Custo</button> ferramentas, servidor, domínios, contador, anúncios: mensais, anuais ou únicos.</li>
+      <li><button class="bt" data-fn="planoConfig">Regras do plano</button> regime de imposto e quanto você precisa tirar por mês.</li></ol>
+      <p class="sub">Já tem tudo numa planilha do Google? <button class="bt mini" data-fn="planilha">Puxar da planilha</button> (usa o Claude para ler e te mostra antes de gravar).</p></div>`;
+  }
+  return `<div class="faixa-plano"><div><b>Plano ${esc(p.ano)}</b> · ${esc((pl.regimes[p.regime] || {}).nome || 'regime de imposto não informado')} ${p.pro_labore ? ` · você precisa de ${brl(p.pro_labore)}/mês` : ''}</div>
     <div class="acoes-linha"><button class="bt mini" data-fn="planoConfig">Regras do plano</button><button class="bt mini" data-fn="planilha" title="Usa o Claude para ler a sua planilha do Google Drive">Puxar da planilha</button><button class="bt mini pri" data-fn="discutir">Discutir com o Financeiro</button></div></div>
   <div class="kpis">${[['Receita provável no ano', brl(soma('receita_provavel')), `se tudo fechar: ${brl(soma('receita_se_tudo_fechar'))}`],
     ['Resultado do ano', brl(soma('resultado')), `impostos ${brl(soma('imposto'))} · custos ${brl(soma('custos'))}`, soma('resultado') >= 0 ? 'bom' : 'ruim'],
-    ['Te paga em', `${pagam} de 12 meses`, p.pro_labore ? `meta ${brl(p.pro_labore)}/mês` : 'informe quanto precisa tirar', pagam === 12 ? 'bom' : 'ruim'],
-    ['Clientes de CRM para te pagar', eq.clientes_para_te_pagar ?? '—', `${brl(eq.liquido_por_cliente)} líquido cada`]].map(([r, v, e, c]) => `<div class="kpi"><small>${r}</small><strong>${v}</strong><em class="${c || 'neutro'}">${e}</em></div>`).join('')}</div>
+    ['Te paga em', p.pro_labore ? `${pagam} de 12 meses` : '—', p.pro_labore ? `meta ${brl(p.pro_labore)}/mês` : 'informe em Regras do plano', p.pro_labore ? (pagam === 12 ? 'bom' : 'ruim') : 'neutro'],
+    ['Clientes de CRM para te pagar', p.pro_labore ? (eq.clientes_para_te_pagar ?? '—') : '—', `${brl(eq.liquido_por_cliente)} líquido cada`]].map(([r, v, e, c]) => `<div class="kpi"><small>${r}</small><strong>${v}</strong><em class="${c || 'neutro'}">${e}</em></div>`).join('')}</div>
   <h2>O que olhar (${pl.auditoria.length})</h2><div class="lista">${pl.auditoria.map((a) => `<div class="linha-item achado ${a.nivel}"><span class="chip ${NIVEL[a.nivel][0]}">${NIVEL[a.nivel][1]}</span><div class="cresce"><b>${esc(a.titulo)}</b><small style="white-space:normal">${esc(a.detalhe)}</small></div></div>`).join('') || '<p class="sub">Nada a apontar.</p>'}</div>
   <div class="cartao" style="margin-top:12px"><h2 style="margin-top:0">Resultado mês a mês ${p.pro_labore ? `· a linha é o seu pró-labore (${brl(p.pro_labore)})` : ''}</h2>
     <div class="barras-plano">${proj.map((m) => { const max = Math.max(1, ...proj.map((x) => Math.abs(x.resultado)), +p.pro_labore || 0); return `<div title="${esc(m.mes)}: receita ${brl(m.receita_provavel)} · resultado ${brl(m.resultado)}"><b>${brlCurto(m.resultado)}</b><i style="height:${Math.max(2, 100 * Math.abs(m.resultado) / max) * 0.8}%" class="${m.sobra_para_voce >= 0 ? 'ok' : 'falta'}"></i>${p.pro_labore ? `<u style="bottom:${(100 * p.pro_labore / max) * 0.8 + 18}px"></u>` : ''}${meses[+m.mes.slice(5) - 1]}</div>`; }).join('')}</div></div>
@@ -928,14 +948,43 @@ async function renderConteudo(j) {
         } });
       $('.mais-reel', el).onclick = () => $('.reels-form', el).insertAdjacentHTML('beforeend', linhaReel());
     },
+    legenda: async ({ post }) => {
+      const q = d.quadro.find((x) => x.post === post);
+      let texto = q.legenda;
+      if (!texto) { const r = await operar('cont_legenda', { post }); if (!r.ok) return aviso({ titulo: 'Não deu', texto: r.saida, cor: '#C8442F' }); texto = r.legenda; }
+      dialogo(j, { titulo: `Legenda · ${q.titulo}`, texto: 'Rascunho feito das falas do roteiro: gancho na 1ª linha, valor, chamada e hashtags. Ajuste no seu jeito e salve.',
+        campos: [{ nome: 'texto', rotulo: 'Legenda', tipo: 'area', valor: texto }], botao: 'Salvar legenda',
+        extra: '<div class="acoes-linha" style="margin-top:8px"><button type="button" class="bt mini copiar-legenda">Copiar</button><small class="neutro">até 2.200 caracteres</small></div>',
+        enviar: ({ texto: t }) => operar('cont_legenda_salvar', { post, texto: t }) });
+      $('.dialogo .caixa-dialogo textarea', j.el).rows = 12;
+      $('.dialogo .copiar-legenda', j.el).onclick = () => copiar($('.dialogo textarea', j.el).value);
+    },
+    agendei: ({ post }) => { const q = d.quadro.find((x) => x.post === post); dialogo(j, { titulo: `Agendado · ${q.titulo}`, texto: 'Registre aqui quando você agendou o post no Metricool (ou publicou direto no Instagram). Fica no historico.md.',
+      campos: [{ nome: 'quando', rotulo: 'Data e hora do post', valor: `${q.data.slice(8, 10)}/${q.data.slice(5, 7)} 10h`, meia: true }, { nome: 'publicado', rotulo: 'Situação', tipo: 'escolha', opcoes: [['', 'Agendado'], ['sim', 'Já publicado']], meia: true }],
+      botao: 'Registrar', enviar: (x) => operar('cont_agendado', { post, quando: x.quando, publicado: !!x.publicado }) }); },
+    produzir: ({ post }) => { const q = d.quadro.find((x) => x.post === post); pedirEquipe(`Termine o post ${post} ("${q.titulo}", vai ao ar em ${ddmm(q.data)}). Falta: ${q.falta.map((e) => (d.etapas.find((x) => x[0] === e) || [e, e])[1]).join(', ')}. Siga o AGENTE.md (narração com a voz do Estúdio de Voz, vídeo final, capa, legenda) e me mostre o vídeo e a legenda antes de agendar. Só agende no Metricool depois que eu aprovar.`, `Post ${ddmm(q.data)}`); },
   };
-  j.corpo.innerHTML = `<div class="pagina"><h1>Conteúdo e Instagram</h1><p class="sub">@ciellotec${i ? ` · retrato de ${ddmm(i.data)}` : ''}</p>
-  <div class="acoes topo"><button class="bt pri" data-fn="retrato">Anotar números do Instagram</button><button class="bt" data-acao="relatorio">Relatório semanal</button></div>
-  ${i ? `<div class="kpis">${kpi('Seguidores', num(i.seguidores), delta != null ? `${delta >= 0 ? '+' : ''}${delta} na semana` : '', delta >= 0 ? 'bom' : 'ruim')}${kpi('Alcance 30 dias', num(i.alcance))}
+  const etapaChip = (q, e, rot) => `<span class="etapa-post ${q.etapas[e] ? 'feita' : q.proximo === e ? 'proxima' : ''}" title="${esc(rot)}${q.etapas[e] ? ': feito' : q.proximo === e ? ': próximo passo' : ''}">${q.etapas[e] ? '✓' : ''} ${esc(rot)}</span>`;
+  const quando = (q) => (q.dias === 0 ? 'hoje' : q.dias === 1 ? 'amanhã' : q.dias < 0 ? `há ${-q.dias} dias` : `em ${q.dias} dias`);
+  const producao = `${d.alertas.length ? `<div class="lista" style="margin-top:12px">${d.alertas.map((a) => `<div class="linha-item achado alto">${esc(a)}</div>`).join('')}</div>` : ''}
+  <h2>Próximos posts</h2><div class="quadro-posts">${d.quadro.filter((q) => q.dias >= 0).map((q) => cartaoPost(q)).join('') || '<div class="vazio">Nenhum post na agenda. Rode a esteira <b>Semana de conteúdo</b> em Objetivos.</div>'}</div>
+  ${d.quadro.some((q) => q.dias < 0) ? `<details class="passados"><summary>Posts passados (${d.quadro.filter((q) => q.dias < 0).length})</summary><div class="quadro-posts">${d.quadro.filter((q) => q.dias < 0).reverse().map((q) => cartaoPost(q)).join('')}</div></details>` : ''}`;
+  function cartaoPost(q) { return `<div class="cartao post-linha ${q.pronto ? 'pronto' : ''}">
+    <div class="post-cab"><b>${ddmm(q.data)}</b> <small class="${q.dias >= 0 && q.dias <= 2 && !q.pronto ? 'ruim' : 'neutro'}">${quando(q)}</small> <span>${esc(q.titulo)}</span>${q.status_historico ? `<small class="neutro" title="historico.md">· ${esc(q.status_historico.slice(0, 60))}</small>` : ''}</div>
+    <div class="etapas-post">${d.etapas.map(([e, r]) => etapaChip(q, e, r)).join('<i>›</i>')}</div>
+    <div class="acoes-linha">${q.pronto ? '<span class="chip pronto">pronto e agendado</span>' : `<small class="neutro">Próximo: <b>${esc((d.etapas.find((x) => x[0] === q.proximo) || ['', ''])[1])}</b> com ${esc(nome(q.dono))}</small>`}
+      <button class="bt mini" data-fn="legenda" data-post="${esc(q.post)}">${q.etapas.legenda ? 'Ver legenda' : 'Gerar legenda'}</button>
+      ${!q.etapas.agendado ? `<button class="bt mini" data-fn="agendei" data-post="${esc(q.post)}">${q.dias < 0 ? 'Foi publicado?' : 'Já agendei'}</button>` : ''}
+      ${!q.pronto && q.dias >= 0 ? `<button class="bt mini pri" data-fn="produzir" data-post="${esc(q.post)}" title="Abre o Claude com a equipe de conteúdo">Terminar com a equipe</button>` : ''}</div></div>`; }
+  const rodapeProducao = `<p class="sub">Próximos horários livres (seg, qua e sex às 10h): ${d.horarios.map((h) => ddmm(h)).join(', ')}. Para criar posts novos: <a data-abrir="objetivos" style="cursor:pointer;color:var(--azul-claro)">Objetivos → Semana de conteúdo</a>.</p>`;
+  const insta = `${i ? `<div class="kpis">${kpi('Seguidores', num(i.seguidores), delta != null ? `${delta >= 0 ? '+' : ''}${delta} na semana` : '', delta >= 0 ? 'bom' : 'ruim')}${kpi('Alcance 30 dias', num(i.alcance))}
   ${kpi('Tempo médio no reel', `${String(i.tempo_medio).replace('.', ',')}s`, 'meta 6s', i.tempo_medio >= 6 ? 'bom' : 'ruim')}${kpi('Salvamentos', `${String(i.salvamentos_pct).replace('.', ',')}%`, 'meta 1%', i.salvamentos_pct >= 1 ? 'bom' : 'ruim')}</div>` : '<div class="vazio">Sem retrato do Instagram ainda. Clique em <b>Anotar números do Instagram</b> (ou rode /segunda no Claude Code).</div>'}
   <h2>Posts · próximos e recentes</h2><div class="posts">${d.posts.map((p) => `<div class="post">${p.capa ? `<img src="${esc(p.capa)}" alt="" loading="lazy">` : '<div class="sem-capa"></div>'}<div><b>${ddmm(p.data)}</b>${esc(p.titulo)}<br>${p.final ? '<span class="chip pronto">vídeo pronto</span>' : '<span class="chip esperando">sem vídeo final</span>'}</div></div>`).join('')}</div>
   ${i && i.reels.length ? `<h2>Reels que mais alcançaram</h2><table class="tab"><tr><th>Data</th><th>Gancho</th><th>Alcance</th><th>Tempo</th></tr>${i.reels.map((r) => `<tr><td>${ddmm(r.data)}</td><td>${esc(r.gancho)}</td><td>${num(r.alcance)}</td><td>${String(r.tempo_medio_s ?? '').replace('.', ',')}s</td></tr>`).join('')}</table>` : ''}
-  <div class="acoes"><button class="bt" data-acao="ganchos">Ranking de ganchos</button><button class="bt" data-abrir="agente:produtor-video">Produtor de vídeo</button><button class="bt" data-abrir="agente:postagem">Postagem</button></div></div>`;
+  <div class="acoes"><button class="bt" data-acao="ganchos">Ranking de ganchos</button><button class="bt" data-abrir="agente:produtor-video">Produtor de vídeo</button><button class="bt" data-abrir="agente:postagem">Postagem</button></div>`;
+  j.corpo.innerHTML = `<div class="pagina"><h1>Conteúdo e Instagram</h1><p class="sub">@ciellotec${i ? ` · retrato de ${ddmm(i.data)}` : ''}</p>${SEM_CLAUDE}
+  <div class="acoes topo"><button class="bt pri" data-fn="retrato">Anotar números do Instagram</button><button class="bt" data-acao="relatorio">Relatório semanal</button><button class="bt" data-abrir="voz">Estúdio de Voz</button></div>
+  ${abas(j, [['producao', 'Produção', d.quadro.filter((q) => !q.pronto && q.dias >= 0).length || ''], ['instagram', 'Instagram']])}${j.aba === 'instagram' ? insta : producao + rodapeProducao}</div>`;
 }
 
 // ------------------------------------------------------------------ apps: tendências e concorrentes

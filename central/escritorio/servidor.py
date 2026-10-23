@@ -45,6 +45,7 @@ RAIZ = AQUI.parent.parent
 sys.path.insert(0, str(AQUI.parent))
 import status  # noqa: E402
 import briefing  # noqa: E402
+import conteudo  # noqa: E402
 import financeiro  # noqa: E402
 import atexit  # noqa: E402
 
@@ -247,7 +248,9 @@ def app_conteudo():
         posts.append({"data": r.name[:10], "slug": r.stem[11:], "titulo": titulo,
                       "capa": f"/midia/capas/{capa.name}" if capa.exists() else "",
                       "final": (RAIZ / "midia" / "final" / f"{r.stem}.mp4").exists()})
-    return {"instagram": kpis()["instagram"], "posts": posts[::-1]}
+    quadro = conteudo.quadro()
+    return {"instagram": kpis()["instagram"], "posts": posts[::-1], "quadro": quadro, "alertas": conteudo.alertas(quadro),
+            "horarios": conteudo.proximos_horarios(), "etapas": [[e, conteudo.ROTULOS[e]] for e in conteudo.ETAPAS]}
 
 
 def ultimo_md(padrao):
@@ -328,6 +331,15 @@ def operar(op, dados):
             return {"ok": True, "saida": "", "vozes": estudio_voz.voz.VoiceStudio(espera=30).vozes()}
         except (OSError, RuntimeError, ValueError) as e:
             return {"ok": False, "saida": f"Não consegui falar com o VoiceStudio: {e}"}
+    if op in ("cont_legenda", "cont_legenda_salvar", "cont_agendado"):
+        post = str(dados.get("post") or "")
+        if not re.fullmatch(r"20\d\d-\d\d-\d\d-[\w\-]{1,80}", post):
+            return {"ok": False, "saida": "post inválido"}
+        if op == "cont_legenda":
+            return conteudo.gerar_legenda(post, bool(dados.get("forcar")))
+        if op == "cont_legenda_salvar":
+            return conteudo.salvar_legenda(post, dados.get("texto", ""))
+        return conteudo.marcar_agendado(post, str(dados.get("quando") or ""), "Publicado" if dados.get("publicado") else "Agendado")
     if op == "plano_config":
         return plano.configurar(dados)
     if op == "plano_item":
