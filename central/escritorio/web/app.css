@@ -391,3 +391,8 @@ details.taxas .tab { margin-top: 6px; }
 .pacote-post video, .pacote-post img { width: 150px; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 8px; background: #000; border: 1px solid var(--linha); }
 .pacote-post .cresce { flex: 1 1 260px; min-width: 0; }
 .legenda-pacote { max-height: 190px; overflow: auto; margin: 8px 0 6px; }
+
+/* Bom dia: abrir a janela certa e "hoje não" */
+.prioridade .txt { flex: 1; min-width: 0; }
+.acoes-item { display: flex; gap: 6px; flex: none; align-self: center; }
+.bt.fantasma { background: transparent; border-color: transparent; color: var(--cinza); } .bt.fantasma:hover { border-color: var(--linha); color: var(--tinta); }

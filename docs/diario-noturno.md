@@ -278,3 +278,13 @@ O Financeiro mostrava tudo como lançamentos soltos, sem nenhum aviso.
 - "Terminar com a equipe" deixa de ser o botão principal quando o vídeo já está pronto.
 
 Conferido no navegador com os posts reais de 27/10 e 29/10.
+
+### Volta 15 · 23/10 · Bom dia que leva até o lugar
+
+**Simulação:** o Bom dia dizia "Financeiro → Cobrança e pós-venda", mas era preciso abrir o Financeiro e achar a aba na mão. E uma pendência que você já sabia, mas não ia resolver hoje (o retrato do Instagram, por exemplo), ficava ocupando uma das 3 prioridades.
+
+**Feito:**
+- **Abrir** em cada prioridade e pendência: abre a janela já na aba certa. O destino sai do próprio texto ("Financeiro → Cobrança e pós-venda") ou de uma pista: retrato do Instagram vai para Conteúdo → Instagram; demo e follow-up, para Comercial → Hoje; post, para Conteúdo → Produção.
+- **Hoje não:** o item some até amanhã e a próxima pendência sobe para as 3 prioridades. No fim aparece "N item(ns) deixado(s) para amanhã · mostrar de novo". Fica guardado só neste PC.
+
+**Bug achado na simulação e corrigido:** "Abrir" levava à Visão geral em vez de "Cobrança e pós-venda", por causa do hífen no nome da aba.

@@ -626,13 +626,35 @@ async function abrirAcao(chave, aba, fn) {
 }
 const ATALHOS = [['financeiro', 'cobranca', 'Cobrança e pós-venda'], ['comercial', 'hoje', 'Comercial de hoje'], ['conteudo', 'producao', 'Produção de conteúdo'], ['video', '', 'Estúdio de Vídeo'],
   ['financeiro', 'plano', 'Plano do ano'], ['voz', '', 'Estúdio de Voz'], ['objetivos', '', 'Esteiras da equipe']];
+// cada pendência do Bom dia leva para a janela e a aba certas: pelo "Janela → Aba" do texto ou por uma pista
+const DESTINOS = {
+  Financeiro: ['financeiro', { 'Visão geral': 'geral', Clientes: 'clientes', 'Cobrança e pós-venda': 'cobranca', Lançamentos: 'lancamentos', 'Plano do ano': 'plano', 'Metas e decisões': 'rumo', 'Gerar faturas': 'geral' }],
+  Comercial: ['comercial', { Hoje: 'hoje', Leads: 'leads', 'Buscar leads': 'buscar' }], Conteúdo: ['conteudo', { Produção: 'producao', Instagram: 'instagram', Análise: 'analise' }],
+  Atendimento: ['atendimento', {}], 'Estúdio de Vídeo': ['video', {}], 'Estúdio de Voz': ['voz', {}],
+};
+const PISTAS = [[/Retrato semanal/, ['conteudo', 'instagram']], [/Radar de tendências/, ['tendencias', '']], [/[Cc]oncorrente/, ['concorrentes', '']], [/Fila com/, ['comercial', 'buscar']],
+  [/^Post de|post\(s\) com data passada/, ['conteudo', 'producao']], [/follow-up|lead\(s\) quente|[Dd]emo /, ['comercial', 'hoje']], [/Teste grátis/, ['financeiro', 'clientes']], [/espera sua aprovação/, ['equipe', '']]];
+function destinoDoTexto(texto) {
+  const m = String(texto).match(/(Financeiro|Comercial|Conteúdo|Atendimento|Estúdio de Vídeo|Estúdio de Voz)(?:\s*→\s*([A-Za-zÀ-ÿ\- ]+?))?(?=\s*(?:→|[:,.()]|$))/);
+  if (m) { const [app, abasApp] = DESTINOS[m[1]]; return [app, (m[2] && abasApp[m[2].trim()]) || '']; }
+  const p = PISTAS.find(([re]) => re.test(texto));
+  return p ? p[1] : null;
+}
+const chaveItem = (texto) => String(texto).replace(/\d+([.,]\d+)?/g, '#').slice(0, 90);
 async function renderBriefing(j) {
   const d = await api('/api/app/briefing');
+  const hoje = hojeISO();
+  SALVO.adiados = Object.fromEntries(Object.entries(SALVO.adiados || {}).filter(([, dia]) => dia === hoje));
+  const adiados = d.itens.filter((x) => SALVO.adiados[chaveItem(x.texto)]);
+  d.itens = d.itens.filter((x) => !SALVO.adiados[chaveItem(x.texto)]);
   j.fns = {
     mandar: () => { const t = $('.objetivo-texto', j.corpo); if (t.value.trim()) { pedirEquipe(t.value); t.value = ''; } else t.focus(); },
     atalho: ({ chave, aba }) => (aba ? abrirAba(chave, aba) : abrir(chave)),
     passo: ({ i }) => { const [c, a, f] = d.passos[+i].abrir; abrirAcao(c, a, f); },
     esconderPassos: () => { SALVO.semPassos = true; salvar(); desenhar(j, true); },
+    ir: ({ i }) => { const [c, a] = destinoDoTexto(d.itens[+i].texto); if (a) abrirAba(c, a); else abrir(c); },
+    hojeNao: ({ i }) => { SALVO.adiados[chaveItem(d.itens[+i].texto)] = hoje; salvar(); desenhar(j, true); },
+    mostrarAdiados: () => { SALVO.adiados = {}; salvar(); desenhar(j, true); },
   };
   const feitos = d.passos.filter((x) => x.feito).length;
   const passos = feitos < d.passos.length && !SALVO.semPassos ? `<div class="cartao passos-inicio"><div class="cab-passos"><b>Primeiros passos · ${feitos} de ${d.passos.length}</b><i style="--p:${Math.round(100 * feitos / d.passos.length)}%"></i><button class="bt mini" data-fn="esconderPassos" title="Esconde este cartão">Esconder</button></div>
@@ -642,12 +664,14 @@ async function renderBriefing(j) {
   const data = new Date(`${d.data}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   const dono = (x) => (NOMES[x.dono] && x.dono !== 'Mateus') ? `<a data-abrir="agente:${esc(x.dono)}" style="cursor:pointer">${sprite(x.dono, 16)} ${esc(nome(x.dono))}</a>` : `${esc(nome(x.dono))}`;
   const top = d.itens.slice(0, 3); const resto = d.itens.slice(3);
+  const botoesItem = (x, i) => `${destinoDoTexto(x.texto) ? `<button class="bt mini" data-fn="ir" data-i="${i}" title="Abre a janela certa">Abrir</button>` : ''}<button class="bt mini fantasma" data-fn="hojeNao" data-i="${i}" title="Some daqui até amanhã">Hoje não</button>`;
   j.corpo.innerHTML = `<div class="saudacao"><img src="/web/logo-marfim.svg" alt=""><div><h1>${saud}, Mateus</h1><p>${esc(data)}</p></div></div>
   <div class="pagina"><div class="objetivo compacto"><textarea class="objetivo-texto" rows="1" placeholder="O que você quer que a equipe faça hoje? (Enter manda)">${esc(texto)}</textarea><button class="bt pri" data-fn="mandar">${icone('play')} Mandar</button></div>
   ${passos}<div class="atalhos">${ATALHOS.map(([c, a, r]) => `<button class="atalho" data-fn="atalho" data-chave="${c}" data-aba="${a}">${tile(APPS[c])}<span>${esc(r)}</span></button>`).join('')}</div>
-  <h2>As 3 prioridades de hoje</h2><div class="lista">${top.map((x, i) => `<div class="prioridade"><span class="num">${i + 1}</span><div class="txt md">${md(x.texto).replace(/^<p>|<\/p>$/g, '')}<small>com ${dono(x)}</small></div></div>`).join('') || '<div class="vazio">Nada urgente. Bom dia para gravar conteúdo ou prospectar.</div>'}</div>
+  <h2>As 3 prioridades de hoje</h2><div class="lista">${top.map((x, i) => `<div class="prioridade"><span class="num">${i + 1}</span><div class="txt md">${md(x.texto).replace(/^<p>|<\/p>$/g, '')}<small>com ${dono(x)}</small></div><div class="acoes-item">${botoesItem(x, i)}</div></div>`).join('') || '<div class="vazio">Nada urgente. Bom dia para gravar conteúdo ou prospectar.</div>'}</div>
   <h2>Números</h2><div class="cartao md">${md(d.numeros.join('\n'))}</div>
-  ${resto.length ? `<h2>Pendências</h2><div class="lista">${resto.map((x) => `<div class="linha-item"><div class="cresce md">${md(x.texto).replace(/^<p>|<\/p>$/g, '')}</div><small>${dono(x)}</small></div>`).join('')}</div>` : ''}
+  ${resto.length ? `<h2>Pendências</h2><div class="lista">${resto.map((x, k) => `<div class="linha-item"><div class="cresce md">${md(x.texto).replace(/^<p>|<\/p>$/g, '')}</div><small>${dono(x)}</small><div class="acoes-item">${botoesItem(x, k + 3)}</div></div>`).join('')}</div>` : ''}
+  ${adiados.length ? `<p class="sub">${adiados.length} item(ns) deixado(s) para amanhã · <a href="#" data-fn="mostrarAdiados">mostrar de novo</a></p>` : ''}
   <div class="acoes"><button class="bt pri" data-acao="briefing">${icone('play')} Atualizar briefing</button><button class="bt" data-acao="placar">Placar da semana</button><button class="bt" data-abrir="equipe">Equipe</button></div></div>`;
 }
 
