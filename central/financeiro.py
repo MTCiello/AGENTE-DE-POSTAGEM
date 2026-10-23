@@ -14,6 +14,11 @@ Fluxo do mês:
   python central/financeiro.py nps 3 10                 # nota do cliente 3 (9–10 recebe o pedido de avaliação no Google)
   python central/financeiro.py resumo                   # MRR, churn, CAC, LTV, caixa, previsão 30/60/90 dias, o que não bate
 
+Produtos e preços: comercial/produtos.json (CRM com 30 dias grátis, site à vista ou parcelado, hospedagem).
+  python central/financeiro.py cliente --empresa "X" --produto crm --teste 30     # começa no teste grátis
+  python central/financeiro.py converter 4                                        # o teste virou assinatura
+  python central/financeiro.py venda --empresa "Y" --forma parcelado              # site 12x, mais a hospedagem
+
 Outros: pago, cancelar, editar, lancar (Pix/dinheiro fora do extrato), categoria (classificar na mão),
 config (saldo inicial, alerta de saldo, link de avaliação).
 
@@ -39,14 +44,16 @@ CLIENTES, FATURAS, LANCAMENTOS = PASTA / "clientes.csv", PASTA / "faturas.csv", 
 CONFIG = PASTA / "config.json"
 REGRAS = RAIZ / "financeiro" / "categorias.json"  # regras versionadas no git, valem para qualquer pasta de dados
 LEADS = RAIZ / "comercial" / "leads.csv"
+PRODUTOS = RAIZ / "comercial" / "produtos.json"  # produtos e preços de lista (CRM, site, hospedagem)
 C_CLIENTE = ["id", "empresa", "contato", "whatsapp", "plano", "valor_mensal", "dia_vencimento", "inicio", "status",
-             "cancelado_em", "motivo", "lead_id", "nps", "posvenda", "obs"]
-C_FATURA = ["id", "cliente_id", "competencia", "vencimento", "valor", "pago_em", "lancamento", "cobrancas"]
+             "cancelado_em", "motivo", "lead_id", "nps", "posvenda", "obs", "teste_ate"]
+C_FATURA = ["id", "cliente_id", "competencia", "vencimento", "valor", "pago_em", "lancamento", "cobrancas", "descricao"]
 C_LANC = ["id", "data", "descricao", "valor", "categoria", "fitid", "fatura_id", "origem"]
 COBRANCA = [3, 7, 14]                    # dias de atraso
 POSVENDA = [1, 7, 30, 90]                # dias desde o início
 SEM_CATEGORIA = "a classificar"
 RECEITA = "Receita de assinaturas"
+RECEITA_SITES = "Receita de sites"
 FORA_DO_RESULTADO = {"Transferência entre contas", "Aplicação/resgate"}
 
 
@@ -78,6 +85,14 @@ def config():
 def salvar_config(cfg):
     PASTA.mkdir(parents=True, exist_ok=True)
     CONFIG.write_text(json.dumps(cfg, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def produtos() -> dict:
+    """Catálogo de comercial/produtos.json, por id (crm, site, hospedagem)."""
+    try:
+        return {p["id"]: p for p in json.loads(PRODUTOS.read_text(encoding="utf-8"))["produtos"]}
+    except (OSError, ValueError, KeyError):
+        return {}
 
 
 def proximo_id(linhas):
@@ -156,13 +171,88 @@ def cmd_cliente(a):
         empresa, whatsapp = empresa or lead["empresa"], whatsapp or lead["telefone"]
     if not empresa:
         sys.exit("informe --empresa ou --lead")
-    c = {"id": proximo_id(clientes), "empresa": empresa, "contato": a.contato, "whatsapp": whatsapp, "plano": a.plano,
-         "valor_mensal": f"{a.valor:.2f}", "dia_vencimento": a.dia, "inicio": a.inicio or hoje().isoformat(),
-         "status": "ativo", "lead_id": a.lead or ""}
+    produto = produtos().get(getattr(a, "produto", "") or "", {})
+    valor = a.valor if a.valor is not None else produto.get("mensal")
+    if valor is None:
+        sys.exit("informe --valor (ou --produto com preço em comercial/produtos.json)")
+    inicio = a.inicio or hoje().isoformat()
+    teste = getattr(a, "teste", 0) or 0
+    c = {"id": proximo_id(clientes), "empresa": empresa, "contato": a.contato, "whatsapp": whatsapp,
+         "plano": a.plano or getattr(a, "produto", "") or "", "valor_mensal": f"{valor:.2f}", "dia_vencimento": a.dia,
+         "inicio": inicio, "status": "teste" if teste else "ativo", "lead_id": a.lead or "",
+         "teste_ate": (data(inicio) + dt.timedelta(days=teste)).isoformat() if teste else ""}
     clientes.append(c)
     gravar(CLIENTES, C_CLIENTE, clientes)
-    print(f"cliente #{c['id']} {empresa}: {reais(a.valor)}/mês, vence dia {a.dia}"
+    print(f"cliente #{c['id']} {empresa}: {reais(valor)}/mês, vence dia {a.dia}"
+          + (f" · em teste grátis até {data(c['teste_ate']):%d/%m} (depois: Virou cliente)" if teste else "")
           + (f" · lembre: python central/sdr.py marcar {a.lead} cliente" if a.lead else ""))
+
+
+def cmd_converter(a):
+    """O teste grátis virou assinatura: passa a ativo e a 1ª fatura sai no próximo vencimento."""
+    clientes = ler(CLIENTES, C_CLIENTE)
+    c = achar(clientes, a.id, "cliente")
+    if c["status"] != "teste":
+        sys.exit(f"cliente #{c['id']} não está em teste (está {c['status']})")
+    c.update(status="ativo", inicio=a.data or hoje().isoformat())
+    if a.valor is not None:
+        c["valor_mensal"] = f"{a.valor:.2f}"
+    gravar(CLIENTES, C_CLIENTE, clientes)
+    print(f"cliente #{c['id']} {c['empresa']}: assinatura ativa desde {data(c['inicio']):%d/%m}, {reais(float(c['valor_mensal']))}/mês")
+
+
+def cmd_venda(a):
+    """Venda de site: à vista (1 fatura) ou parcelada (N faturas mensais), mais a hospedagem como assinatura."""
+    cat = produtos().get("site", {})
+    clientes, faturas = ler(CLIENTES, C_CLIENTE), ler(FATURAS, C_FATURA)
+    if a.cliente:
+        c = achar(clientes, a.cliente, "cliente")
+    else:
+        empresa, whatsapp = a.empresa, a.whatsapp
+        if a.lead:
+            lead = next((l for l in ler(LEADS, ["id", "empresa", "telefone"]) if l["id"] == str(a.lead)), None)
+            if not lead:
+                sys.exit(f"lead {a.lead} não está em {LEADS}")
+            empresa, whatsapp = empresa or lead["empresa"], whatsapp or lead["telefone"]
+        if not empresa:
+            sys.exit("informe --cliente, --empresa ou --lead")
+        hosp = produtos().get("hospedagem", {})
+        mensal = 0.0 if a.sem_hospedagem else (a.hospedagem if a.hospedagem is not None else hosp.get("mensal", 0.0))
+        c = {"id": proximo_id(clientes), "empresa": empresa, "contato": a.contato, "whatsapp": whatsapp,
+             "plano": "hospedagem" if mensal else "site", "valor_mensal": f"{mensal:.2f}", "dia_vencimento": a.dia,
+             "inicio": a.inicio_hospedagem or hoje().isoformat(), "status": "ativo" if mensal else "projeto", "lead_id": a.lead or ""}
+        clientes.append(c)
+    parcelado = a.forma == "parcelado"
+    n = a.parcelas or (cat.get("parcelas", 12) if parcelado else 1)
+    valor = a.valor if a.valor is not None else (cat.get("parcela") if parcelado else cat.get("avista"))
+    if valor is None:
+        sys.exit("informe --valor (ou o preço do site em comercial/produtos.json)")
+    primeira = data(a.primeira) if a.primeira else hoje()
+    for i in range(n):
+        ano, mes = primeira.year + (primeira.month - 1 + i) // 12, (primeira.month - 1 + i) % 12 + 1
+        venc = dt.date(ano, mes, min(primeira.day, calendar.monthrange(ano, mes)[1]))
+        faturas.append({"id": proximo_id(faturas), "cliente_id": c["id"], "competencia": venc.strftime("%Y-%m"),
+                        "vencimento": venc.isoformat(), "valor": f"{valor:.2f}",
+                        "descricao": f"Site parcela {i + 1}/{n}" if n > 1 else "Site à vista"})
+    gravar(CLIENTES, C_CLIENTE, clientes)
+    gravar(FATURAS, C_FATURA, faturas)
+    total = valor * n
+    print(f"site para {c['empresa']} (cliente #{c['id']}): " + (f"{n}x {reais(valor)} = {reais(total)}" if n > 1 else f"{reais(valor)} à vista")
+          + f", 1º vencimento {primeira:%d/%m}" + (f" · hospedagem {reais(float(c['valor_mensal']))}/mês" if float(c["valor_mensal"] or 0) else ""))
+
+
+def o_que(f, de=False) -> str:
+    """Como chamar esta fatura na mensagem: "a mensalidade do CIELLO CRM"; com de=True, "da mensalidade...")."""
+    d = f.get("descricao") or ""
+    if d.startswith("Site parcela"):
+        artigo, resto = "a", f"parcela {d.split()[-1]} do seu site"
+    elif d.startswith("Site"):
+        artigo, resto = "o", "pagamento do seu site"
+    elif d == "Hospedagem" or (f.get("cliente") or {}).get("plano") == "hospedagem":
+        artigo, resto = "a", "hospedagem do seu site"
+    else:
+        artigo, resto = "a", "mensalidade do CIELLO CRM"
+    return f"{'d' if de else ''}{artigo} {resto}"
 
 
 def cmd_cancelar(a):
@@ -199,14 +289,15 @@ def achar(linhas, id_, nome):
 def cmd_faturar(a):
     comp = a.mes or hoje().strftime("%Y-%m")
     faturas = ler(FATURAS, C_FATURA)
-    existentes = {(f["cliente_id"], f["competencia"]) for f in faturas}
+    existentes = {(f["cliente_id"], f["competencia"]) for f in faturas if not f["descricao"].startswith("Site")}
     novas = 0
     for c in ler(CLIENTES, C_CLIENTE):
         # 1ª fatura no 1º vencimento depois do início (antes disso é o período de teste)
-        if c["status"] != "ativo" or (c["id"], comp) in existentes or vencimento(comp, c["dia_vencimento"]) < data(c["inicio"]):
+        if c["status"] != "ativo" or not float(c["valor_mensal"] or 0) or (c["id"], comp) in existentes or vencimento(comp, c["dia_vencimento"]) < data(c["inicio"]):
             continue
         faturas.append({"id": proximo_id(faturas), "cliente_id": c["id"], "competencia": comp,
-                        "vencimento": vencimento(comp, c["dia_vencimento"]).isoformat(), "valor": c["valor_mensal"]})
+                        "vencimento": vencimento(comp, c["dia_vencimento"]).isoformat(), "valor": c["valor_mensal"],
+                        "descricao": "Hospedagem" if c["plano"] == "hospedagem" else "Mensalidade"})
         novas += 1
     gravar(FATURAS, C_FATURA, faturas)
     print(f"{novas} faturas de {comp} criadas ({sum(f['competencia'] == comp for f in faturas)} no mês)")
@@ -299,7 +390,7 @@ def conciliar(lanc, faturas, clientes):
         return None  # dois clientes com o mesmo valor e nenhum nome no extrato: fica para você conferir
     f = candidatas[0]
     f.update(pago_em=lanc["data"], lancamento=lanc["id"])
-    lanc.update(fatura_id=f["id"], categoria=RECEITA)
+    lanc.update(fatura_id=f["id"], categoria=RECEITA_SITES if f.get("descricao", "").startswith("Site") else RECEITA)
     return f
 
 
@@ -357,7 +448,7 @@ def cmd_categoria(a):
 
 def categorias():
     """Categorias conhecidas: as das regras, a receita de assinaturas e as que já foram usadas."""
-    nomes = [RECEITA] + [r["categoria"] for r in regras()] + [l["categoria"] for l in ler(LANCAMENTOS, C_LANC)]
+    nomes = [RECEITA, RECEITA_SITES] + [r["categoria"] for r in regras()] + [l["categoria"] for l in ler(LANCAMENTOS, C_LANC)]
     return [c for i, c in enumerate(nomes) if c and c != SEM_CATEGORIA and c not in nomes[:i]]
 
 
@@ -391,14 +482,16 @@ def msg_cobranca(f, etapa, assinatura):
     nome = (f["cliente"].get("contato") or "").split(" ")[0] or "tudo bem"
     venc = data(f["vencimento"]).strftime("%d/%m")
     valor = reais(float(f["valor"]))
+    item = o_que(f)
     if etapa == 3:
-        return (f"Oi, {nome}! Aqui é {assinatura}, da Ciello. Passando só para lembrar da mensalidade do CIELLO CRM "
+        return (f"Oi, {nome}! Aqui é {assinatura}, da Ciello. Passando só para lembrar {o_que(f, de=True)} "
                 f"de {valor} que venceu em {venc}. Se já pagou, desconsidera. Quer que eu reenvie o Pix?")
     if etapa == 7:
-        return (f"Oi, {nome}! A mensalidade do CIELLO CRM de {valor} (venc. {venc}) ainda aparece em aberto aqui. "
+        return (f"Oi, {nome}! {item[0].upper() + item[1:]} de {valor} (venc. {venc}) ainda aparece em aberto aqui. "
                 f"Consegue ver pra mim hoje? Se precisar de outra data, me fala que a gente combina.")
-    return (f"Oi, {nome}. A mensalidade de {valor} do CIELLO CRM está com 14 dias de atraso. Para não precisar pausar o acesso "
-            f"da equipe, consegue regularizar até sexta? Se estiver difícil, me liga que a gente acha um jeito.")
+    pausa = "o site" if "site" in item else "o acesso da equipe"
+    return (f"Oi, {nome}. {item[0].upper() + item[1:]} de {valor} está com 14 dias de atraso. Para não precisar pausar "
+            f"{pausa}, consegue regularizar até sexta? Se estiver difícil, me liga que a gente acha um jeito.")
 
 
 def etapa_atual(dias, etapas, feitas):
@@ -442,7 +535,7 @@ def cmd_cobrar(a):
 
 def posvenda_devida(c, ref=None):
     ref = ref or hoje()
-    if c["status"] != "ativo":
+    if c["status"] not in ("ativo", "teste"):  # quem está no teste grátis é quem mais precisa de boas-vindas
         return None
     return etapa_atual((ref - data(c["inicio"])).days, POSVENDA, c["posvenda"])
 
@@ -547,6 +640,11 @@ def situacao(ref=None):
     mes = ref.strftime("%Y-%m")
     ativos = [c for c in clientes if c["status"] == "ativo"]
     mrr = sum(float(c["valor_mensal"]) for c in ativos)
+    testes = sorted(({"id": c["id"], "empresa": c["empresa"], "teste_ate": c["teste_ate"], "valor": float(c["valor_mensal"] or 0),
+                      "dias": (data(c["teste_ate"]) - ref).days} for c in clientes if c["status"] == "teste" and c["teste_ate"]),
+                    key=lambda t: t["dias"])
+    sites = [f for f in ler(FATURAS, C_FATURA) if not f["pago_em"] and f["descricao"].startswith("Site")]
+    a_receber = {d: round(sum(float(f["valor"]) for f in sites if 0 <= (data(f["vencimento"]) - ref).days <= d), 2) for d in (30, 60, 90)}
     # despesa média dos últimos 3 meses fechados (sem transferências entre contas)
     meses = [meses_atras(mes, i) for i in (1, 2, 3)]
     desp = [-sum(float(l["valor"]) for l in lancs if l["data"][:7] == m and float(l["valor"]) < 0
@@ -559,7 +657,7 @@ def situacao(ref=None):
                              and l["categoria"] not in FORA_DO_RESULTADO)
     caixa = saldo_atual(cfg, lancs)
     atras = atrasadas(ref)
-    previsao = {d: round(caixa + (mrr - despesa_media) * d / 30, 2) for d in (30, 60, 90)}
+    previsao = {d: round(caixa + (mrr - despesa_media) * d / 30 + a_receber[d], 2) for d in (30, 60, 90)}
     queima = despesa_media - mrr
     alertas = []
     if atras:
@@ -567,6 +665,11 @@ def situacao(ref=None):
     menor = min(previsao.values())
     if lancs and menor < float(cfg["alerta_saldo"]):
         alertas.append(f"caixa previsto abaixo de {reais(float(cfg['alerta_saldo']))} em até 90 dias ({reais(menor)})")
+    for t in testes:
+        if t["dias"] < 0:
+            alertas.append(f"teste grátis de {t['empresa']} acabou há {-t['dias']} dia(s): virou cliente ou não?")
+        elif t["dias"] <= 5:
+            alertas.append(f"teste grátis de {t['empresa']} acaba em {t['dias']} dia(s): ligue para fechar")
     sem_cat = sum(l["categoria"] == SEM_CATEGORIA for l in lancs)
     if sem_cat:
         alertas.append(f"{sem_cat} lançamento(s) a classificar")
@@ -579,6 +682,7 @@ def situacao(ref=None):
             "atrasadas": [{"id": f["id"], "empresa": f["cliente"].get("empresa", ""), "valor": float(f["valor"]), "dias": f["dias"]} for f in atras],
             "cobrancas_devidas": sum(1 for f in atras if etapa_devida(f["dias"], f["cobrancas"])),
             "posvenda_devidos": sum(1 for c in clientes if posvenda_devida(c, ref)),
+            "testes": testes, "mrr_em_teste": round(sum(t["valor"] for t in testes), 2), "sites_a_receber": a_receber,
             "alertas": alertas, "tem_dados": bool(clientes or lancs)}
 
 
@@ -670,8 +774,20 @@ def parser():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("cliente"); s.add_argument("--empresa", default=""); s.add_argument("--lead", type=int); s.add_argument("--contato", default="")
-    s.add_argument("--whatsapp", default=""); s.add_argument("--plano", default=""); s.add_argument("--valor", type=float, required=True)
+    s.add_argument("--whatsapp", default=""); s.add_argument("--plano", default=""); s.add_argument("--valor", type=float, help="padrão: o preço do --produto")
+    s.add_argument("--produto", default="", help="crm ou hospedagem (preço de comercial/produtos.json)")
+    s.add_argument("--teste", type=int, default=0, help="dias de teste grátis (o CRM tem 30): não fatura até virar cliente")
     s.add_argument("--dia", type=int, default=10); s.add_argument("--inicio"); s.set_defaults(f=cmd_cliente)
+    s = sub.add_parser("converter", help="o teste grátis virou assinatura"); s.add_argument("id"); s.add_argument("--data")
+    s.add_argument("--valor", type=float); s.set_defaults(f=cmd_converter)
+    s = sub.add_parser("venda", help="venda de site: à vista ou parcelado, com a hospedagem como assinatura")
+    s.add_argument("--cliente"); s.add_argument("--empresa", default=""); s.add_argument("--lead", type=int); s.add_argument("--contato", default="")
+    s.add_argument("--whatsapp", default=""); s.add_argument("--forma", choices=["avista", "parcelado"], default="avista")
+    s.add_argument("--valor", type=float, help="valor à vista ou de cada parcela (padrão: comercial/produtos.json)")
+    s.add_argument("--parcelas", type=int); s.add_argument("--primeira", help="1º vencimento (padrão: hoje)")
+    s.add_argument("--dia", type=int, default=10, help="dia de vencimento da hospedagem")
+    s.add_argument("--hospedagem", type=float, help="mensalidade da hospedagem (padrão: comercial/produtos.json)")
+    s.add_argument("--sem-hospedagem", action="store_true"); s.add_argument("--inicio-hospedagem"); s.set_defaults(f=cmd_venda)
     s = sub.add_parser("editar", help="muda os dados de um cliente (só o que for informado)"); s.add_argument("id")
     for campo in ("empresa", "contato", "whatsapp", "plano", "obs"):
         s.add_argument(f"--{campo}")

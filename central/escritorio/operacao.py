@@ -101,8 +101,16 @@ segmentos = lambda: list(sdr.icp()["segmentos"])
 OPERACOES = {
     "fin_cliente": (financeiro, "cliente", [
         ("empresa", _texto, False, "--empresa"), ("contato", _texto, False, "--contato"), ("whatsapp", _texto, False, "--whatsapp"),
-        ("plano", _texto, False, "--plano"), ("valor", _numero, True, "--valor"), ("dia", DIA, False, "--dia"),
-        ("inicio", _data, False, "--inicio"), ("lead", ID, False, "--lead")]),
+        ("plano", _texto, False, "--plano"), ("valor", _numero, False, "--valor"), ("dia", DIA, False, "--dia"),
+        ("inicio", _data, False, "--inicio"), ("lead", ID, False, "--lead"),
+        ("produto", _escolha(["crm", "hospedagem"]), False, "--produto"), ("teste", _inteiro(0, 90), False, "--teste")]),
+    "fin_converter": (financeiro, "converter", [("id", ID, True, None), ("data", _data, False, "--data"), ("valor", _numero, False, "--valor")]),
+    "fin_venda": (financeiro, "venda", [
+        ("cliente", ID, False, "--cliente"), ("empresa", _texto, False, "--empresa"), ("lead", ID, False, "--lead"),
+        ("contato", _texto, False, "--contato"), ("whatsapp", _texto, False, "--whatsapp"),
+        ("forma", _escolha(["avista", "parcelado"]), False, "--forma"), ("valor", _numero, False, "--valor"),
+        ("parcelas", _inteiro(1, 48), False, "--parcelas"), ("primeira", _data, False, "--primeira"), ("dia", DIA, False, "--dia"),
+        ("hospedagem", _numero, False, "--hospedagem"), ("sem_hospedagem", SIM, False, "--sem-hospedagem")]),
     "fin_editar": (financeiro, "editar", [
         ("id", ID, True, None), ("empresa", _texto, False, "--empresa"), ("contato", _texto, False, "--contato"),
         ("whatsapp", _texto, False, "--whatsapp"), ("plano", _texto, False, "--plano"), ("obs", _texto, False, "--obs"),

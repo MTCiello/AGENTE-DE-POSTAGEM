@@ -67,7 +67,12 @@ def coletar(ref):
         elif "NPS" in alerta:
             add(75, "sucesso-cliente", f"Ligar para {alerta.split(': ', 1)[-1]} (nota baixa, risco de cancelar)")
         elif "classificar" in alerta:
-            add(20, "financeiro", f"{alerta}: ajuste financeiro/categorias.json")
+            add(20, "financeiro", f"{alerta}: Financeiro → Lançamentos")
+    for t in fin.get("testes", []):
+        if t["dias"] <= 5:
+            quando = f"acabou há {-t['dias']} dia(s)" if t["dias"] < 0 else ("acaba hoje" if t["dias"] == 0 else f"acaba em {t['dias']} dia(s)")
+            add(92 if t["dias"] <= 1 else 78, "closer",
+                f"Teste grátis de {t['empresa']} {quando}: ligue e feche ({financeiro.reais(t['valor'])}/mês). Fechou? Financeiro → Clientes → Virou cliente")
     if fin["posvenda_devidos"]:
         add(55, "sucesso-cliente", f"{fin['posvenda_devidos']} mensagem(ns) de pós-venda: Financeiro → Cobrança e pós-venda (ou `python central/financeiro.py posvenda`)")
 

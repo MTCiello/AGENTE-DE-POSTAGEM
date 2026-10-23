@@ -633,6 +633,7 @@ async function renderFinanceiro(j) {
   const porId = Object.fromEntries(d.clientes.map((c) => [c.id, c]));
   const clienteOpcoes = (lista) => lista.map((c) => [c.id, `#${c.id} · ${c.empresa}`]);
   const cats = ['', ...d.categorias];
+  const P = d.produtos || {};
 
   // ---- formulários
   const camposCliente = (c = {}) => [
@@ -644,7 +645,20 @@ async function renderFinanceiro(j) {
     ...(c.id ? [{ nome: 'obs', rotulo: 'Observação', tipo: 'area', valor: c.obs }] : [{ nome: 'inicio', rotulo: 'Início', tipo: 'data', valor: hojeISO(), meia: true, dica: 'A 1ª fatura sai no 1º vencimento depois do início.' }]),
   ];
   j.fns = {
-    novoCliente: () => dialogo(j, { titulo: 'Novo cliente', texto: 'Assinante do CIELLO CRM. Depois gere as faturas do mês.', campos: camposCliente(), botao: 'Cadastrar', enviar: formOp('fin_cliente') }),
+    novoCliente: () => dialogo(j, { titulo: 'Nova assinatura', texto: `CIELLO CRM${P.crm ? ` (${brl(P.crm.mensal)}/mês, ${P.crm.teste_dias} dias grátis)` : ''} ou hospedagem${P.hospedagem ? ` (${brl(P.hospedagem.mensal)}/mês)` : ''}. Em teste grátis, nada é faturado até você marcar <b>Virou cliente</b>.`,
+      campos: [{ nome: 'produto', rotulo: 'Produto', tipo: 'escolha', opcoes: [['crm', `CIELLO CRM${P.crm ? ` · ${brl(P.crm.mensal)}/mês` : ''}`], ['hospedagem', `Hospedagem de site${P.hospedagem ? ` · ${brl(P.hospedagem.mensal)}/mês` : ''}`], ['', 'Outro (digite o valor)']], valor: 'crm', meia: true },
+        { nome: 'teste', rotulo: 'Começa em teste grátis?', tipo: 'escolha', opcoes: [[String((P.crm || {}).teste_dias || 30), `Sim, ${(P.crm || {}).teste_dias || 30} dias`], ['0', 'Não, já paga']], meia: true },
+        ...camposCliente().map((c) => (c.nome === 'valor' ? { ...c, obrigatorio: false, rotulo: 'Mensalidade (R$, se diferente)', exemplo: 'vazio = preço do produto' } : c)).filter((c) => c.nome !== 'plano')],
+      botao: 'Cadastrar', enviar: (x) => operar('fin_cliente', { ...x, teste: x.produto === 'crm' ? x.teste : '0' }) }),
+    venda: () => dialogo(j, { titulo: 'Venda de site', texto: `${P.site ? `${brl(P.site.avista)} à vista ou ${P.site.parcelas}x de ${brl(P.site.parcela)}` : 'Site'}${P.hospedagem ? `, mais a hospedagem de ${brl(P.hospedagem.mensal)}/mês` : ''}. As parcelas viram faturas e entram na previsão de caixa.`,
+      campos: [{ nome: 'empresa', rotulo: 'Empresa', obrigatorio: true }, { nome: 'contato', rotulo: 'Contato (nome)', meia: true }, { nome: 'whatsapp', rotulo: 'WhatsApp', exemplo: '49 99999-8888', meia: true },
+        { nome: 'forma', rotulo: 'Pagamento', tipo: 'escolha', opcoes: [['avista', P.site ? `À vista · ${brl(P.site.avista)}` : 'À vista'], ['parcelado', P.site ? `${P.site.parcelas}x de ${brl(P.site.parcela)}` : 'Parcelado']], meia: true },
+        { nome: 'primeira', rotulo: '1º vencimento', tipo: 'data', valor: hojeISO(), meia: true },
+        { nome: 'valor', rotulo: 'Valor combinado (R$, se diferente)', tipo: 'numero', exemplo: 'vazio = preço de lista', meia: true }, { nome: 'parcelas', rotulo: 'Parcelas (se diferente)', meia: true },
+        { nome: 'com_hospedagem', rotulo: 'Hospedagem', tipo: 'escolha', opcoes: [['sim', `Sim${P.hospedagem ? `, ${brl(P.hospedagem.mensal)}/mês` : ''}`], ['nao', 'Não']], meia: true }, { nome: 'dia', rotulo: 'Dia de vencimento da hospedagem', valor: '10', meia: true }],
+      botao: 'Registrar venda', enviar: ({ com_hospedagem: h, ...x }) => operar('fin_venda', { ...x, sem_hospedagem: h === 'nao' }) }),
+    converter: ({ id }) => rapido('fin_converter', { id }, `${porId[id].empresa} virou cliente`),
+    desistiu: ({ id }) => rapido('fin_cancelar', { id, motivo: 'não continuou depois do teste grátis' }, 'Teste encerrado'),
     editar: ({ id }) => dialogo(j, { titulo: `Editar ${porId[id].empresa}`, campos: camposCliente(porId[id]), enviar: formOp('fin_editar', { id }) }),
     cancelar: ({ id }) => dialogo(j, { titulo: `Cancelar ${porId[id].empresa}`, texto: 'O cliente sai do MRR e não recebe mais fatura. Dá para reativar depois.',
       campos: [{ nome: 'motivo', rotulo: 'Motivo', tipo: 'area', exemplo: 'preço, não usou, fechou a empresa…' }, { nome: 'data', rotulo: 'Data', tipo: 'data', valor: hojeISO() }], botao: 'Cancelar assinatura', enviar: formOp('fin_cancelar', { id }) }),
@@ -677,13 +691,13 @@ async function renderFinanceiro(j) {
     reclassificar: () => rapido('fin_reclassificar', {}, 'Regras aplicadas'),
   };
 
-  const barra = `<div class="acoes topo"><button class="bt pri" data-fn="novoCliente">+ Cliente</button><button class="bt" data-fn="pagamento">Registrar pagamento</button>
+  const barra = `<div class="acoes topo"><button class="bt pri" data-fn="novoCliente">+ Cliente</button><button class="bt" data-fn="venda">+ Venda de site</button><button class="bt" data-fn="pagamento">Registrar pagamento</button>
     <button class="bt" data-fn="lancar">Lançar receita/despesa</button><button class="bt" data-fn="extrato">Importar extrato</button>
     <button class="bt" data-fn="faturar" title="Cria as faturas de ${nomeMes(d.mes)} para os clientes ativos (não duplica)">Gerar faturas de ${nomeMes(d.mes)}</button><button class="bt" data-fn="caixa">Caixa</button></div>`;
   if (!s.tem_dados) {
     j.corpo.innerHTML = `<div class="pagina"><h1>Financeiro</h1><p class="sub">Assinaturas, cobrança, caixa e crescimento.</p>${SEM_CLAUDE}${barra}
     <div class="passos"><h2>Para começar</h2><ol>
-      <li><button class="bt pri" data-fn="novoCliente">Cadastrar o 1º cliente</button> nome, mensalidade e dia do vencimento.</li>
+      <li><button class="bt pri" data-fn="novoCliente">Cadastrar uma assinatura</button> CRM (com ou sem teste grátis) ou hospedagem. Vendeu um site? <button class="bt" data-fn="venda">+ Venda de site</button></li>
       <li><button class="bt" data-fn="caixa">Informar o saldo do banco</button> é o ponto de partida do caixa.</li>
       <li><button class="bt" data-fn="extrato">Importar o extrato</button> (OFX ou CSV do banco): classifica as despesas e dá baixa nas faturas.</li></ol></div></div>`;
     return;
@@ -694,13 +708,21 @@ async function renderFinanceiro(j) {
   const msgCartao = (x, i, lista, titulo, botoes) => `<div class="cartao msg"><div class="cab"><b>${titulo}</b></div><pre class="texto-msg">${esc(x.mensagem)}</pre>
     <div class="acoes-linha">${wa(x.link)}<button class="bt" data-fn="copiar" data-lista="${lista}" data-i="${i}">Copiar</button>${botoes}</div></div>`;
 
+  const ROT_PLANO = { crm: 'CRM', hospedagem: 'Hospedagem', site: 'Site' };
+  const situacaoCliente = (c) => {
+    if (c.status === 'teste') { const t = s.testes.find((x) => x.id === c.id) || {}; return `<span class="chip ${t.dias <= 5 ? 'esperando' : 'trabalhando'}" title="teste grátis até ${ddmm(c.teste_ate)}">teste · ${t.dias < 0 ? 'acabou' : `${t.dias} dias`}</span>`; }
+    if (c.status === 'ativo') return '<span class="chip pronto">ativo</span>';
+    if (c.status === 'projeto') return '<span class="chip">site</span>';
+    return `<span class="chip erro" title="${esc(c.motivo)}">cancelado</span>`;
+  };
   let corpo = '';
   if (j.aba === 'clientes') {
     corpo = `<table class="tab"><tr><th>Empresa</th><th>Contato</th><th>Mensalidade</th><th>Vence</th><th>Desde</th><th>NPS</th><th>Situação</th><th></th></tr>${d.clientes.map((c) => `<tr>
-      <td><b>${esc(c.empresa)}</b>${c.obs ? `<br><small class="neutro">${esc(c.obs)}</small>` : ''}</td><td>${esc(c.contato)}${c.whatsapp ? `<br><a href="${esc(zap(c.whatsapp))}" target="_blank" rel="noopener"><small>${esc(c.whatsapp)}</small></a>` : ''}</td>
+      <td><b>${esc(c.empresa)}</b>${c.plano ? ` <small class="neutro">${esc(ROT_PLANO[c.plano] || c.plano)}</small>` : ''}${c.obs ? `<br><small class="neutro">${esc(c.obs)}</small>` : ''}</td><td>${esc(c.contato)}${c.whatsapp ? `<br><a href="${esc(zap(c.whatsapp))}" target="_blank" rel="noopener"><small>${esc(c.whatsapp)}</small></a>` : ''}</td>
       <td>${brl(+c.valor_mensal)}</td><td>dia ${esc(c.dia_vencimento)}</td><td>${ddmm(c.inicio)}</td><td>${esc(c.nps || '—')}</td>
-      <td>${c.status === 'ativo' ? '<span class="chip pronto">ativo</span>' : `<span class="chip erro" title="${esc(c.motivo)}">cancelado</span>`}</td>
-      <td class="acoes-linha"><button class="bt mini" data-fn="editar" data-id="${c.id}">Editar</button>${c.status === 'ativo' ? `<button class="bt mini" data-fn="nps" data-id="${c.id}">NPS</button><button class="bt mini" data-fn="cancelar" data-id="${c.id}">Cancelar</button>` : `<button class="bt mini" data-fn="reativar" data-id="${c.id}">Reativar</button>`}</td></tr>`).join('')}</table>`;
+      <td>${situacaoCliente(c)}</td>
+      <td class="acoes-linha"><button class="bt mini" data-fn="editar" data-id="${c.id}">Editar</button>${c.status === 'teste' ? `<button class="bt mini pri" data-fn="converter" data-id="${c.id}">Virou cliente</button><button class="bt mini" data-fn="desistiu" data-id="${c.id}">Desistiu</button>`
+        : c.status === 'ativo' ? `<button class="bt mini" data-fn="nps" data-id="${c.id}">NPS</button><button class="bt mini" data-fn="cancelar" data-id="${c.id}">Cancelar</button>` : c.status === 'cancelado' ? `<button class="bt mini" data-fn="reativar" data-id="${c.id}">Reativar</button>` : ''}</td></tr>`).join('')}</table>`;
   } else if (j.aba === 'cobranca') {
     corpo = `<p class="sub">Mensagens prontas. Abra no WhatsApp, revise, envie e marque aqui. Nada é enviado sozinho.</p>
     <h2>Cobranças (${d.cobrancas.length})</h2>${d.cobrancas.map((x, i) => msgCartao(x, i, 'cobrancas', `${esc(x.empresa)} · ${brl(x.valor)} · ${x.dias} dias de atraso <span class="chip esperando">D+${x.etapa}</span>`,
@@ -714,12 +736,13 @@ async function renderFinanceiro(j) {
     <h2>Últimos lançamentos</h2><table class="tab"><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Valor</th></tr>${d.lancamentos.map((l) => `<tr><td>${ddmm(l.data)}</td><td>${esc(l.descricao)}${l.fatura_id ? ` <small class="neutro">fatura #${esc(l.fatura_id)}</small>` : ''}</td><td>${esc(l.categoria)}</td><td class="${+l.valor < 0 ? 'ruim' : 'bom'}">${brl(+l.valor)}</td></tr>`).join('') || '<tr><td colspan="4">Nenhum lançamento: importe o extrato ou lance à mão.</td></tr>'}</table>`;
   } else {
     corpo = `<div class="kpis">${kpi('MRR', brl(s.mrr), `${num(s.clientes_ativos)} clientes · ARPA ${brl(atual.arpa)}`)}${kpi('Caixa hoje', brl(s.caixa), `30 dias: ${brl(s.previsao['30'])}`, s.previsao['30'] >= s.caixa ? 'bom' : 'ruim')}
-    ${kpi('Atrasadas', s.atrasadas.length, s.atrasadas.length ? brl(atraso) : 'tudo em dia', s.atrasadas.length ? 'ruim' : 'bom')}${kpi('CAC', atual.cac != null ? brl(atual.cac) : '—', atual.payback != null ? `paga em ${atual.payback.toFixed(1).replace('.', ',')} meses` : 'sem cliente de anúncio no mês')}</div>
+    ${kpi('Atrasadas', s.atrasadas.length, s.atrasadas.length ? brl(atraso) : 'tudo em dia', s.atrasadas.length ? 'ruim' : 'bom')}${s.testes.length ? kpi('Em teste grátis', s.testes.length, `+${brl(s.mrr_em_teste)}/mês se todos fecharem`, s.testes.some((t) => t.dias <= 5) ? 'ruim' : 'neutro') : kpi('CAC', atual.cac != null ? brl(atual.cac) : '—', atual.payback != null ? `paga em ${atual.payback.toFixed(1).replace('.', ',')} meses` : 'sem cliente de anúncio no mês')}</div>
+    ${s.sites_a_receber && s.sites_a_receber['90'] ? `<p class="sub" style="margin-top:8px">Sites a receber: ${brl(s.sites_a_receber['30'])} em 30 dias · ${brl(s.sites_a_receber['90'])} em 90 dias (já entram na previsão de caixa).</p>` : ''}
     ${!d.faturado_no_mes && ativos.length ? `<div class="faixa">As faturas de ${nomeMes(d.mes)} ainda não foram geradas. <button class="bt pri mini" data-fn="faturar">Gerar agora</button></div>` : ''}
     <div class="grade2" style="margin-top:12px"><div class="cartao"><h2 style="margin-top:0">MRR · últimos 6 meses</h2>${barras(d.serie.map((m) => ({ r: nomeMes(m.mes), v: m.mrr })))}</div>
     <div class="cartao"><h2 style="margin-top:0">Previsão de caixa</h2>${barras([{ r: 'hoje', v: s.caixa, cor: 'linear-gradient(180deg,#5E92E6,#2F5BA8)' }, ...['30', '60', '90'].map((k) => ({ r: `${k} dias`, v: s.previsao[k], cor: s.previsao[k] < s.caixa ? 'linear-gradient(180deg,#E9826C,#C8442F)' : undefined }))])}</div></div>
     ${s.alertas.length ? `<h2>Alertas</h2><div class="lista">${s.alertas.map((a) => `<div class="linha-item" style="border-left:4px solid var(--vermelho)">${esc(a)}</div>`).join('')}</div>` : ''}
-    <h2>Faturas em aberto (${d.faturas_abertas.length})</h2><div class="lista">${d.faturas_abertas.map((f) => `<div class="linha-item"><div class="cresce"><b>${esc(f.empresa)}</b><small>fatura #${esc(f.id)} · ${esc(f.competencia)} · vence ${ddmm(f.vencimento)}${f.dias > 0 ? ` · <span class="ruim">${f.dias} dias de atraso</span>` : ''}</small></div><b>${brl(f.valor)}</b><button class="bt mini pri" data-fn="recebi" data-id="${f.id}">Recebi</button></div>`).join('') || '<p class="sub">Tudo pago.</p>'}</div>
+    <h2>Faturas em aberto (${d.faturas_abertas.length})</h2><div class="lista">${d.faturas_abertas.map((f) => `<div class="linha-item"><div class="cresce"><b>${esc(f.empresa)}</b><small>fatura #${esc(f.id)} · ${esc(f.descricao || f.competencia)} · vence ${ddmm(f.vencimento)}${f.dias > 0 ? ` · <span class="ruim">${f.dias} dias de atraso</span>` : ''}</small></div><b>${brl(f.valor)}</b><button class="bt mini pri" data-fn="recebi" data-id="${f.id}">Recebi</button></div>`).join('') || '<p class="sub">Tudo pago.</p>'}</div>
     ${Object.keys(atual.por_categoria).length ? `<h2>Despesas do mês por categoria</h2>${barras(Object.entries(atual.por_categoria).slice(0, 6).map(([r, v]) => ({ r, v, cor: 'linear-gradient(180deg,#8FA3C7,#3A5582)' })))}` : ''}
     <div class="acoes"><button class="bt" data-acao="fin_resumo">Resumo completo</button><button class="bt" data-abrir="agente:financeiro">Agente Financeiro</button></div>`;
   }
@@ -747,9 +770,13 @@ async function renderComercial(j) {
       const nova = el.value;
       if (nova === 'cliente') {
         const l = porId[id];
-        return dialogo(j, { titulo: `${l.empresa} fechou!`, texto: 'Cadastre como cliente no Financeiro (a empresa e o WhatsApp vêm do lead). A etapa do lead vira "cliente".',
-          campos: [{ nome: 'valor', rotulo: 'Mensalidade (R$)', tipo: 'numero', obrigatorio: true, exemplo: '149,90', meia: true }, { nome: 'dia', rotulo: 'Dia do vencimento', valor: '10', meia: true }, { nome: 'contato', rotulo: 'Contato (nome)' }],
-          botao: 'Cadastrar cliente', enviar: async (x) => { const r = await operar('fin_cliente', { ...x, lead: id }); if (!r.ok) return r; const m = await operar('sdr_marcar', { id, etapa: 'cliente' }); return { ok: m.ok, saida: `${r.saida}\n${m.saida}` }; } });
+        return dialogo(j, { titulo: `${l.empresa} fechou!`, texto: 'O que foi fechado? O cadastro vai para o Financeiro com a empresa e o WhatsApp do lead, e a etapa vira "cliente".',
+          campos: [{ nome: 'oferta', rotulo: 'Produto', tipo: 'escolha', opcoes: [['crm_teste', 'CIELLO CRM · começa no teste grátis'], ['crm', 'CIELLO CRM · já paga'], ['site_avista', 'Site à vista'], ['site_parcelado', 'Site parcelado']] },
+            { nome: 'valor', rotulo: 'Valor (R$, se diferente da lista)', tipo: 'numero', exemplo: 'vazio = preço de lista', meia: true }, { nome: 'dia', rotulo: 'Dia do vencimento', valor: '10', meia: true }, { nome: 'contato', rotulo: 'Contato (nome)' }],
+          botao: 'Cadastrar', enviar: async ({ oferta, ...x }) => {
+            const r = oferta.startsWith('site') ? await operar('fin_venda', { ...x, lead: id, forma: oferta === 'site_avista' ? 'avista' : 'parcelado' })
+              : await operar('fin_cliente', { ...x, lead: id, produto: 'crm', teste: oferta === 'crm_teste' ? '30' : '0' });
+            if (!r.ok) return r; const m = await operar('sdr_marcar', { id, etapa: 'cliente' }); return { ok: m.ok, saida: `${r.saida}\n${m.saida}` }; } });
       }
       if (nova === 'nao_contatar' && !confirm(`${porId[id].empresa} vai para a lista de não contatar e nunca mais recebe mensagem. Confirma?`)) { el.value = atual; return null; }
       return marcar(id, nova, `Etapa: ${ROTULO_ETAPA[nova]}`);

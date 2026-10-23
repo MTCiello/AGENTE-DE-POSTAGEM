@@ -189,7 +189,7 @@ def app_financeiro():
     mes = ref.strftime("%Y-%m")
     serie = [financeiro.metricas_mes(financeiro.meses_atras(mes, i), clientes, lancs) for i in range(5, -1, -1)]
     por_id = {c["id"]: c for c in clientes}
-    abertas = [{"id": f["id"], "empresa": por_id.get(f["cliente_id"], {}).get("empresa", "?"), "competencia": f["competencia"],
+    abertas = [{"id": f["id"], "empresa": por_id.get(f["cliente_id"], {}).get("empresa", "?"), "competencia": f["competencia"], "descricao": f["descricao"],
                 "vencimento": f["vencimento"], "valor": float(f["valor"] or 0), "dias": (ref - financeiro.data(f["vencimento"])).days}
                for f in faturas if not f["pago_em"]]
     ultimos = sorted(lancs, key=lambda l: (l["data"], int(l["id"]) if l["id"].isdigit() else 0), reverse=True)
@@ -199,7 +199,7 @@ def app_financeiro():
             "faturado_no_mes": any(f["competencia"] == mes for f in faturas), "mes": mes,
             "cobrancas": financeiro.cobrancas_devidas(), "posvenda": financeiro.posvendas_devidos(),
             "lancamentos": ultimos[:40], "a_classificar": [l for l in ultimos if l["categoria"] == financeiro.SEM_CATEGORIA][:40],
-            "categorias": financeiro.categorias(),
+            "categorias": financeiro.categorias(), "produtos": financeiro.produtos(),
             "config": {k: cfg[k] for k in ("saldo_inicial", "data_saldo", "alerta_saldo", "link_avaliacao", "assinatura")}}
 
 

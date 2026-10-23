@@ -1,0 +1,11 @@
+{
+ "_sobre": "Produtos e preços validados da Ciello (preço de lista, o mesmo que vai para o cliente). Lidos pelo financeiro.py, pelo sdr.py, pelo Ciello OS e pelos agentes. Mude aqui e tudo acompanha.",
+ "produtos": [
+  {"id": "crm", "nome": "CIELLO CRM", "tipo": "assinatura", "mensal": 397.0, "teste_dias": 30,
+   "inclui": "uso ilimitado e apoio comercial", "chamada": "30 dias grátis para testar"},
+  {"id": "site", "nome": "Criação de site", "tipo": "projeto", "avista": 1500.0, "parcelas": 12, "parcela": 137.90,
+   "inclui": "site profissional publicado, com domínio configurado", "recorrente": "hospedagem"},
+  {"id": "hospedagem", "nome": "Hospedagem do site", "tipo": "assinatura", "mensal": 90.0, "teste_dias": 0,
+   "inclui": "site no ar, com manutenção básica"}
+ ]
+}

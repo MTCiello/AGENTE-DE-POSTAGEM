@@ -146,3 +146,72 @@ class TesteFinanceiro(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TesteProdutos(TesteFinanceiro):
+    """Produtos reais: CRM com teste grátis, site à vista ou parcelado, hospedagem."""
+
+    def setUp(self):
+        super().setUp()
+        cat = self.tmp / "produtos.json"
+        cat.write_text('{"produtos": [{"id": "crm", "tipo": "assinatura", "mensal": 397, "teste_dias": 30},'
+                       '{"id": "site", "tipo": "projeto", "avista": 1500, "parcelas": 12, "parcela": 137.9},'
+                       '{"id": "hospedagem", "tipo": "assinatura", "mensal": 90}]}', encoding="utf-8")
+        p = mock.patch.object(fin, "PRODUTOS", cat)
+        p.start()
+        self.addCleanup(p.stop)
+
+    def novo(self, **k):
+        base = dict(empresa="Imob Sol", lead=None, contato="Ana", whatsapp="49999990000", plano="", valor=None, dia=10,
+                    inicio="2026-11-01", produto="crm", teste=30)
+        fin.cmd_cliente(NS(**{**base, **k}))
+
+    def test_teste_gratis_nao_fatura_e_avisa_o_fim(self):
+        self.novo()
+        c = fin.ler(fin.CLIENTES, fin.C_CLIENTE)[0]
+        self.assertEqual((c["status"], c["valor_mensal"], c["teste_ate"]), ("teste", "397.00", "2026-12-01"))
+        fin.cmd_faturar(NS(mes="2026-12"))
+        self.assertEqual(fin.ler(fin.FATURAS, fin.C_FATURA), [])
+        with mock.patch.object(fin, "hoje", lambda: dt.date(2026, 11, 28)):
+            s = fin.situacao()
+        self.assertEqual((s["mrr"], s["mrr_em_teste"], s["testes"][0]["dias"]), (0, 397.0, 3))
+        self.assertTrue(any("acaba em 3" in a for a in s["alertas"]))
+        self.assertTrue(fin.posvendas_devidos(dt.date(2026, 11, 2)))  # boas-vindas também no teste
+        fin.cmd_converter(NS(id="1", data="2026-12-01", valor=None))
+        fin.cmd_faturar(NS(mes="2027-01"))
+        f = fin.ler(fin.FATURAS, fin.C_FATURA)
+        self.assertEqual((len(f), f[0]["valor"], f[0]["descricao"]), (1, "397.00", "Mensalidade"))
+        with self.assertRaises(SystemExit):
+            fin.cmd_converter(NS(id="1", data=None, valor=None))
+
+    def test_venda_de_site_parcelado_com_hospedagem(self):
+        fin.cmd_venda(NS(cliente=None, empresa="Padaria Pão", lead=None, contato="Rui", whatsapp="49988887777", forma="parcelado",
+                         valor=None, parcelas=None, primeira="2026-11-25", dia=10, hospedagem=None, sem_hospedagem=False, inicio_hospedagem="2026-12-01"))
+        f = fin.ler(fin.FATURAS, fin.C_FATURA)
+        self.assertEqual(len(f), 12)
+        self.assertEqual((f[0]["vencimento"], f[11]["vencimento"], f[0]["valor"], f[3]["descricao"]), ("2026-11-25", "2027-10-25", "137.90", "Site parcela 4/12"))
+        c = fin.ler(fin.CLIENTES, fin.C_CLIENTE)[0]
+        self.assertEqual((c["plano"], c["valor_mensal"], c["status"]), ("hospedagem", "90.00", "ativo"))
+        fin.cmd_faturar(NS(mes="2026-12"))  # hospedagem fatura; parcelas não duplicam
+        f = fin.ler(fin.FATURAS, fin.C_FATURA)
+        self.assertEqual([x["descricao"] for x in f[12:]], ["Hospedagem"])
+        s = fin.situacao(dt.date(2026, 11, 20))
+        self.assertAlmostEqual(s["sites_a_receber"][30], 137.9)
+        self.assertAlmostEqual(s["sites_a_receber"][90], 137.9 * 3)
+        atr = fin.atrasadas(dt.date(2026, 12, 2))
+        msg = fin.msg_cobranca(atr[0], 7, "Mateus")
+        self.assertIn("A parcela 1/12 do seu site", msg)
+        self.assertIn("da hospedagem do seu site", fin.msg_cobranca({**f[12], "cliente": c}, 3, "Mateus"))
+        self.assertIn("pausar o site", fin.msg_cobranca(atr[0], 14, "Mateus"))
+        # pagamento da parcela no extrato vira receita de sites
+        lanc = {"id": "1", "data": "2026-11-26", "descricao": "PIX PADARIA PAO", "valor": "137.90"}
+        fin.conciliar(lanc, f, [c])
+        self.assertEqual(lanc["categoria"], fin.RECEITA_SITES)
+
+    def test_site_a_vista_sem_hospedagem(self):
+        fin.cmd_venda(NS(cliente=None, empresa="Loja X", lead=None, contato="", whatsapp="", forma="avista", valor=None, parcelas=None,
+                         primeira=None, dia=10, hospedagem=None, sem_hospedagem=True, inicio_hospedagem=None))
+        f = fin.ler(fin.FATURAS, fin.C_FATURA)
+        self.assertEqual((len(f), f[0]["valor"], f[0]["descricao"]), (1, "1500.00", "Site à vista"))
+        self.assertEqual(fin.ler(fin.CLIENTES, fin.C_CLIENTE)[0]["status"], "projeto")
+        self.assertEqual(fin.situacao()["clientes_ativos"], 0)
