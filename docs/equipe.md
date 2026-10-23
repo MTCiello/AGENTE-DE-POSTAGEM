@@ -31,7 +31,7 @@ Origem dos 4 novos: o reel "10 agentes de IA que toda empresa devia ter". Avalia
 | `/segunda` | segunda de manhã | analista + pesquisador em paralelo → gestor-anuncios |
 | `/conselho` | decisões de negócio (preço, oferta, onde investir) | Founder skills (conselho, CFO, painel de 100 compradores, marketing…) com os dados reais da empresa |
 
-**Modelo e esforço por tarefa:** o Gerente classifica cada etapa (leve, média ou pesada) e escolhe o modelo e o esforço antes de delegar: `haiku · low` para descrição, legenda ou trocar a cor de um botão; `sonnet · medium` para roteiro, pesquisa, relatório ou código pequeno; `opus · high` só para arquitetura, bug difícil, mudanças grandes e estratégia. A tabela está em `.claude/agents/gerente.md`, cada agente tem um padrão no cabeçalho (`model`, `effort`) e a caixa de objetivos abre o Gerente no `sonnet`. Assim o modelo mais potente fica para o que precisa dele e o limite da sessão rende mais.
+**Modelo e esforço por tarefa:** o Gerente classifica cada etapa e escolhe o modelo e o esforço antes de delegar, equilibrando qualidade e economia: `haiku · low` só para o que é interno e fácil de conferir (resumo, triagem, trocar a cor de um botão); `sonnet` (esforço `low` a `high`) para tudo que vai para cliente ou público ou mexe com dinheiro, roteiros, pesquisa e código pequeno; `opus · high` para arquitetura, bug difícil, mudanças grandes e estratégia. Resultado que não passa na conferência do Gerente é refeito um nível acima. A tabela está em `.claude/agents/gerente.md`, cada agente tem um padrão no cabeçalho (`model`, `effort`) e a caixa de objetivos abre o Gerente no `sonnet`.
 
 Também dá para chamar um agente direto: "use o sdr para gerar 20 leads de odontologia em Xanxerê".
 

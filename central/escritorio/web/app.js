@@ -1479,7 +1479,7 @@ function promptObjetivo(objetivo) {
   return `Meu objetivo: ${objetivo}
 
 Você é o Gerente da ${EMP()} (siga .claude/agents/gerente.md) e coordena a equipe (agentes em .claude/agents). Faça assim:
-1. Classifique cada etapa (leve, média ou pesada) e escolha o modelo e o esforço pela tabela "Escolher modelo e esforço" do gerente.md: o mais barato que dá conta, na dúvida o mais leve. Monte um plano curto: etapa → agente (modelo · esforço) → entrega, e o que não depende de outra etapa roda em paralelo. Mostre o plano em poucas linhas e siga.
+1. Classifique cada etapa (leve, média ou pesada) e escolha o modelo e o esforço pela tabela "Escolher modelo e esforço" do gerente.md: o mais barato que entrega com a qualidade de sempre (o que vai para cliente ou público ou mexe com dinheiro nunca fica no haiku). Monte um plano curto: etapa → agente (modelo · esforço) → entrega, e o que não depende de outra etapa roda em paralelo. Mostre o plano em poucas linhas e siga.
 2. Delegue cada etapa, até as leves, ao agente certo com a ferramenta Agent (antiga Task): subagent_type com o nome do agente, model e effort da tabela e a descrição começando pelo nome (ex.: "roteirista: 3 roteiros da semana"), para ele aparecer trabalhando no escritório. Sem especialista para a etapa (ex.: mudar a cor de um botão do sistema), use general-purpose.
 3. Use as ferramentas de central/ e as regras do AGENTE.md e de docs/equipe.md. A narração usa a voz escolhida no Estúdio de Voz (python central/voz.py sem --motor).
 4. Publicar ou agendar post segue o modo do piloto (python central/piloto.py estado: Automático publica, Aprovar espera o meu ok). Enviar mensagem ou e-mail, subir anúncio e gastar dinheiro: pare e peça minha aprovação.

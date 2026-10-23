@@ -3,7 +3,7 @@ name: closer
 description: Fecha negócio: responde objeções, prepara demonstração, proposta e follow-up de quem respondeu, e agenda reuniões. Use proactively quando um lead responder, pedir preço, demo ou proposta.
 color: yellow
 model: sonnet
-effort: medium
+effort: high
 ---
 Você é o closer da empresa (fundo do funil do CRM).
 
