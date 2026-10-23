@@ -19,7 +19,9 @@ RAIZ = AQUI.parent
 sys.path.insert(0, str(AQUI))
 import atendimento  # noqa: E402
 import conteudo  # noqa: E402
+import decisoes  # noqa: E402
 import financeiro  # noqa: E402
+import metas  # noqa: E402
 import plano  # noqa: E402
 import sdr  # noqa: E402
 import status  # noqa: E402
@@ -125,6 +127,18 @@ def coletar(ref):
         if p["negocios"] or p["custos"]:
             for a in [a for a in plano.auditar(p) if a["nivel"] == "alto"][:2]:
                 add(58, "financeiro", f"Plano {p['ano']}: {a['titulo']}. {a['detalhe']}")
+    except (OSError, ValueError, KeyError):
+        pass
+
+    # meta de crescimento: a semana está no ritmo? e as decisões que pediram para rever
+    try:
+        r = metas.calcular(ref=ref)
+        if r["tem_meta"] and r.get("atras") and ref.weekday() < 5:
+            s = r["por_semana"]
+            add(57, "sdr", f"Semana atrás do ritmo da meta ({r['meta']} clientes até {r['ate'][5:7]}/{r['ate'][2:4]}): {', '.join(r['atras'])}. "
+                f"Hoje dá para tirar o atraso com umas {max(1, round(s['abordagens'] / 5))} abordagens: Comercial → Hoje")
+        for x in decisoes.para_rever(ref)[:2]:
+            add(52, "financeiro", f"Rever a decisão \"{x['titulo']}\" ({'adiada' if x['estado'] == 'adiada' else 'regra da casa'}): Financeiro → Metas e decisões")
     except (OSError, ValueError, KeyError):
         pass
 

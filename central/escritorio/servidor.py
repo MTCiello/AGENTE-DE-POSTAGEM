@@ -47,8 +47,10 @@ import status  # noqa: E402
 import atendimento  # noqa: E402
 import briefing  # noqa: E402
 import conteudo  # noqa: E402
+import decisoes  # noqa: E402
 import estudio_video  # noqa: E402
 import financeiro  # noqa: E402
+import metas  # noqa: E402
 import atexit  # noqa: E402
 
 import estudio_voz  # noqa: E402
@@ -193,6 +195,8 @@ def primeiros_passos():
          bool(cfg.get("data_saldo")) or financeiro.LANCAMENTOS.exists(), ["financeiro", "geral", "caixa"]),
         ("plano", "Monte o plano do ano", "Negócios, custos e quanto você precisa tirar: a auditoria aponta o que não fecha.",
          bool(p["negocios"]), ["financeiro", "plano", ""]),
+        ("meta", "Defina a meta de clientes", "Quantos clientes até quando: o OS calcula as abordagens e demos da semana e avisa se ficar para trás.",
+         bool(metas.ler().get("clientes")), ["financeiro", "rumo", "meta"]),
         ("voz", "Grave a sua voz", "10 a 20 segundos lendo um texto: os vídeos podem sair com a sua voz.",
          estudio_voz.voz.AMOSTRA.exists(), ["voz", "", ""]),
         ("instagram", "Atualize os números do Instagram", "Retrato da semana: o Bom dia e o relatório usam.",
@@ -256,7 +260,7 @@ def app_comercial():
         except (KeyError, ValueError):
             abordar.append(com_msg(l, ""))
     return {"funil": kpis()["funil"], "hoje": hoje, "testes": financeiro.testes_acabando(), "oportunidades": financeiro.oportunidades(), "agenda": sdr.agenda(),
-            "quentes": [resumo(l) for l in leads if l["etapa"] in ("respondeu", "demo", "proposta")],
+            "ritmo": metas.calcular(), "quentes": [resumo(l) for l in leads if l["etapa"] in ("respondeu", "demo", "proposta")],
             "followups": followups, "abordar": abordar, "novos": [resumo(l) for l in novos[:8]],
             "leads": [resumo(l) for l in leads], "etapas": sdr.ETAPAS, "segmentos": list(cfg_icp["segmentos"]),
             "cidades": cfg_icp["cidades"], "tem_consultas": (sdr.PASTA / "bruto" / "consultas.txt").exists(),
@@ -315,6 +319,10 @@ def ultimo_md(padrao):
     return {"arquivo": p.relative_to(RAIZ).as_posix(), "texto": p.read_text(encoding="utf-8")}
 
 
+def app_rumo():
+    return {"meta": metas.calcular(), "taxas_padrao": {k: v[1] for k, v in metas.TAXAS.items()}, **decisoes.para_janela()}
+
+
 def app_concorrentes():
     cfg = ler_json(RAIZ / "comercial" / "concorrentes.json", {"concorrentes": []})
     return {"relatorio": ultimo_md("concorrentes-*.md"), "concorrentes": [c["nome"] for c in cfg["concorrentes"]]}
@@ -324,7 +332,7 @@ def app_tendencias():
     return {"relatorio": ultimo_md("20??-??-??*.md")}
 
 
-APPS = {"escritorio": app_escritorio, "voz": estudio_voz.estado, "video": app_video, "atendimento": app_atendimento, "plano": plano.para_janela, "briefing": app_briefing, "financeiro": app_financeiro, "comercial": app_comercial,
+APPS = {"escritorio": app_escritorio, "rumo": app_rumo, "voz": estudio_voz.estado, "video": app_video, "atendimento": app_atendimento, "plano": plano.para_janela, "briefing": app_briefing, "financeiro": app_financeiro, "comercial": app_comercial,
         "conteudo": app_conteudo, "concorrentes": app_concorrentes, "tendencias": app_tendencias,
         "anuncios": lambda: {"campanhas": campanhas(), "resumo": kpis()["anuncios"]}}
 
@@ -415,6 +423,12 @@ def operar(op, dados):
         if op == "cont_legenda_salvar":
             return conteudo.salvar_legenda(post, dados.get("texto", ""))
         return conteudo.marcar_agendado(post, str(dados.get("quando") or ""), "Publicado" if dados.get("publicado") else "Agendado")
+    if op == "meta_config":
+        return metas.configurar(dados)
+    if op == "decisao_salvar":
+        return decisoes.salvar(dados)
+    if op == "decisao_remover":
+        return decisoes.remover(str(dados.get("chave") or ""))
     if op == "plano_config":
         return plano.configurar(dados)
     if op == "plano_item":

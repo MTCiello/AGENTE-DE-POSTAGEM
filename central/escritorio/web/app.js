@@ -658,7 +658,7 @@ function barras(itens, fmt = brlCurto) {
   return `<div class="barras">${itens.map((i) => `<div><b>${fmt(i.v)}</b><i style="height:${Math.max(3, 100 * Math.abs(i.v) / max) * 0.8}%;${i.cor ? `background:${i.cor}` : ''}"></i>${esc(i.r)}</div>`).join('')}</div>`;
 }
 async function renderFinanceiro(j) {
-  const [d, pl] = await Promise.all([api('/api/app/financeiro'), j.aba === 'plano' ? api('/api/app/plano') : null]); const s = d.situacao;
+  const [d, pl] = await Promise.all([api('/api/app/financeiro'), j.aba === 'plano' ? api('/api/app/plano') : j.aba === 'rumo' ? api('/api/app/rumo') : null]); const s = d.situacao;
   const nomeMes = (m) => ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][+m.slice(5) - 1];
   const kpi = (r, v, e = '', c = 'neutro') => `<div class="kpi"><small>${r}</small><strong>${v}</strong><em class="${c}">${e}</em></div>`;
   const ativos = d.clientes.filter((c) => c.status === 'ativo');
@@ -750,6 +750,8 @@ async function renderFinanceiro(j) {
   let corpo = '';
   if (j.aba === 'plano' && pl) {
     corpo = planoCorpo(j, pl);
+  } else if (j.aba === 'rumo' && pl) {
+    corpo = rumoCorpo(j, pl);
   } else if (j.aba === 'clientes') {
     corpo = `<table class="tab"><tr><th>Empresa</th><th>Contato</th><th>Mensalidade</th><th>Vence</th><th>Desde</th><th>NPS</th><th>Situação</th><th></th></tr>${d.clientes.map((c) => `<tr>
       <td><b>${esc(c.empresa)}</b>${c.plano ? ` <small class="neutro">${esc(ROT_PLANO[c.plano] || c.plano)}</small>` : ''}${c.obs ? `<br><small class="neutro">${esc(c.obs)}</small>` : ''}</td><td>${esc(c.contato)}${c.whatsapp ? `<br><a href="${esc(zap(c.whatsapp))}" target="_blank" rel="noopener"><small>${esc(c.whatsapp)}</small></a>` : ''}</td>
@@ -781,7 +783,7 @@ async function renderFinanceiro(j) {
     <div class="acoes"><button class="bt" data-acao="fin_resumo">Resumo completo</button><button class="bt" data-abrir="agente:financeiro">Agente Financeiro</button></div>`;
   }
   j.corpo.innerHTML = `<div class="pagina"><h1>Financeiro</h1><p class="sub">${num(s.clientes_ativos)} clientes ativos · despesa média ${brl(s.despesa_media)}/mês</p>${SEM_CLAUDE}${barra}
-  ${abas(j, [['geral', 'Visão geral'], ['clientes', 'Clientes', d.clientes.length], ['cobranca', 'Cobrança e pós-venda', fila], ['lancamentos', 'Lançamentos', d.a_classificar.length || ''], ['plano', 'Plano do ano']])}${corpo}</div>`;
+  ${abas(j, [['geral', 'Visão geral'], ['clientes', 'Clientes', d.clientes.length], ['cobranca', 'Cobrança e pós-venda', fila], ['lancamentos', 'Lançamentos', d.a_classificar.length || ''], ['plano', 'Plano do ano'], ['rumo', 'Metas e decisões']])}${corpo}</div>`;
 }
 
 // ------------------------------------------------------------------ financeiro: plano do ano (central/plano.py)
@@ -844,6 +846,69 @@ function planoCorpo(j, pl) {
   <p class="sub" style="margin-top:12px">Para decidir: <b>Discutir com o Financeiro</b> abre o Claude com este plano e pede caminhos, números e uma recomendação. Nada muda sem você aprovar.</p>`;
 }
 
+// ------------------------------------------------------------------ financeiro: metas e decisões (central/metas.py, central/decisoes.py)
+const pctBr = (v) => `${String(Math.round((+v || 0) * 1000) / 10).replace('.', ',')}%`;
+const mesAno = (m) => (m ? `${['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][+m.slice(5, 7) - 1]}/${m.slice(2, 4)}` : '');
+function ritmoFaixa(r, compacto = false) {
+  if (!r.tem_meta) return '';
+  const s = r.por_semana; const f = r.feito;
+  const passo = (rot, alvo, feito) => `<div class="passo-ritmo"><small>${rot}</small><b>${feito != null ? `${feito}<em>/${alvo}</em>` : alvo}</b>${feito != null ? `<i style="--p:${Math.min(100, alvo ? Math.round(100 * feito / alvo) : 100)}%"></i>` : ''}</div>`;
+  return `<div class="ritmo ${compacto ? 'compacto' : ''}"><div class="ritmo-cab"><b>Ritmo da semana</b> <small class="neutro">para ${r.meta} clientes até ${mesAno(r.ate)} · faltam ${r.faltam}</small>${r.atras && r.atras.length ? ` <span class="chip esperando" title="Até hoje, pelo ritmo">atrás: ${esc(r.atras.join(', '))}</span>` : r.faltam ? ' <span class="chip pronto">no ritmo</span>' : ''}</div>
+    <div class="passos-ritmo">${passo('abordagens', s.abordagens, f.abordagens)}<span>→</span>${passo('respostas', s.respostas)}<span>→</span>${passo('demos', s.demos, f.demos)}<span>→</span>${passo('testes grátis', s.testes, f.testes)}<span>→</span>${passo('clientes', String(s.clientes).replace('.', ','))}</div></div>`;
+}
+function rumoCorpo(j, r) {
+  const m = r.meta;
+  const ORIGEM = { 'seus dados': 'pronto', estimativa: 'esperando', sua: '' };
+  Object.assign(j.fns, {
+    meta: () => dialogo(j, { titulo: 'Meta de clientes', texto: `Quantos clientes de CRM você quer ter, e até quando. A conta volta pelo funil até as abordagens por semana.${m.sugestao ? ` O seu ponto de equilíbrio (Plano do ano) é ${m.sugestao} clientes.` : ''}`,
+      campos: [{ nome: 'clientes', rotulo: 'Clientes de CRM', tipo: 'numero', valor: m.meta || m.sugestao || '', obrigatorio: true, meia: true },
+        { nome: 'ate', rotulo: 'Até', tipo: 'mes', valor: m.ate || '', obrigatorio: true, meia: true },
+        ...Object.entries(m.taxas).map(([k, t]) => ({ nome: `taxa_${k}`, rotulo: `% de ${t.nome}`, valor: t.origem === 'sua' ? String(Math.round(t.valor * 1000) / 10).replace('.', ',') : '', meia: true,
+          exemplo: `vazio = ${t.origem === 'seus dados' ? 'seus dados' : 'estimativa'} (${pctBr(t.origem === 'sua' ? r.taxas_padrao[k] : t.valor)})` }))],
+      enviar: (x) => operar('meta_config', x) }),
+    crescer: () => pedirEquipe(`Use o chefe-gabinete com o financeiro e o SDR. Meta: ${m.meta} clientes do CIELLO CRM até ${mesAno(m.ate)} (hoje ${m.ativos}, ${m.em_teste} em teste). Pela conta do OS (python central/metas.py), são ${m.por_semana.abordagens} abordagens, ${m.por_semana.demos} demos e ${m.por_semana.testes} testes grátis por semana. Monte comigo um plano de implantação de 90 dias, em etapas semanais, para chegar lá: de onde vêm os leads (Maps, anúncio, Instagram, indicação, venda para quem já é cliente), quanto tempo por dia isso pede, o que automatizar e o que parar de fazer. Leia financeiro/regras.md e respeite as regras da casa. Me pergunte antes de mudar meta, preço ou plano.`, 'Plano de crescimento'),
+    discutirDecisao: ({ i, lista }) => { const x = (lista === 'abertas' ? r.abertas : r.decisoes)[+i];
+      pedirEquipe(`Use o agente financeiro. Quero decidir isto sobre a Ciello: "${x.titulo}". Contexto do OS: ${x.detalhe || '(sem detalhe)'}${x.decisao ? ` Hoje a regra é: ${x.decisao}` : ''} Leia financeiro/plano.json, comercial/produtos.json e financeiro/regras.md. Me dê 2 ou 3 caminhos com os números de cada um (o que ganha, o que arrisca), a sua recomendação e uma regra curta que eu possa adotar (uma frase, para os agentes seguirem). Não decida por mim e não mude nada: quando eu escolher, registro em Financeiro → Metas e decisões.`, `Decisão · ${x.titulo.slice(0, 24)}`); },
+    decidir: ({ i, lista }) => { const x = lista ? (lista === 'abertas' ? r.abertas : r.decisoes)[+i] : {};
+      dialogo(j, { titulo: x.titulo ? 'Registrar decisão' : 'Nova decisão', texto: 'O que você decidir vira regra da casa: os agentes (financeiro, closer, SDR) leem antes de propor preço, desconto ou condição.',
+        campos: [{ nome: 'titulo', rotulo: 'Assunto', valor: x.titulo || '', obrigatorio: true }, { nome: 'decisao', rotulo: 'O que você decidiu (uma regra curta)', tipo: 'area', valor: x.decisao || '', obrigatorio: true, exemplo: 'Ex.: site parcelado só com entrada de 30%' },
+          { nome: 'revisar', rotulo: 'Rever em (opcional)', tipo: 'data', valor: x.revisar || '' }],
+        extra: x.detalhe ? `<p class="sub">${esc(x.detalhe)}</p>` : '', enviar: (v) => operar('decisao_salvar', { ...v, chave: x.chave, detalhe: x.detalhe, origem: x.origem, estado: 'decidida' }) }); },
+    adiar: ({ i, lista }) => { const x = (lista === 'abertas' ? r.abertas : r.decisoes)[+i];
+      dialogo(j, { titulo: 'Deixar para depois', texto: x.titulo, campos: [{ nome: 'revisar', rotulo: 'Lembrar de novo em', tipo: 'data', valor: new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10) }],
+        enviar: (v) => operar('decisao_salvar', { ...v, chave: x.chave, titulo: x.titulo, detalhe: x.detalhe, origem: x.origem, estado: 'adiada' }) }); },
+    naoSeAplica: ({ i }) => { const x = r.abertas[+i]; rapido('decisao_salvar', { chave: x.chave, titulo: x.titulo, detalhe: x.detalhe, origem: x.origem, estado: 'descartada' }, 'Não se aplica'); },
+    apagarDecisao: ({ i }) => { const x = r.decisoes[+i]; if (confirm(`Apagar a decisão "${x.titulo}"?`)) rapido('decisao_remover', { chave: x.chave }, 'Decisão apagada'); },
+  });
+  const metaHtml = m.tem_meta ? `<div class="kpis">${[['Meta', `${m.meta} clientes`, `até ${mesAno(m.ate)} · ${brl(m.mrr_meta)}/mês`],
+      ['Hoje', `${m.ativos} clientes`, `${m.em_teste} em teste · ${brl(m.mrr_atual)}/mês`],
+      ['Faltam', m.faltam, `${m.vindo_do_teste ? `${m.vindo_do_teste} ${m.vindo_do_teste > 1 ? 'devem vir' : 'deve vir'} do teste · ` : ''}${m.perdas ? `${m.perdas} cancelamento(s) no caminho` : 'sem cancelamento previsto'}`, m.faltam ? 'ruim' : 'bom'],
+      ['Tempo', `${m.meses} meses`, m.meses_uteis !== m.meses ? `${m.meses_uteis} para prospectar (o teste leva 30 dias)` : '']].map(([a, b, c, k]) => `<div class="kpi"><small>${a}</small><strong>${b}</strong><em class="${k || 'neutro'}">${c}</em></div>`).join('')}</div>
+    ${ritmoFaixa(m)}
+    ${m.avisos.length ? `<div class="lista" style="margin-top:8px">${m.avisos.map((a) => `<div class="linha-item achado medio"><span class="chip esperando">atenção</span><div class="cresce"><small style="white-space:normal">${esc(a)}</small></div></div>`).join('')}</div>` : ''}
+    <details class="taxas"><summary>De onde vêm as taxas do funil</summary><table class="tab"><tr><th>Passo</th><th>Taxa</th><th>Origem</th><th>Seus números</th></tr>${Object.values(m.taxas).map((t) => `<tr><td>${esc(t.nome)}</td><td><b>${pctBr(t.valor)}</b></td><td><span class="chip ${ORIGEM[t.origem]}">${esc(t.origem)}</span></td><td>${esc(t.dados)}</td></tr>`).join('')}</table>
+      <p class="sub">A estimativa vira a sua taxa assim que houver dados suficientes (registre as abordagens, demos e testes no Comercial e no Financeiro). Para usar outro número, <a href="#" data-fn="meta">mude na meta</a>.</p></details>
+    <div class="acoes"><button class="bt" data-fn="meta">Mudar meta ou taxas</button><button class="bt pri" data-fn="crescer">Montar o plano de 90 dias com a equipe</button></div>`
+    : `<div class="passos"><h2>Qual é a meta?</h2><p class="sub">Diga quantos clientes de CRM quer ter e até quando. O OS faz a conta de trás para frente: quantas abordagens, demos e testes grátis por semana, e mostra no Comercial se a semana está no ritmo.${m.sugestao ? ` Pelo Plano do ano, <b>${m.sugestao} clientes</b> pagam os custos e o seu pró-labore.` : ''}</p>
+      <div class="acoes" style="margin-top:0"><button class="bt pri" data-fn="meta">Definir a meta</button></div></div>`;
+  const abertas = r.abertas; const rever = r.decisoes.filter((x) => x.rever_agora); const regras = r.decisoes.filter((x) => x.estado === 'decidida'); const outras = r.decisoes.filter((x) => x.estado !== 'decidida' && !x.rever_agora);
+  const idx = (x) => r.decisoes.indexOf(x);
+  const cartaoAberta = (x, i) => `<div class="linha-item decisao"><span class="chip ${x.origem === 'plano' ? NIVEL[x.nivel][0] : 'pronto'}">${x.origem === 'plano' ? NIVEL[x.nivel][1] : 'preço'}</span><div class="cresce"><b>${esc(x.titulo)}</b><small style="white-space:normal">${esc(x.detalhe)}</small></div>
+    <div class="acoes-linha"><button class="bt mini" data-fn="discutirDecisao" data-lista="abertas" data-i="${i}" title="Abre o Claude com os caminhos e os números">Discutir</button><button class="bt mini pri" data-fn="decidir" data-lista="abertas" data-i="${i}">Decidir</button>
+    <button class="bt mini" data-fn="adiar" data-lista="abertas" data-i="${i}">Depois</button><button class="bt mini" data-fn="naoSeAplica" data-i="${i}">Não se aplica</button></div></div>`;
+  const cartaoDecisao = (x) => `<div class="linha-item decisao ${x.rever_agora ? 'rever' : ''}"><span class="chip ${x.estado === 'decidida' ? 'pronto' : x.estado === 'adiada' ? 'esperando' : ''}">${esc(r.estados[x.estado])}</span><div class="cresce"><b>${esc(x.titulo)}</b>
+    <small style="white-space:normal">${x.decisao ? esc(x.decisao) : esc(x.detalhe || '')} · ${ddmm(x.data)}${x.revisar ? ` · rever em ${ddmm(x.revisar)}` : ''}</small></div>
+    <div class="acoes-linha"><button class="bt mini" data-fn="discutirDecisao" data-lista="decisoes" data-i="${idx(x)}">Discutir</button><button class="bt mini ${x.estado === 'decidida' ? '' : 'pri'}" data-fn="decidir" data-lista="decisoes" data-i="${idx(x)}">${x.estado === 'decidida' ? 'Mudar' : 'Decidir'}</button><button class="bt mini" data-fn="apagarDecisao" data-i="${idx(x)}">Apagar</button></div></div>`;
+  return `<h2 style="margin-top:4px">Meta de crescimento</h2>${metaHtml}
+  <h2>Decisões${abertas.length ? ` em aberto (${abertas.length})` : ''}</h2><p class="sub" style="margin-top:0">Os furos do plano e as ideias de preço esperando a sua palavra. <b>Discutir</b> abre o Claude com caminhos e números; <b>Decidir</b> grava a regra que os agentes passam a seguir.</p>
+  ${rever.length ? `<div class="lista">${rever.map(cartaoDecisao).join('')}</div>` : ''}
+  <div class="lista">${abertas.map(cartaoAberta).join('') || '<p class="sub">Nada em aberto.</p>'}</div>
+  <div class="acoes" style="margin-top:6px"><button class="bt mini" data-fn="decidir">+ Nova decisão</button></div>
+  <h2>Regras da casa (${regras.length})</h2><p class="sub" style="margin-top:0">Ficam em financeiro/regras.md, fora do GitHub. Os agentes leem antes de propor preço, desconto ou condição.</p>
+  <div class="lista">${regras.filter((x) => !x.rever_agora).map(cartaoDecisao).join('') || '<p class="sub">Nenhuma ainda. Comece pelas importantes acima.</p>'}</div>
+  ${outras.length ? `<details class="taxas"><summary>Para depois e "não se aplica" (${outras.length})</summary><div class="lista">${outras.map(cartaoDecisao).join('')}</div></details>` : ''}`;
+}
+
 // ------------------------------------------------------------------ apps: comercial
 const ROTULO_ETAPA = { novo: 'novo', contatado: 'contatado', respondeu: 'respondeu', demo: 'demo', proposta: 'proposta', cliente: 'cliente', perdido: 'perdido', frio: 'frio', nao_contatar: 'não contatar' };
 const ORIGENS = [['instagram', 'Instagram (DM)'], ['anuncio', 'Anúncio'], ['site', 'Site'], ['indicacao', 'Indicação'], ['outro', 'Outro']];
@@ -854,6 +919,7 @@ async function renderComercial(j) {
   const marcar = (id, etapa, titulo, obs = '') => rapido('sdr_marcar', { id, etapa, obs }, titulo);
   j.filtro = j.filtro || { texto: '', etapa: '' };
   j.fns = {
+    definirMeta: () => abrirAba('financeiro', 'rumo'),
     entrada: () => dialogo(j, { titulo: 'Lead que chegou sozinho', texto: 'Alguém chamou pela DM, anúncio, site ou indicação? Registre aqui e responda na hora: a mensagem pronta aparece embaixo, com o link do WhatsApp.',
       campos: [{ nome: 'nome', rotulo: 'Nome da pessoa', meia: true }, { nome: 'empresa', rotulo: 'Empresa', meia: true }, { nome: 'telefone', rotulo: 'WhatsApp', exemplo: '49 99999-8888', meia: true },
         { nome: 'origem', rotulo: 'Veio por', tipo: 'escolha', opcoes: ORIGENS, meia: true }, { nome: 'segmento', rotulo: 'Segmento', tipo: 'escolha', opcoes: [['', '—'], ...d.segmentos], meia: true },
@@ -939,7 +1005,7 @@ async function renderComercial(j) {
       <li><button class="bt" data-fn="planilha">Importar uma planilha</button></li><li><button class="bt" data-fn="entrada">Registrar quem chegou sozinho</button> (DM, anúncio, indicação)</li></ol></div>`;
   } else {
     const topo = Math.max(1, d.funil.etapas[0].n);
-    corpo = `<div class="grade2"><div class="cartao"><h2 style="margin-top:0">Funil</h2><div class="funil">${d.funil.etapas.map((e, i) => `<div><span>${esc(e.etapa)}</span><i style="width:${Math.max(2, 100 * e.n / topo)}%"></i><b>${e.n}</b><small>${i && d.funil.etapas[i - 1].n ? Math.round(100 * e.n / d.funil.etapas[i - 1].n) + '%' : ''}</small></div>`).join('')}</div></div>
+    corpo = `${d.ritmo && d.ritmo.tem_meta ? ritmoFaixa(d.ritmo, true) : `<p class="sub">Sem meta de clientes ainda: <a href="#" data-fn="definirMeta">defina a meta</a> e o OS mostra aqui o ritmo da semana.</p>`}<div class="grade2"><div class="cartao"><h2 style="margin-top:0">Funil</h2><div class="funil">${d.funil.etapas.map((e, i) => `<div><span>${esc(e.etapa)}</span><i style="width:${Math.max(2, 100 * e.n / topo)}%"></i><b>${e.n}</b><small>${i && d.funil.etapas[i - 1].n ? Math.round(100 * e.n / d.funil.etapas[i - 1].n) + '%' : ''}</small></div>`).join('')}</div></div>
     <div class="cartao"><h2 style="margin-top:0">Quentes · responder hoje</h2><div class="lista">${d.quentes.map((l) => `<div class="linha-item"><div class="cresce"><b>${esc(l.empresa)}</b><small>${esc([l.segmento, l.cidade, l.obs].filter(Boolean).join(' · '))}</small></div>
       ${l.telefone ? `<a class="bt mini wa" href="${esc(zap(l.telefone))}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="bt mini" data-fn="agendar" data-id="${l.id}">${l.agenda ? `Demo ${ddmm(l.agenda)} ${l.agenda.slice(11, 16)}` : 'Agendar demo'}</button>${etapaSel(l)}</div>`).join('') || '<p class="sub">Ninguém esperando resposta.</p>'}</div></div></div>
     ${d.agenda.proximas.length ? `<h2>Agenda de demos (${d.agenda.proximas.length})</h2>${d.agenda.proximas.map((a, i) => msgSimples(a, i, 'agenda_proximas',

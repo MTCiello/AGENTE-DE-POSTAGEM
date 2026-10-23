@@ -173,3 +173,32 @@ Cada passo tem **Fazer agora**, que abre a janela na aba certa já com o formul�
 - Pelo terminal: `python central/sdr.py agendar 12 --quando 2026-10-24T15:00`.
 
 **Testes:** 3 testes novos (agendar e a agenda do dia; link do Google Agenda e confirmação; data inválida).
+
+### Volta 11 · 23/10 · Meta de crescimento e decisões do negócio
+
+**Simulação:**
+- **Meta:** o Plano do ano dizia "são 9 clientes para te pagar", mas em lugar nenhum dava para responder "e o que eu faço esta semana para chegar lá?".
+- **Decisões:** as ideias de preço e os furos do plano apareciam como texto. Não havia onde registrar "decidi X", nem como os agentes saberem a regra. O pedido era justamente "discutir uma regra ou plano de implantação".
+
+**Feito:**
+- **Financeiro → Metas e decisões** (aba nova).
+  - **Meta de clientes:** você diz quantos clientes de CRM quer e até quando. O OS faz o funil de trás para frente: clientes que faltam (descontando os que devem vir do teste grátis e somando os cancelamentos do caminho), testes, demos, respostas e **abordagens por semana**.
+    - O teste de 30 dias entra na conta: quem começa o teste depois de certo mês só vira cliente depois da meta.
+    - As taxas do funil usam **os seus dados** assim que há o bastante (20 abordagens, 5 demos). Antes disso é uma estimativa conservadora, marcada como tal, e dá para trocar.
+  - **Ritmo da semana:** abordagens, demos e testes feitos contra o necessário, com o aviso "atrás" quando faltar. Só contam os dias úteis que já terminaram, então ninguém fica "atrás" na segunda de manhã. A mesma faixa aparece no topo de **Comercial → Hoje**.
+  - **Montar o plano de 90 dias com a equipe:** abre o Claude (chefe de gabinete + financeiro + SDR) com a meta e o ritmo, para montar o plano de implantação semana a semana.
+  - **Decisões em aberto:** os pontos importantes do plano e as ideias de preço, cada um com 4 botões:
+    - **Discutir:** abre o Claude com 2 ou 3 caminhos, os números e uma regra sugerida, sem decidir por você;
+    - **Decidir:** grava a regra;
+    - **Depois:** lembra em 30 dias;
+    - **Não se aplica.**
+  - **Regras da casa:** o que você decide vai para `financeiro/regras.md` (fora do git). Financeiro, closer e SDR passaram a ler esse arquivo antes de falar de preço, desconto ou condição.
+- **Bom dia:**
+  - avisa quando a semana está atrás do ritmo e quantas abordagens tiram o atraso;
+  - avisa quando chega a data de rever uma decisão;
+  - "Defina a meta de clientes" entrou nos Primeiros passos.
+- Pelo terminal: `python central/metas.py --meta 12 --ate 2027-06` e `python central/decisoes.py`.
+
+**Bug achado na simulação e corrigido:** na segunda de manhã a semana já aparecia "atrás do ritmo".
+
+**Testes:** 11 testes novos: funil de trás para frente, cancelamentos, meta já coberta, sem tempo pelo teste grátis, taxas dos seus dados, ritmo da semana, validação, decisões e regras, chave do assunto e adiar/descartar.

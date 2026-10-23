@@ -365,3 +365,18 @@ label.bt { cursor: pointer; }
 .previa { width: 200px; aspect-ratio: 9 / 16; border-radius: 10px; background: #000; }
 textarea.texto-msg { width: 100%; border: 1px solid transparent; resize: vertical; } textarea.texto-msg:focus { outline: 2px solid rgba(224, 168, 28, .5); }
 .objetivo.compacto .bt { white-space: nowrap; flex: none; }
+
+/* metas e decisões: ritmo da semana (funil de trás para frente) */
+.ritmo { background: #fff; border: 1px solid var(--linha); border-radius: 10px; padding: 11px 14px; margin-top: 10px; }
+.ritmo.compacto { margin: 0 0 12px; }
+.ritmo-cab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.passos-ritmo { display: flex; align-items: stretch; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.passos-ritmo > span { align-self: center; color: var(--cinza); }
+.passo-ritmo { flex: 1 1 90px; min-width: 84px; background: var(--papel); border: 1px solid var(--linha); border-radius: 8px; padding: 6px 9px; }
+.passo-ritmo small { display: block; color: var(--cinza); font-size: 11px; }
+.passo-ritmo b { font: 600 20px Oswald, sans-serif; color: var(--azul); } .passo-ritmo b em { font-style: normal; font-size: 13px; color: var(--cinza); }
+.passo-ritmo i { display: block; height: 4px; border-radius: 2px; margin-top: 4px; background: linear-gradient(90deg, var(--ouro) var(--p), var(--linha) var(--p)); }
+.decisao { flex-wrap: wrap; } .decisao .cresce { min-width: 220px; }
+.decisao.rever { border-left: 4px solid var(--ouro); }
+details.taxas { margin-top: 10px; } details.taxas summary { cursor: pointer; color: var(--azul); font-weight: 600; padding: 4px 0; }
+details.taxas .tab { margin-top: 6px; }
