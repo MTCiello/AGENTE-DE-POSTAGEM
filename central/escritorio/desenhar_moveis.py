@@ -7,7 +7,7 @@ escritorio/webview-ui/public/assets/furniture/<ID>/ com o PNG e o manifest.json.
   VARANDA      GUARDA_CORPO (grade de madeira), ESPREGUICADEIRA
   DECORAÇÃO    QUADRO_CIELLO e JANELA (parede), LUMINARIA, ARCADE (fliperama), BEBEDOURO, ARQUIVO_ACO,
                TRIPE_CAMERA e RING_LIGHT (o set de gravação), CAVALETE_METAS (o quadro de metas de vendas)
-  PREMIUM      MESA_EXECUTIVA (mogno), POLTRONA_COURO (frente, costas e lado), ESTANTE_ESCURA, PAINEL_CIELLO (parede),
+  PREMIUM      PORTA_CARVALHO (a porta da sala do Gerente), MESA_EXECUTIVA (mogno), POLTRONA_COURO (frente, costas e lado), ESTANTE_ESCURA, PAINEL_CIELLO (parede),
                VASO_GRANDE, APARADOR, e em cima das mesas NOTEBOOK, TROFEU e GLOBO
   PACOTE       VASO_PEQUENO, PUFE, MESA_LATERAL, PALETE_CAIXAS, MAQUINA_SALGADINHOS, GUARDA_SOL_MESA,
                TV_PAREDE, PAINEL_METRICAS e QUADRO_AVISOS (parede)
@@ -704,6 +704,29 @@ def quadro_avisos():
     return t, {"category": "wall", "footprintW": 2, "footprintH": 2, "backgroundTiles": 0, "parede": True}
 
 
+CARVALHO, CARVALHO_LUZ, CARVALHO_SOMBRA, CARVALHO_CONTORNO = cor("4a2e1b"), cor("6b4429"), cor("2f1c10"), cor("1a0e07")
+
+
+def porta_carvalho():
+    """Porta de carvalho escuro, fechada, para o vão de uma parede (a da sala do Gerente): batente, duas almofadas
+    entalhadas e a maçaneta dourada. Não bloqueia o chão: quem tem lugar na sala passa por ela."""
+    t = Tela(16, 32)
+    t.ret(0, 0, 15, 31, CARVALHO_CONTORNO)               # batente
+    t.ret(1, 1, 14, 31, CARVALHO_SOMBRA)
+    t.ret(2, 2, 13, 31, CARVALHO)                        # folha da porta
+    t.ret(2, 2, 13, 2, CARVALHO_LUZ)
+    for y0, y1 in ((5, 14), (18, 28)):                   # almofadas entalhadas
+        t.ret(4, y0, 11, y1, CARVALHO_SOMBRA)
+        t.ret(5, y0 + 1, 11, y1, CARVALHO_LUZ)
+        t.ret(5, y0 + 1, 10, y1 - 1, CARVALHO)
+    for x, y in ((7, 8), (8, 11), (6, 22), (9, 25)):      # veio da madeira
+        t.p(x, y, CARVALHO_SOMBRA)
+    t.ret(11, 16, 12, 17, OURO)                          # maçaneta
+    t.p(11, 16, OURO_LUZ)
+    t.ret(1, 31, 14, 31, CARVALHO_CONTORNO)              # soleira
+    return t, {"category": "wall", "footprintW": 1, "footprintH": 2, "backgroundTiles": 2, "parede": True}
+
+
 MOVEIS = {"CAIXAS": ("Caixas", caixas), "ESTANTE_ARQUIVO": ("Estante de arquivos", estante_arquivo), "SERVIDOR": ("Servidor", servidor),
           "BALCAO_CAFE": ("Balcão com café", balcao_cafe), "GELADEIRA": ("Geladeira", geladeira),
           "GUARDA_CORPO": ("Guarda-corpo", guarda_corpo), "ESPREGUICADEIRA": ("Espreguiçadeira", espreguicadeira),
@@ -717,7 +740,7 @@ MOVEIS = {"CAIXAS": ("Caixas", caixas), "ESTANTE_ARQUIVO": ("Estante de arquivos
           "MESA_LATERAL": ("Mesinha lateral", mesa_lateral), "PALETE_CAIXAS": ("Palete com caixas", palete_caixas),
           "MAQUINA_SALGADINHOS": ("Máquina de salgadinhos", maquina_salgadinhos), "GUARDA_SOL_MESA": ("Mesa com guarda-sol", guarda_sol_mesa),
           "TV_PAREDE": ("TV de parede", tv_parede), "PAINEL_METRICAS": ("Painel de métricas", painel_metricas),
-          "QUADRO_AVISOS": ("Mural de avisos", quadro_avisos)}
+          "QUADRO_AVISOS": ("Mural de avisos", quadro_avisos), "PORTA_CARVALHO": ("Porta de carvalho", porta_carvalho)}
 
 
 def main():

@@ -321,7 +321,7 @@ class TesteAtivos(unittest.TestCase):
         lay = json.loads((Path(__file__).resolve().parent.parent / "escritorio" / "layout-padrao.json").read_text(encoding="utf-8"))
         cat = {c["id"]: c for c in Ativos(TELA).moveis["catalog"]}
         rotulos = {a["label"] for a in lay["areas"]}
-        self.assertEqual(rotulos, {"Gerente", "Produtor Social", "Comercial", "Vendas"})
+        self.assertEqual(rotulos, {"Gerente", "Arquivos G", "Copa", "Área de lazer", "Varanda", "Produtor Social", "Comercial", "Vendas"})
         from nucleo.residentes import AREAS, SALA_DAS_SESSOES
         self.assertLessEqual(set(AREAS.values()) | {SALA_DAS_SESSOES}, rotulos)  # todo agente tem a sua sala
         C = lay["cols"]
@@ -345,7 +345,7 @@ class TesteAtivos(unittest.TestCase):
                     fila.append(v)
         alcancadas = {lay["areaTiles"][r * C + c] for c, r in vistos} - {None}
         self.assertEqual(alcancadas, rotulos)
-        # as portas são exatamente as do esboço (central/escritorio/gerar_layout.py)
+        # as portas são exatamente as do esboço (gerar_layout.py): um caminho único entre as salas
         portas = set()
         for c, r in andavel:
             if lay["areaTiles"][r * C + c] is None:  # quadrado de porta
@@ -353,10 +353,11 @@ class TesteAtivos(unittest.TestCase):
                             if (cc, rr) in andavel} - {None}
                 if len(vizinhas) == 2:
                     portas.add(frozenset(vizinhas))
-        esperadas = {frozenset(x) for x in [("Gerente", "Produtor Social"), ("Gerente", "Comercial"), ("Comercial", "Vendas"),
+        esperadas = {frozenset(x) for x in [("Arquivos G", "Gerente"), ("Gerente", "Comercial"), ("Comercial", "Área de lazer"),
+                                            ("Área de lazer", "Varanda"), ("Área de lazer", "Produtor Social"),
                                             ("Produtor Social", "Vendas")]}
         self.assertEqual(portas, esperadas)
-        # nenhuma sala encosta na outra sem porta
+        # nenhuma sala encosta na outra sem porta, a não ser a Copa e a Área de lazer, que são um ambiente só
         abertas = set()
         for c, r in andavel:
             a = lay["areaTiles"][r * C + c]
@@ -364,7 +365,7 @@ class TesteAtivos(unittest.TestCase):
                 b = lay["areaTiles"][rr * C + cc] if (cc, rr) in andavel else None
                 if a and b and a != b:
                     abertas.add(frozenset((a, b)))
-        self.assertEqual(abertas, set())
+        self.assertEqual(abertas, {frozenset(("Copa", "Área de lazer"))})
         # perspectiva 3/4: a parede (2 blocos de altura na tela) cobre o bloco de cima, então nenhum bloco de sala fica
         # logo acima de uma parede (escondido atrás dela, com agente sumindo); e móvel alto de frente só encostado na
         # parede do fundo, com a última linha de fundo na linha da parede, senão parece boiar no meio da sala
@@ -385,14 +386,43 @@ class TesteAtivos(unittest.TestCase):
         poltrona = next(m for m in lay["furniture"] if m["uid"] == lay["lugaresFixos"]["Gerente"])
         self.assertEqual(poltrona["type"], "POLTRONA_COURO_FRONT")
         self.assertEqual(lay["areaTiles"][(poltrona["row"] + 1) * C + poltrona["col"]], "Gerente")
+        self.assertEqual(lay["cielloLayout"], 7)
+        # a sala do Gerente é fechada por uma porta de carvalho no vão que dá para o Comercial, sem bloquear a passagem
+        porta = next(m for m in lay["furniture"] if m["type"] == "PORTA_CARVALHO")
+        self.assertEqual(cat["PORTA_CARVALHO"]["backgroundTiles"], cat["PORTA_CARVALHO"]["footprintH"])
+        vao = (porta["col"], porta["row"] + 1)
+        self.assertIn(vao, andavel)
+        self.assertIsNone(lay["areaTiles"][vao[1] * C + vao[0]])
+        self.assertEqual({lay["areaTiles"][r * C + c] for c, r in ((vao[0], vao[1] - 1), (vao[0], vao[1] + 1))}, {"Gerente", "Comercial"})
 
-    def test_layout_padrao_so_entra_sem_layout(self):
-        """O padrão entra na primeira vez; um layout seu (importado ou desenhado) nunca é trocado por ele."""
+    def test_layout_padrao_novo_substitui_o_antigo(self):
         from nucleo import persistencia as P
         with tempfile.TemporaryDirectory() as d, mock.patch.object(P, "CASA", Path(d)), \
                 mock.patch.object(P, "LAYOUT_ANTIGO", Path(d) / "nao-existe.json"):
-            self.assertEqual(P.ler_layout()["cols"], 19)
-            P.gravar_layout({"version": 1, "cols": 37, "rows": 14})
+            P._gravar(Path(d) / "layout.json", {"version": 1, "cols": 27, "rows": 20, "cielloLayout": 6})
+            P._gravar(Path(d) / "config.json", {"areas": {"SDR": ["Comercial"]}, "areasVistas": ["SDR"]})
+            novo = P.ler_layout()
+            self.assertEqual((novo["cols"], novo["cielloLayout"]), (27, 7))
+            self.assertTrue((Path(d) / "layout-antigo-v6.json").exists())  # cópia do antigo
+            self.assertEqual((P.config()["areas"], P.config()["areasVistas"]), ({}, []))  # as áreas refazem com as salas novas
+            P.gravar_layout({**novo, "cielloLayout": None})  # o editor salva sem a versão
+            self.assertEqual(P.ler_layout()["cielloLayout"], 7)  # e não troca de novo
+
+    def test_padrao_de_4_salas_vira_o_novo(self):
+        from nucleo import persistencia as P
+        areas = [{"label": n} for n in ("Gerente", "Produtor Social", "Comercial", "Vendas")]
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(P, "CASA", Path(d)):
+            P._gravar(Path(d) / "layout.json", {"version": 1, "cols": 19, "rows": 16, "areas": areas})
+            self.assertEqual(P.ler_layout()["cols"], 27)
+            self.assertTrue((Path(d) / "layout-antigo-v0.json").exists())
+
+    def test_layout_padrao_so_entra_sem_layout(self):
+        """O padrão entra na primeira vez; um layout importado nunca é trocado por ele."""
+        from nucleo import persistencia as P
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(P, "CASA", Path(d)), \
+                mock.patch.object(P, "LAYOUT_ANTIGO", Path(d) / "nao-existe.json"):
+            self.assertEqual(P.ler_layout()["cols"], 27)
+            P._gravar(Path(d) / "layout.json", {"version": 1, "cols": 37, "rows": 14})  # importado
             self.assertEqual(P.ler_layout()["cols"], 37)
 
     def test_png_paleta_com_transparencia(self):

@@ -35,6 +35,23 @@ As variáveis estão no `:root` de `app.css`. Use sempre a variável, nunca a co
 
 ![Tendências em lista e detalhe](img/tendencias.png)
 
+## Layout de cada tela
+
+Cada tela tem um tipo de layout (`ux` em `APPS`, tabela `LAYOUTS` em `app.js`). Ele fixa o tamanho mínimo e máximo da janela e a largura máxima do conteúdo: abaixo do mínimo a tela quebraria, acima do máximo os botões e gráficos esticariam. Maximizada, a janela ocupa a tela toda e o conteúdo fica centralizado na largura do layout.
+
+| Layout | Telas | Janela mín. | Janela máx. | Conteúdo máx. |
+|---|---|---|---|---|
+| Painel | Financeiro, Comercial, Conteúdo, Rede social, Anúncios | 760 × 480 | 1440 × 960 | 1180 |
+| Lista | Tendências, Equipe, Atendimento, Conexões | 640 × 440 | 1200 × 960 | 1040 |
+| Estúdio | Estúdio de Vídeo, Estúdio de Voz, Gerente (objetivos) | 720 × 520 | 1320 × 960 | 1120 |
+| Leitura | Bom dia, cada agente, Boas-vindas, Concorrentes | 520 × 420 | 900 × 900 | 760 |
+| Compacta | Atividade, Atualizações | 420 × 340 | 720 × 760 | 640 |
+| Terminal | Claude Code, execução | 520 × 320 | a tela | sem limite |
+
+Dentro da tela também há limites: gráfico de barras até 760 px com colunas de no máximo 44 px, funil até 640 px, botão até a largura da linha (na barra de título, até 220 px), campo de texto até 520 px, e imagem e vídeo nunca passam da largura nem perdem a proporção. Uma tela nova escolhe um destes layouts; se nenhum servir, crie outro na tabela em vez de mudar o tamanho na mão.
+
+![Financeiro maximizado: o conteúdo fica no meio](img/financeiro-max.png)
+
 ## Regras
 
 1. Um botão principal (`.bt.pri`) por área. Os outros são `.bt`.

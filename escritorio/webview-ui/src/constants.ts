@@ -20,6 +20,10 @@ export const SEAT_REST_MAX_SEC = 240.0;
 // Ciello: rotina dos agentes parados. Chance de o próximo passeio ser ir conversar com outro agente parado,
 // quanto o outro espera o colega chegar e quanto dura a conversa (com balão).
 export const CONVERSA_CHANCE = 0.35;
+/** Salas fechadas (porta de carvalho): quem mora nelas não sai, para ser fácil de achar, e os outros não passeiam lá
+ *  dentro. As que só têm entrada por uma sala fechada (os Arquivos do Gerente) contam como parte dela. */
+export const SALAS_FECHADAS: ReadonlyArray<string> = ['Gerente'];
+export const SALAS_PRIVATIVAS: ReadonlyArray<string> = ['Gerente', 'Arquivos G'];
 // Ciello: sem conversa, a chance de o passeio ser uma pausa (copa, lazer, varanda) e o peso de cada lugar.
 // O lugar é achado pelo rótulo da área no layout (sem acento, minúsculo): renomear para "Copa da Ciello" continua valendo.
 export const PAUSA_CHANCE = 0.55;

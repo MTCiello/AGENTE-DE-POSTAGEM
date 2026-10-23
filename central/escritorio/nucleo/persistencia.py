@@ -7,6 +7,8 @@
 Na primeira vez, se existir o layout do pixel-agents original (~/.pixel-agents/layout.json), ele é trazido;
 senão entra o layout padrão (central/escritorio/layout-padrao.json). O seu layout entra pelo editor do escritório
 (Layout → Importar) ou pela janela Boas-vindas (Importar meus dados: escritorio/layout.json no .zip).
+Quando o layout padrão muda (campo cielloLayout), quem ainda usa um padrão anterior (mesmo mexido no editor) recebe o
+novo, com cópia do antigo em layout-antigo-v<N>.json. Um layout importado sem esse campo nunca é trocado.
 """
 import json
 import os
@@ -102,6 +104,18 @@ def gravar_lugares(lugares):
 
 # ------------------------------------------------------------------ layout
 
+def versao_padrao(layout) -> int:
+    return int(layout.get("cielloLayout") or 0) if isinstance(layout, dict) else 0
+
+
+def _padrao_antigo(layout) -> bool:
+    """O layout é um padrão que já veio com o app? Os numerados (cielloLayout) e o de 4 salas, que não tinha número."""
+    if versao_padrao(layout):
+        return True
+    rotulos = {a.get("label") for a in layout.get("areas") or [] if isinstance(a, dict)}
+    return (layout.get("cols"), layout.get("rows")) == (19, 16) and rotulos == {"Gerente", "Produtor Social", "Comercial", "Vendas"}
+
+
 def ler_layout():
     p = CASA / "layout.json"
     if not p.exists():
@@ -109,8 +123,30 @@ def ler_layout():
         if origem.exists():
             CASA.mkdir(parents=True, exist_ok=True)
             shutil.copy2(origem, p)
-    return _ler(p, None)
+    atual = _ler(p, None)
+    novo = _ler(LAYOUT_PADRAO, None)
+    if isinstance(atual, dict) and novo is not None and _padrao_antigo(atual) and versao_padrao(atual) < versao_padrao(novo):
+        atualizar_layout(atual, novo)
+        return novo
+    return atual
+
+
+def atualizar_layout(antigo, novo):
+    """Chegou um layout padrão novo: guarda uma cópia do antigo, troca e refaz as áreas e os lugares dos agentes
+    (as salas mudaram). Quem quiser o antigo de volta: Layout → Importar a cópia guardada."""
+    _gravar(CASA / f"layout-antigo-v{versao_padrao(antigo)}.json", antigo)
+    _gravar(CASA / "layout.json", novo)
+    c = config()
+    c["areas"], c["areasVistas"] = {}, []
+    gravar_config(c)
+    e = estado()
+    e["lugares"] = {}
+    _gravar(CASA / "estado.json", e)
 
 
 def gravar_layout(layout):
+    """O editor de layout salva sem o campo cielloLayout: mantém a versão, senão o padrão seria trocado de novo."""
+    v = versao_padrao(_ler(CASA / "layout.json", None))
+    if v and isinstance(layout, dict) and not layout.get("cielloLayout"):
+        layout = {**layout, "cielloLayout": v}
     _gravar(CASA / "layout.json", layout)

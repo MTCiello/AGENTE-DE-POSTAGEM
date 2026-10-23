@@ -37,24 +37,24 @@ const icone = (n, vb = 24) => `<svg viewBox="0 0 ${vb} ${vb}">${SVG[n] || SVG.ag
 
 // ------------------------------------------------------------------ apps
 const APPS = {
-  redes: { titulo: 'Rede social', icone: 'redes', cor: 'linear-gradient(135deg,#F07A9B,#7B3FE4)', w: 960, h: 720, render: renderRedes },
-  conexoes: { titulo: 'Conexões', icone: 'conexoes', cor: 'linear-gradient(135deg,#6FB0D8,#2F6A99)', w: 900, h: 700, render: renderConexoes },
-  objetivos: { titulo: 'Gerente · objetivos e esteiras', icone: 'alvo', cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', w: 900, h: 700, render: renderObjetivos, cada: 3000 },
-  atendimento: { titulo: 'Atendimento', icone: 'balao', cor: 'linear-gradient(135deg,#4CC6D1,#1E8C99)', w: 760, h: 680, render: renderAtendimento, estatico: true },
-  video: { titulo: 'Estúdio de Vídeo', icone: 'video', cor: 'linear-gradient(135deg,#8E6BD8,#4B2F99)', w: 900, h: 720, render: renderVideo, estatico: true },
-  voz: { titulo: 'Estúdio de Voz', icone: 'microfone', cor: 'linear-gradient(135deg,#E9826C,#B5442F)', w: 780, h: 700, render: renderVoz, estatico: true },
-  briefing: { titulo: 'Bom dia', icone: 'sol', cor: 'linear-gradient(135deg,#F7A35C,#E0722F)', w: 640, h: 660, render: renderBriefing },
-  financeiro: { titulo: 'Financeiro', icone: 'financeiro', cor: 'linear-gradient(135deg,#3CC285,#1F8A4C)', w: 900, h: 680, render: renderFinanceiro },
-  comercial: { titulo: 'Comercial', icone: 'comercial', cor: 'linear-gradient(135deg,#5E92E6,#2F5BA8)', w: 880, h: 660, render: renderComercial },
-  conteudo: { titulo: 'Conteúdo e Instagram', icone: 'conteudo', cor: 'linear-gradient(135deg,#EC70A0,#C2416F)', w: 920, h: 680, render: renderConteudo },
-  tendencias: { titulo: 'Tendências', icone: 'tendencias', cor: 'linear-gradient(135deg,#F48D5E,#D24E36)', w: 740, h: 640, render: (j) => renderRelatorio(j, 'tendencias') },
-  concorrentes: { titulo: 'Concorrentes', icone: 'concorrentes', cor: 'linear-gradient(135deg,#4CC6D1,#1E8C99)', w: 740, h: 620, render: (j) => renderRelatorio(j, 'concorrentes') },
-  anuncios: { titulo: 'Anúncios', icone: 'anuncios', cor: 'linear-gradient(135deg,#AE92EE,#6B4FBB)', w: 780, h: 540, render: renderAnuncios },
-  equipe: { titulo: 'Equipe', icone: 'equipe', cor: 'linear-gradient(135deg,#7385AC,#3A4C70)', w: 860, h: 620, render: renderEquipe, cada: 4000 },
-  atividade: { titulo: 'Atividade', icone: 'atividade', cor: 'linear-gradient(135deg,#7E8AA1,#4B566B)', w: 520, h: 580, render: renderAtividade, cada: 3000 },
+  redes: { titulo: 'Rede social', icone: 'redes', cor: 'linear-gradient(135deg,#F07A9B,#7B3FE4)', ux: 'painel', w: 960, h: 720, render: renderRedes },
+  conexoes: { titulo: 'Conexões', icone: 'conexoes', cor: 'linear-gradient(135deg,#6FB0D8,#2F6A99)', ux: 'lista', w: 900, h: 700, render: renderConexoes },
+  objetivos: { titulo: 'Gerente · objetivos e esteiras', icone: 'alvo', cor: 'linear-gradient(135deg,#F1C95A,#D99A0B)', ux: 'estudio', w: 900, h: 700, render: renderObjetivos, cada: 3000 },
+  atendimento: { titulo: 'Atendimento', icone: 'balao', cor: 'linear-gradient(135deg,#4CC6D1,#1E8C99)', ux: 'lista', w: 760, h: 680, render: renderAtendimento, estatico: true },
+  video: { titulo: 'Estúdio de Vídeo', icone: 'video', cor: 'linear-gradient(135deg,#8E6BD8,#4B2F99)', ux: 'estudio', w: 900, h: 720, render: renderVideo, estatico: true },
+  voz: { titulo: 'Estúdio de Voz', icone: 'microfone', cor: 'linear-gradient(135deg,#E9826C,#B5442F)', ux: 'estudio', w: 780, h: 700, render: renderVoz, estatico: true },
+  briefing: { titulo: 'Bom dia', icone: 'sol', cor: 'linear-gradient(135deg,#F7A35C,#E0722F)', ux: 'leitura', w: 640, h: 660, render: renderBriefing },
+  financeiro: { titulo: 'Financeiro', icone: 'financeiro', cor: 'linear-gradient(135deg,#3CC285,#1F8A4C)', ux: 'painel', w: 900, h: 680, render: renderFinanceiro },
+  comercial: { titulo: 'Comercial', icone: 'comercial', cor: 'linear-gradient(135deg,#5E92E6,#2F5BA8)', ux: 'painel', w: 880, h: 660, render: renderComercial },
+  conteudo: { titulo: 'Conteúdo e Instagram', icone: 'conteudo', cor: 'linear-gradient(135deg,#EC70A0,#C2416F)', ux: 'painel', w: 920, h: 680, render: renderConteudo },
+  tendencias: { titulo: 'Tendências', icone: 'tendencias', cor: 'linear-gradient(135deg,#F48D5E,#D24E36)', ux: 'lista', w: 740, h: 640, render: (j) => renderRelatorio(j, 'tendencias') },
+  concorrentes: { titulo: 'Concorrentes', icone: 'concorrentes', cor: 'linear-gradient(135deg,#4CC6D1,#1E8C99)', ux: 'leitura', w: 740, h: 620, render: (j) => renderRelatorio(j, 'concorrentes') },
+  anuncios: { titulo: 'Anúncios', icone: 'anuncios', cor: 'linear-gradient(135deg,#AE92EE,#6B4FBB)', ux: 'painel', w: 780, h: 540, render: renderAnuncios },
+  equipe: { titulo: 'Equipe', icone: 'equipe', cor: 'linear-gradient(135deg,#7385AC,#3A4C70)', ux: 'lista', w: 860, h: 620, render: renderEquipe, cada: 4000 },
+  atividade: { titulo: 'Atividade', icone: 'atividade', cor: 'linear-gradient(135deg,#7E8AA1,#4B566B)', ux: 'compacta', w: 520, h: 580, render: renderAtividade, cada: 3000 },
   verificar: { titulo: 'Verificação', icone: 'verificar', cor: 'linear-gradient(135deg,#5BC0A0,#2D8C70)', acao: 'verificar' },
-  dados: { titulo: 'Boas-vindas e seus dados', icone: 'caixa', cor: 'linear-gradient(135deg,#C9A36A,#8A6A3B)', w: 760, h: 680, render: renderDados },
-  atualizacoes: { titulo: 'Atualizações', icone: 'atualizar', cor: 'linear-gradient(135deg,#3A5582,#263A59)', w: 620, h: 520, render: renderAtualizacoes },
+  dados: { titulo: 'Boas-vindas e seus dados', icone: 'caixa', cor: 'linear-gradient(135deg,#C9A36A,#8A6A3B)', ux: 'leitura', w: 760, h: 680, render: renderDados },
+  atualizacoes: { titulo: 'Atualizações', icone: 'atualizar', cor: 'linear-gradient(135deg,#3A5582,#263A59)', ux: 'compacta', w: 620, h: 520, render: renderAtualizacoes },
 };
 // menu Iniciar por objetivo: o que você quer fazer agora
 const GRUPOS = [['Criar', ['redes', 'video', 'conteudo', 'voz', 'tendencias', 'concorrentes']], ['Vender', ['comercial', 'atendimento', 'anuncios']],
@@ -151,19 +151,37 @@ const salvar = () => { try { SALVO.abertas = [...janelas.keys()].filter((k) => !
 // ------------------------------------------------------------------ gerenciador de janelas
 const janelas = new Map();
 let zTopo = 10; let ativa = null;
-const MIN_W = 340; const MIN_H = 220;
+// cada tela tem um tipo de layout (ux nos APPS) com tamanho mínimo e máximo da janela e a largura máxima do conteúdo:
+// abaixo do mínimo a tela quebra, acima do máximo os botões e gráficos esticam. Maximizada, a janela ocupa a tela toda
+// e o conteúdo fica centralizado na largura dele (docs/design.md)
+const LAYOUTS = {
+  painel: { min: [760, 480], max: [1440, 960], pagina: 1180 },    // números e gráficos: Financeiro, Comercial, Conteúdo
+  lista: { min: [640, 440], max: [1200, 960], pagina: 1040 },     // listas e lista com detalhe: Tendências, Equipe
+  estudio: { min: [720, 520], max: [1320, 960], pagina: 1120 },   // criar algo com prévia: Vídeo, Voz, Gerente
+  leitura: { min: [520, 420], max: [900, 900], pagina: 760 },     // texto e formulário: Bom dia, agentes, Boas-vindas
+  compacta: { min: [420, 340], max: [720, 760], pagina: 640 },    // utilitários: Atividade, Atualizações
+  terminal: { min: [520, 320], max: null, pagina: null },          // Claude Code e execução: estica à vontade
+};
+const layoutDe = (def) => LAYOUTS[def.ux] || LAYOUTS.leitura;
+// limita a largura e a altura ao layout da tela e ao espaço livre
+function limites(def) {
+  const { w: W, h: H } = area(); const L = layoutDe(def);
+  const [minW, minH] = L.min; const [maxW, maxH] = L.max || [W, H];
+  return { minW: Math.min(minW, W), minH: Math.min(minH, H), maxW: Math.max(Math.min(maxW, W), Math.min(minW, W)), maxH: Math.max(Math.min(maxH, H), Math.min(minH, H)) };
+}
+const entre = (v, a, b) => Math.max(a, Math.min(v, b));
 
 function definicao(chave) {
   if (APPS[chave]) return APPS[chave];
   if (chave.startsWith('agente:')) {
     const a = chave.slice(7);
-    return { titulo: nome(a), icone: 'agente', cor: CORES[(equipeCache.find((x) => x.nome === a) || {}).cor] || '#6E7FA3', w: 560, h: 600, render: renderAgente, cada: 2500, agente: a };
+    return { titulo: nome(a), ux: 'leitura', icone: 'agente', cor: CORES[(equipeCache.find((x) => x.nome === a) || {}).cor] || '#6E7FA3', w: 560, h: 600, render: renderAgente, cada: 2500, agente: a };
   }
   if (chave.startsWith('term:')) {
     const rotulo = (SALVO.terminais || {})[chave.slice(5)];
-    return { titulo: rotulo ? `Claude Code · ${rotulo}` : 'Claude Code', icone: 'terminal', cor: 'linear-gradient(135deg,#3A5582,#13213A)', w: 860, h: 540, render: renderTerminal, estatico: true };
+    return { titulo: rotulo ? `Claude Code · ${rotulo}` : 'Claude Code', ux: 'terminal', icone: 'terminal', cor: 'linear-gradient(135deg,#3A5582,#13213A)', w: 860, h: 540, render: renderTerminal, estatico: true };
   }
-  if (chave.startsWith('exec:')) return { titulo: 'Executando…', icone: 'terminal', cor: 'linear-gradient(135deg,#3A4256,#12151C)', w: 700, h: 460, render: renderExecucao, estatico: true };
+  if (chave.startsWith('exec:')) return { titulo: 'Executando…', ux: 'terminal', icone: 'terminal', cor: 'linear-gradient(135deg,#3A4256,#12151C)', w: 700, h: 460, render: renderExecucao, estatico: true };
   return null;
 }
 
@@ -177,7 +195,8 @@ function abrir(chave, dados = {}) {
   const n = janelas.size;
   const g = SALVO.geo[chave] || { w: Math.min(def.w, W - 40), h: Math.min(def.h, H - 30), x: Math.max(110, Math.min(W - def.w - 20, 140 + (n * 34) % 260)), y: 18 + (n * 30) % 150 };
   const el = document.createElement('section');
-  el.className = 'janela';
+  el.className = `janela ux-${def.ux || 'leitura'}`;
+  const pag = layoutDe(def).pagina; if (pag) el.style.setProperty('--pagina-max', `${pag}px`);
   el.innerHTML = `<header class="barra"><span class="ic" style="background:${def.cor}">${icone(def.icone)}</span><span class="titulos"><b class="titulo">${esc(def.titulo)}</b><small class="secao"></small></span>
     <div class="ferramentas"></div>
     <div class="botoes"><button class="minimizar" title="Minimizar" aria-label="Minimizar">${icone('min', 12)}</button><button class="maximizar" title="Maximizar" aria-label="Maximizar">${icone('max', 12)}</button><button class="fechar" title="Fechar" aria-label="Fechar">${icone('fechar', 12)}</button></div></header>
@@ -231,8 +250,8 @@ const fecharMais = (fora) => document.querySelectorAll('.menu-mais:not([hidden])
 document.addEventListener('pointerdown', (e) => fecharMais(e.target), true);
 
 function posicionar(j, g) {
-  const { w: W, h: H } = area();
-  const w = Math.max(MIN_W, Math.min(g.w, W)); const h = Math.max(MIN_H, Math.min(g.h, H));
+  const { w: W, h: H } = area(); const L = limites(j.def);
+  const w = entre(g.w, L.minW, L.maxW); const h = entre(g.h, L.minH, L.maxH);
   Object.assign(j.el.style, { left: `${Math.min(Math.max(g.x, -w + 120), W - 120)}px`, top: `${Math.min(Math.max(g.y, 0), H - 40)}px`, width: `${w}px`, height: `${h}px` });
 }
 const geo = (j) => ({ x: j.el.offsetLeft, y: j.el.offsetTop, w: j.el.offsetWidth, h: j.el.offsetHeight });
@@ -329,15 +348,15 @@ function ligarJanela(j) {
   el.querySelectorAll('.borda').forEach((b) => b.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
     e.preventDefault(); e.stopPropagation(); focar(j); semSelecao();
-    const d = b.dataset.d; const r0 = geo(j); const sx = e.clientX; const sy = e.clientY;
+    const d = b.dataset.d; const r0 = geo(j); const sx = e.clientX; const sy = e.clientY; const L = limites(j.def);
     b.setPointerCapture(e.pointerId);
     document.body.classList.add('arrastando'); document.body.style.cursor = getComputedStyle(b).cursor;
     const mover = (ev) => {
       const dx = ev.clientX - sx; const dy = ev.clientY - sy; let { x, y, w, h } = r0;
-      if (d.includes('e')) w = Math.max(MIN_W, r0.w + dx);
-      if (d.includes('s')) h = Math.max(MIN_H, Math.min(r0.h + dy, area().h - r0.y));
-      if (d.includes('w')) { w = Math.max(MIN_W, r0.w - dx); x = r0.x + r0.w - w; }
-      if (d.includes('n')) { h = Math.max(MIN_H, r0.h - dy); y = r0.y + r0.h - h; if (y < 0) { h += y; y = 0; } }
+      if (d.includes('e')) w = entre(r0.w + dx, L.minW, L.maxW);
+      if (d.includes('s')) h = entre(Math.min(r0.h + dy, area().h - r0.y), L.minH, L.maxH);
+      if (d.includes('w')) { w = entre(r0.w - dx, L.minW, L.maxW); x = r0.x + r0.w - w; }
+      if (d.includes('n')) { h = entre(r0.h - dy, L.minH, L.maxH); y = r0.y + r0.h - h; if (y < 0) { h += y; y = 0; } }
       Object.assign(el.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${h}px` });
     };
     const soltar = () => {
